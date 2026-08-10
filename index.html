@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#6C4CE0" />
+
+  <title>Times Table Hero</title>
+  <meta name="description" content="A fun way to learn the times tables up to 12." />
+
+  <!-- iOS home-screen / PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Table Hero" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ============ HOME ============ -->
+    <section class="screen screen--home is-active" data-screen="home">
+      <header class="home-header">
+        <div class="mascot" aria-hidden="true">🦸</div>
+        <h1 class="title">Times Table<br />Hero</h1>
+        <p class="subtitle">Let's practice, superstar!</p>
+      </header>
+
+      <nav class="menu">
+        <button class="tile tile--learn" data-go="learn">
+          <span class="tile__emoji" aria-hidden="true">📚</span>
+          <span class="tile__label">Learn</span>
+          <span class="tile__sub">See a table</span>
+        </button>
+        <button class="tile tile--practice" data-go="practice-setup">
+          <span class="tile__emoji" aria-hidden="true">🎈</span>
+          <span class="tile__label">Practice</span>
+          <span class="tile__sub">No pressure</span>
+        </button>
+        <button class="tile tile--quiz" data-go="quiz-setup">
+          <span class="tile__emoji" aria-hidden="true">⭐️</span>
+          <span class="tile__label">Quiz</span>
+          <span class="tile__sub">Earn stars</span>
+        </button>
+        <button class="tile tile--progress" data-go="progress">
+          <span class="tile__emoji" aria-hidden="true">🏆</span>
+          <span class="tile__label">My Stars</span>
+          <span class="tile__sub" id="home-star-count">0 stars</span>
+        </button>
+      </nav>
+    </section>
+
+    <!-- ============ LEARN ============ -->
+    <section class="screen screen--learn" data-screen="learn">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Learn</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+
+      <p class="picker-label">Pick a table</p>
+      <div class="number-grid" id="learn-picker"></div>
+
+      <div class="table-list" id="learn-table" hidden></div>
+    </section>
+
+    <!-- ============ PRACTICE / QUIZ SETUP ============ -->
+    <section class="screen screen--setup" data-screen="practice-setup">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Practice</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Which tables today?</p>
+      <div class="number-grid number-grid--multi" id="practice-picker"></div>
+      <div class="setup-actions">
+        <button class="chip" data-select-all="practice">All 1–12</button>
+        <button class="chip" data-clear="practice">Clear</button>
+      </div>
+      <button class="btn-primary" id="practice-start" disabled>Start Practice 🎈</button>
+    </section>
+
+    <section class="screen screen--setup" data-screen="quiz-setup">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Quiz</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Which tables today?</p>
+      <div class="number-grid number-grid--multi" id="quiz-picker"></div>
+      <div class="setup-actions">
+        <button class="chip" data-select-all="quiz">All 1–12</button>
+        <button class="chip" data-clear="quiz">Clear</button>
+      </div>
+      <div class="length-picker" id="quiz-length">
+        <span class="length-picker__label">Questions:</span>
+        <button class="chip chip--len" data-len="5">5</button>
+        <button class="chip chip--len is-on" data-len="10">10</button>
+        <button class="chip chip--len" data-len="20">20</button>
+      </div>
+      <button class="btn-primary" id="quiz-start" disabled>Start Quiz ⭐️</button>
+    </section>
+
+    <!-- ============ PRACTICE (flashcards) ============ -->
+    <section class="screen screen--play" data-screen="practice">
+      <div class="topbar">
+        <button class="btn-back" data-go="practice-setup" aria-label="Back">‹</button>
+        <h2 class="topbar__title">Practice</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard__q" id="flash-q">3 × 4</div>
+        <div class="flashcard__a" id="flash-a" hidden></div>
+        <p class="flashcard__hint" id="flash-hint">Tap to see the answer</p>
+      </div>
+
+      <div class="play-actions">
+        <button class="btn-secondary" id="flash-reveal">Show answer</button>
+        <button class="btn-primary" id="flash-next" hidden>Next card ➜</button>
+      </div>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section class="screen screen--play" data-screen="quiz">
+      <div class="topbar">
+        <button class="btn-back" data-go="quiz-setup" aria-label="Quit quiz">‹</button>
+        <div class="quiz-progress"><div class="quiz-progress__bar" id="quiz-bar"></div></div>
+        <div class="quiz-score" id="quiz-score">⭐️ 0</div>
+      </div>
+
+      <div class="question" id="quiz-question">7 × 8</div>
+
+      <div class="answers" id="quiz-answers"></div>
+
+      <div class="feedback" id="quiz-feedback" aria-live="polite"></div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section class="screen screen--results" data-screen="results">
+      <div class="results-burst" id="results-burst" aria-hidden="true"></div>
+      <h2 class="results__title" id="results-title">Great job!</h2>
+      <div class="results__score" id="results-score">8 / 10</div>
+      <div class="results__stars" id="results-stars"></div>
+      <p class="results__msg" id="results-msg"></p>
+      <div class="results-actions">
+        <button class="btn-primary" id="results-again">Play again</button>
+        <button class="btn-secondary" data-go="home">Home</button>
+      </div>
+    </section>
+
+    <!-- ============ PROGRESS ============ -->
+    <section class="screen screen--progress" data-screen="progress">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">My Stars</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+
+      <div class="star-total">
+        <span class="star-total__num" id="progress-total">0</span>
+        <span class="star-total__label">stars earned ⭐️</span>
+      </div>
+
+      <p class="picker-label">Your best on each table</p>
+      <div class="mastery-grid" id="mastery-grid"></div>
+
+      <button class="btn-secondary btn-reset" id="reset-progress">Reset all progress</button>
+    </section>
+  </div>
+
+  <div id="sound-toggle-wrap">
+    <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound" title="Sound">🔊</button>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
