@@ -43,7 +43,7 @@
   function freshProgress() {
     return { v: 2, xp: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
       bestStreak: 0, recent: [], facts: {}, days: {}, badges: {},
-      settings: { dailyGoal: 20, focusTables: allTables() } };
+      settings: { dailyGoal: 20, focusTables: allTables(), streakFreeze: true } };
   }
   function normalize(p) {
     var f = freshProgress();
@@ -51,6 +51,7 @@
     if (!p.settings) p.settings = {};
     if (typeof p.settings.dailyGoal !== "number") p.settings.dailyGoal = 20;
     if (!Array.isArray(p.settings.focusTables) || !p.settings.focusTables.length) p.settings.focusTables = allTables();
+    if (typeof p.settings.streakFreeze !== "boolean") p.settings.streakFreeze = true;
     return p;
   }
   function pKey(id) { return STORE_KEY + "." + (id || activeId); }
@@ -132,12 +133,25 @@
   }
 
   /* ---------------- streak ---------------- */
-  function metOn(key) { var d = progress.days[key]; return d && d.q >= progress.settings.dailyGoal; }
-  function currentStreak() {
-    var i = metOn(dayKey(0)) ? 0 : 1, s = 0;
-    while (metOn(dayKey(i))) { s++; i++; }
-    return s;
+  function metOn(key) { var d = progress.days[key]; return !!(d && d.q >= progress.settings.dailyGoal); }
+  // Streak with an optional "freeze": an isolated missed day is forgiven, but at most
+  // once per rolling 7 days (so you can't keep a streak by practising every other day),
+  // and never two missed days in a row.
+  var FREEZE_WINDOW = 7;
+  function streakDetail() {
+    var freezeOn = progress.settings.streakFreeze !== false;
+    var i = metOn(dayKey(0)) ? 0 : 1; // today, if not met yet, is still "in progress"
+    var streak = 0, frozen = 0, recentBridge = null, lastBridge = -999;
+    while (true) {
+      if (metOn(dayKey(i))) { streak++; i++; continue; }
+      var canBridge = freezeOn && metOn(dayKey(i + 1)) && (i - lastBridge) >= FREEZE_WINDOW;
+      if (canBridge) { if (recentBridge === null) recentBridge = i; lastBridge = i; frozen++; i++; continue; }
+      break;
+    }
+    var freezeReady = freezeOn && (recentBridge === null || recentBridge >= FREEZE_WINDOW);
+    return { streak: streak, frozen: frozen, freezeReady: freezeReady, freezeOn: freezeOn, todayMet: metOn(dayKey(0)) };
   }
+  function currentStreak() { return streakDetail().streak; }
   function bestStreak() { return Math.max(progress.bestStreak || 0, currentStreak()); }
 
   function recentAcc(n) {
@@ -230,9 +244,10 @@
     $("#xp-text").textContent = progress.xp + " XP";
     $("#level-ring-fg").style.strokeDashoffset = String(RING_C * (1 - lp.frac));
 
-    var streak = currentStreak();
+    var det = streakDetail(), streak = det.streak;
     $("#streak-num").textContent = streak;
     $(".streak-pill").classList.toggle("is-lit", streak > 0);
+    $("#streak-freeze").hidden = !(det.freezeReady && streak > 0);
 
     var goal = progress.settings.dailyGoal, done = (progress.days[dayKey(0)] || {}).q || 0;
     $("#daily-goal").textContent = goal;
@@ -242,6 +257,11 @@
     if (done >= goal) msg = "Goal smashed today! 🎉 Come back tomorrow to grow your streak.";
     else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
     else msg = "Do your Daily Challenge to keep your streak alive!";
+    if (streak > 0 && !det.todayMet) {
+      msg += det.freezeReady
+        ? "  ❄️ Streak freeze is ready — one missed day is okay."
+        : "  🔥 Practise today to keep your " + streak + "-day streak!";
+    }
     $("#daily-msg").textContent = msg;
     $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · " + focusLabel();
   }
@@ -638,6 +658,7 @@
     }
 
     $("#goal-value").textContent = progress.settings.dailyGoal;
+    $("#freeze-toggle").setAttribute("aria-checked", progress.settings.streakFreeze !== false ? "true" : "false");
     renderFocusPicker();
   }
   function renderFocusPicker() {
@@ -801,6 +822,13 @@
     $("#goal-plus").addEventListener("click", function () { changeGoal(5); });
     $("#focus-all").addEventListener("click", function () { sTap(); setFocus(allTables()); });
     $("#focus-hard").addEventListener("click", function () { sTap(); setFocus([6, 7, 8, 9, 10, 11, 12]); });
+    $("#freeze-toggle").addEventListener("click", function () {
+      sTap();
+      progress.settings.streakFreeze = !(progress.settings.streakFreeze !== false);
+      save();
+      $("#freeze-toggle").setAttribute("aria-checked", progress.settings.streakFreeze ? "true" : "false");
+      renderHome();
+    });
     $("#reset-progress").addEventListener("click", function () {
       var who = activeProfile(); var nm = who ? who.name : "this player";
       if (window.confirm("Reset " + nm + "'s stars, streaks and progress? This can't be undone.")) {

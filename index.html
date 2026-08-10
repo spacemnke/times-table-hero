@@ -68,6 +68,7 @@
         <button class="streak-pill" data-go="badges" aria-label="Your streak and badges">
           <span class="streak-flame" id="streak-flame">🔥</span>
           <span class="streak-num" id="streak-num">0</span>
+          <span class="streak-freeze" id="streak-freeze" hidden title="Streak freeze ready">❄️</span>
         </button>
       </header>
 
@@ -298,6 +299,13 @@
           </div>
           <p class="rep-note">Tap to choose which tables her Daily Challenge draws from.</p>
           <div class="mini-grid" id="focus-picker"></div>
+        </div>
+
+        <div class="toggle-row">
+          <span class="toggle-row__label">Streak freeze ❄️
+            <span class="toggle-row__hint">Forgive one missed day (once a week) so an off day doesn't reset the streak.</span>
+          </span>
+          <button class="switch" id="freeze-toggle" role="switch" aria-checked="true"><span class="switch__dot"></span></button>
         </div>
 
         <h3 class="rep-h">Players</h3>

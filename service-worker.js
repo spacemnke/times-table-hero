@@ -1,5 +1,5 @@
 /* Times Table Hero — offline cache. Bump CACHE when files change. */
-var CACHE = "tth-v5";
+var CACHE = "tth-v6";
 var ASSETS = [
   "./",
   "./index.html",

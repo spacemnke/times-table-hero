@@ -23,7 +23,9 @@ reason to come back every day.
 - **📚 Learn** — see any full table, 1–12.
 - **Streaks, XP & levels** — every correct answer earns XP (with speed & combo
   bonuses); levels come with ranks (Rookie → Legend). A 🔥 streak grows each day she
-  hits her goal.
+  hits her goal, and a **❄️ streak freeze** forgives one missed day (at most once a
+  week, never two days in a row) so an off day doesn't wipe her progress — a ❄️ next to
+  the streak means a freeze is in reserve. Parents can switch it off in the report.
 - **🏅 Badges** — a dozen unlockables (First Win, Lightning, Table Master, Week
   Warrior, Century, …) to chase.
 - Gentle sound effects & haptics (mute button included), encouraging messages, and
