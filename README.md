@@ -9,15 +9,49 @@ and no Xcode required**.
 
 ## What's inside
 
-- **📚 Learn** — tap a number to see its whole times table, 1–12.
-- **🎈 Practice** — relaxed flashcards. Pick which tables to work on, flip to reveal
-  the answer, no scoring or pressure.
-- **⭐️ Quiz** — multiple-choice questions with instant feedback, a progress bar, and
-  stars earned for good scores. Choose the tables and how many questions (5 / 10 / 20).
-- **🏆 My Stars** — tracks your best score and stars on each table. Saved on the
-  device, works offline.
-- Gentle sound effects & haptics (with a mute button), encouraging messages, and
-  confetti for great scores.
+Designed for around age 10 — real recall (typed answers), a proper game loop, and a
+reason to come back every day.
+
+**For the kid**
+- **⚡️ Daily Challenge** — one tap starts a set of questions that *adapts to her weak
+  spots* and counts toward her daily goal & streak.
+- **🎮 Quiz** — pick tables, choose **Type** (number pad) or **Choose** (multiple
+  choice) and 10 / 15 / 25 questions. Timed feel with a combo multiplier.
+- **🧠 Practice** — relaxed flashcards, including a **🎯 "My tricky ones"** deck built
+  from the exact facts she gets wrong most.
+- **📚 Learn** — see any full table, 1–12.
+- **Streaks, XP & levels** — every correct answer earns XP (with speed & combo
+  bonuses); levels come with ranks (Rookie → Legend). A 🔥 streak grows each day she
+  hits her goal.
+- **🏅 Badges** — a dozen unlockables (First Win, Lightning, Table Master, Week
+  Warrior, Century, …) to chase.
+- Gentle sound effects & haptics (mute button included), encouraging messages, and
+  confetti/level-up celebrations.
+
+**For the parent — a private report** (see below).
+
+Everything is saved on the device and works offline. No accounts, no ads, no data
+leaves the phone.
+
+## 👀 The Parent Report
+
+Tap **🔒 Grown-ups** at the bottom of the home screen and solve a quick two-digit
+multiplication (a light gate so she can't wander in and accidentally reset things).
+Inside you'll find:
+
+![Parent report](docs/parent-report.png)
+
+- **Overall accuracy, questions answered, and time practising.**
+- **Practice this week** — a bar per day (green = daily goal met) so you can see if the
+  habit is sticking.
+- **Accuracy by table** — a color-coded bar for each table 1–12.
+- **Trickiest facts** — the specific facts she gets wrong most (e.g. `7 × 8 — 67%`), so
+  you know exactly what to help with.
+- **Fact mastery map** — a 12×12 heatmap (green = strong, red = needs work, grey = not
+  tried) for the whole picture at a glance.
+- **Daily goal** setting (5–50 questions/day) and a reset button.
+
+> The report reads the same on-device history the game records — nothing is uploaded.
 
 ## Put it on your iPhone (2 steps)
 
@@ -66,7 +100,10 @@ smoke.js                # headless browser test of the core flows
 
 - **Change the top number** (e.g. up to 15): edit `var MAX = 12;` near the top of
   `js/app.js`.
-- **Change star thresholds**: see `starsFor(pct)` in `js/app.js`.
+- **Tune XP / levels / badges**: see the `xp / level`, `BADGES`, and `submit()` sections
+  in `js/app.js`.
+- **Default daily goal**: `dailyGoal` in `freshProgress()` (or change it live in the
+  Parent Report).
 - **Regenerate icons** after editing colors: `pip install Pillow && python3 make_icons.py`.
 - If you change any file, bump `var CACHE = "tth-v1";` in `service-worker.js` so phones
   pick up the new version.
