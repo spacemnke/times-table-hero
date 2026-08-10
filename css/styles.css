@@ -284,6 +284,16 @@ body {
 .step { border: none; width: 34px; height: 34px; border-radius: 10px; background: var(--card-2); color: var(--brand);
   font-size: 22px; font-weight: 900; cursor: pointer; }
 .step:active { transform: scale(.9); }
+.focus-block { background: var(--card); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow-sm); margin-top: 12px; }
+.focus-head { display: flex; align-items: center; justify-content: space-between; font-weight: 800; gap: 8px; flex-wrap: wrap; }
+.focus-actions { display: flex; gap: 6px; }
+.chip--sm { padding: 6px 11px; font-size: 12px; box-shadow: none; background: var(--card-2); }
+.mini-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-top: 10px; }
+.mini-btn { border: none; padding: 10px 0; border-radius: 10px; background: var(--card-2); color: var(--ink);
+  font-weight: 800; font-size: 15px; cursor: pointer; }
+.mini-btn:active { transform: scale(.9); }
+.mini-btn.is-on { background: linear-gradient(140deg, var(--brand), var(--brand-2)); color: #fff; }
+
 .btn-reset { margin-top: 20px; color: var(--bad); }
 
 /* ---------------- sound ---------------- */

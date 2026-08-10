@@ -35,9 +35,11 @@
   var soundOn = loadSound();
 
   /* ---------------- persistence ---------------- */
+  function allTables() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
   function freshProgress() {
     return { v: 2, xp: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
-      bestStreak: 0, recent: [], facts: {}, days: {}, badges: {}, settings: { dailyGoal: 20 } };
+      bestStreak: 0, recent: [], facts: {}, days: {}, badges: {},
+      settings: { dailyGoal: 20, focusTables: allTables() } };
   }
   function loadProgress() {
     try { var raw = localStorage.getItem(STORE_KEY); if (raw) { var p = JSON.parse(raw); return normalize(p); } } catch (e) {}
@@ -46,8 +48,9 @@
   function normalize(p) {
     var f = freshProgress();
     for (var k in f) if (!(k in p)) p[k] = f[k];
-    if (!p.settings) p.settings = { dailyGoal: 20 };
+    if (!p.settings) p.settings = {};
     if (typeof p.settings.dailyGoal !== "number") p.settings.dailyGoal = 20;
+    if (!Array.isArray(p.settings.focusTables) || !p.settings.focusTables.length) p.settings.focusTables = allTables();
     return p;
   }
   function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) {} }
@@ -187,7 +190,21 @@
     else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
     else msg = "Do your Daily Challenge to keep your streak alive!";
     $("#daily-msg").textContent = msg;
-    $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · builds your streak";
+    $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · " + focusLabel();
+  }
+
+  function focusTables() {
+    var f = progress.settings.focusTables;
+    return (Array.isArray(f) && f.length) ? f.slice().sort(function (a, b) { return a - b; }) : allTables();
+  }
+  function focusLabel() {
+    var f = focusTables();
+    if (f.length === MAX) return "all tables";
+    // contiguous range?
+    var contiguous = f.every(function (v, i) { return i === 0 || v === f[i - 1] + 1; });
+    if (contiguous && f.length > 1) return "tables " + f[0] + "–" + f[f.length - 1];
+    if (f.length === 1) return "just the " + f[0] + "s";
+    return f.length + " tables";
   }
 
   /* ---------------- LEARN ---------------- */
@@ -579,7 +596,25 @@
     }
 
     $("#goal-value").textContent = progress.settings.dailyGoal;
+    renderFocusPicker();
   }
+  function renderFocusPicker() {
+    var grid = $("#focus-picker"); grid.innerHTML = "";
+    var sel = progress.settings.focusTables;
+    for (var i = 1; i <= MAX; i++) (function (n) {
+      var b = el("button", "mini-btn" + (sel.indexOf(n) >= 0 ? " is-on" : ""), String(n));
+      b.addEventListener("click", function () {
+        sTap();
+        var arr = progress.settings.focusTables, k = arr.indexOf(n);
+        if (k >= 0) { if (arr.length > 1) arr.splice(k, 1); } // keep at least one
+        else arr.push(n);
+        arr.sort(function (x, y) { return x - y; });
+        save(); renderFocusPicker(); renderHome();
+      });
+      grid.appendChild(b);
+    })(i);
+  }
+  function setFocus(arr) { progress.settings.focusTables = arr.slice(); save(); renderFocusPicker(); renderHome(); }
 
   /* ---------------- init / wiring ---------------- */
   function init() {
@@ -615,7 +650,7 @@
 
     $("#daily-challenge").addEventListener("click", function () {
       sTap(); ac();
-      startPlay({ tables: [1,2,3,4,5,6,7,8,9,10,11,12], len: clamp(progress.settings.dailyGoal, 10, 25), mode: "type", isDaily: true });
+      startPlay({ tables: focusTables(), len: clamp(progress.settings.dailyGoal, 10, 25), mode: "type", isDaily: true });
     });
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
     $("#practice-start").addEventListener("click", function () { sTap(); startPractice(deckFromTables(state.practiceTables)); });
@@ -643,6 +678,8 @@
     $("#gate-input").addEventListener("keydown", function (e) { if (e.key === "Enter") tryGate(); });
     $("#goal-minus").addEventListener("click", function () { changeGoal(-5); });
     $("#goal-plus").addEventListener("click", function () { changeGoal(5); });
+    $("#focus-all").addEventListener("click", function () { sTap(); setFocus(allTables()); });
+    $("#focus-hard").addEventListener("click", function () { sTap(); setFocus([6, 7, 8, 9, 10, 11, 12]); });
     $("#reset-progress").addEventListener("click", function () {
       if (window.confirm("Reset ALL of her stars, streaks and progress? This can't be undone.")) {
         progress = freshProgress(); save(); showReport(); renderHome();

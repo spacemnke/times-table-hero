@@ -69,6 +69,10 @@ function seed() {
   await page.evaluate(() => document.querySelector('#rep-heatmap').scrollIntoView({ block: "center" }));
   await sleep(300);
   await page.screenshot({ path: "shot-parent-heat.png" });
+  await page.click('#focus-hard');
+  await page.evaluate(() => document.querySelector('.focus-block').scrollIntoView({ block: "center" }));
+  await sleep(300);
+  await page.screenshot({ path: "shot-parent-settings.png" });
 
   await browser.close();
   server.kill();

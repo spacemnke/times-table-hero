@@ -106,8 +106,37 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const gv = await page.textContent('#goal-value');
   console.log("✓ daily goal adjustable, now =", gv.trim());
 
-  // LEARN
+  // focus tables: set Hard 6–12, verify Daily Challenge respects it
+  await page.click('#focus-hard');
+  const onCount = await page.$$eval('#focus-picker .mini-btn.is-on', e => e.length);
+  console.log("✓ focus picker set to Hard 6–12, tables lit =", onCount);
+  if (onCount !== 7) throw new Error("expected 7 focus tables, got " + onCount);
+  const savedFocus = await page.evaluate(() => JSON.parse(localStorage.getItem("tth.progress.v2")).settings.focusTables);
+  if (savedFocus.join() !== "6,7,8,9,10,11,12") throw new Error("focus not saved: " + savedFocus);
   await page.click('.screen--parent.is-active [data-go="home"]');
+  const ctaSub = await page.textContent('#cta-sub');
+  console.log("✓ home CTA reflects focus:", ctaSub.trim());
+  await page.click('#daily-challenge');
+  await page.waitForSelector('.screen--play.is-active');
+  // sample the left operand of several questions — all must be within 6..12
+  let okFocus = true;
+  const seenA = new Set();
+  for (let s = 0; s < 6; s++) {
+    const q = await page.textContent('#play-question');
+    const a = parseInt(q.split("×")[0].trim(), 10);
+    seenA.add(a);
+    if (a < 6) okFocus = false;
+    // answer correct to advance
+    const [aa, bb] = q.split("×").map(x => parseInt(x.trim(), 10));
+    for (const ch of String(aa * bb)) await page.click(`.key[data-key="${ch}"]`);
+    await sleep(700);
+  }
+  console.log("✓ daily challenge tables seen:", [...seenA].sort((a,b)=>a-b).join(","), "— all ≥6:", okFocus);
+  if (!okFocus) throw new Error("daily challenge served a table below 6 despite focus");
+  await page.click('#play-quit');
+
+  // LEARN (we're back on home after quitting the challenge)
+  await page.waitForSelector('.screen--home.is-active');
   await page.click('.screen--home.is-active [data-go="learn"]');
   await page.click('#learn-picker .num-btn:nth-child(8)');
   await page.waitForSelector('#learn-table .table-row');

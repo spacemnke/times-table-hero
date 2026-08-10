@@ -49,7 +49,9 @@ Inside you'll find:
   you know exactly what to help with.
 - **Fact mastery map** — a 12×12 heatmap (green = strong, red = needs work, grey = not
   tried) for the whole picture at a glance.
-- **Daily goal** setting (5–50 questions/day) and a reset button.
+- **Daily goal** setting (5–50 questions/day).
+- **Daily Challenge tables** — choose exactly which tables her Daily Challenge draws
+  from (e.g. tap **Hard 6–12** to focus on the tricky ones), and a reset button.
 
 > The report reads the same on-device history the game records — nothing is uploaded.
 
