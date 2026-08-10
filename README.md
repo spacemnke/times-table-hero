@@ -17,8 +17,9 @@ reason to come back every day.
   spots* and counts toward her daily goal & streak.
 - **🎮 Quiz** — pick tables, choose **Type** (number pad) or **Choose** (multiple
   choice) and 10 / 15 / 25 questions. Timed feel with a combo multiplier.
-- **🧠 Practice** — relaxed flashcards, including a **🎯 "My tricky ones"** deck built
-  from the exact facts she gets wrong most.
+- **🧠 Practice** — relaxed, untimed: she **types** the answer on the number pad (no
+  scoring pressure), including a **🎯 "My tricky ones"** deck built from the exact facts
+  she gets wrong most.
 - **📚 Learn** — see any full table, 1–12.
 - **Streaks, XP & levels** — every correct answer earns XP (with speed & combo
   bonuses); levels come with ranks (Rookie → Legend). A 🔥 streak grows each day she

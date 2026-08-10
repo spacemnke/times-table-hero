@@ -74,6 +74,30 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForSelector('.screen--results.is-active');
   console.log("✓ choose-mode quiz finished:", (await page.textContent('#results-score')).trim());
 
+  // PRACTICE (now typed, no timer)
+  await page.click('.screen--results.is-active [data-go="home"]');
+  await page.click('.screen--home.is-active [data-go="practice-setup"]');
+  await page.click('#practice-picker .num-btn:nth-child(3)'); // the 3s
+  await page.click('#practice-start');
+  await page.waitForSelector('.screen--play.is-active');
+  const practiceKeypad = !(await page.getAttribute('#keypad', 'hidden'));
+  const practiceTimerHidden = (await page.getAttribute('#timerbar', 'hidden')) !== null;
+  const pcount = parseInt((await page.textContent('#play-counter')).split("/")[1].trim(), 10);
+  console.log("✓ practice started — typed keypad:", practiceKeypad, "| timer hidden:", practiceTimerHidden, "| questions:", pcount);
+  if (!practiceKeypad) throw new Error("practice should use the typed keypad");
+  if (!practiceTimerHidden) throw new Error("practice should have no timer");
+  if (pcount !== 12) throw new Error("practice on the 3s should be 12 questions, got " + pcount);
+  // answer all by typing (all should be 3 × n)
+  for (let i = 0; i < pcount; i++) {
+    const q = await page.textContent('#play-question');
+    const [a, b] = q.split("×").map(s => parseInt(s.trim(), 10));
+    if (a !== 3) throw new Error("practice on the 3s served " + q);
+    for (const ch of String(a * b)) await page.click(`.key[data-key="${ch}"]`);
+    await sleep(650);
+  }
+  await page.waitForSelector('.screen--results.is-active');
+  console.log("✓ practice finished (typed):", (await page.textContent('#results-title')).trim());
+
   // BADGES screen
   await page.click('.screen--results.is-active [data-go="home"]');
   await page.click('.screen--home.is-active [data-go="badges"]');

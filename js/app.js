@@ -308,11 +308,12 @@
 
   /* ---------------- PLAY engine ---------------- */
   function startPlay(opts) {
-    // opts: {tables, len, mode, isDaily}
+    // opts: {tables, len, mode, isDaily, questions, practice}
     state.lastStart = opts;
-    var questions = buildQuestions(opts.tables, opts.len);
+    var questions = opts.questions ? opts.questions.slice() : buildQuestions(opts.tables, opts.len);
     state.play = {
-      mode: opts.mode, isDaily: !!opts.isDaily, questions: questions, total: questions.length,
+      mode: opts.mode, isDaily: !!opts.isDaily, practice: !!opts.practice,
+      questions: questions, total: questions.length,
       i: 0, correct: 0, xpEarned: 0, combo: 0, maxCombo: 0, typed: "", answered: false, qStart: 0,
       levelBefore: levelFromXp(progress.xp), goalJustMet: false,
     };
@@ -320,7 +321,7 @@
     $("#keypad").hidden = opts.mode !== "type";
     $("#answer-box").hidden = opts.mode !== "type";
     $("#play-answers").hidden = opts.mode !== "choose";
-    $("#timerbar").hidden = false;
+    $("#timerbar").hidden = !!opts.practice; // relaxed: no timer in practice
     show("play");
     renderQuestion();
   }
@@ -345,7 +346,7 @@
     $("#answer-box").className = "answer-box";
     updateDisplay();
     if (p.mode === "choose") renderChoices(q.a * q.b);
-    startTimer();
+    if (!p.practice) startTimer();
   }
   function updateDisplay() {
     var d = $("#answer-display"), p = state.play;
@@ -443,6 +444,7 @@
     else if (acc >= 0.8) { title = "Awesome! 🌟"; msg = "So close to perfect — brilliant work!"; }
     else if (acc >= 0.6) { title = "Well done! 💪"; msg = "You're getting stronger every day. Keep going!"; }
     else { title = "Good effort! 🙌"; msg = "Tricky ones today — practice will crack them!"; }
+    if (p.practice) { title = perfect ? "Practice done! 🌟" : "Practice done! 👏"; msg = "Nice practising — every go makes it stick."; }
     if (p.goalJustMet) msg = "🔥 Daily goal complete! " + msg;
     $("#results-title").textContent = title; $("#results-msg").textContent = msg;
 
@@ -466,26 +468,10 @@
     setTimeout(function () { host.innerHTML = ""; }, 3800);
   }
 
-  /* ---------------- PRACTICE flashcards ---------------- */
+  /* ---------------- PRACTICE (typed, relaxed) ---------------- */
   function startPractice(deck) {
-    state.deck = deck; state.deckIndex = 0;
-    show("practice"); renderFlash();
-  }
-  function renderFlash() {
-    if (state.deckIndex >= state.deck.length) { shuffle(state.deck); state.deckIndex = 0; }
-    var c = state.deck[state.deckIndex];
-    $("#flash-q").textContent = c.a + " × " + c.b;
-    var a = $("#flash-a"); a.textContent = c.a * c.b; a.hidden = true;
-    $("#flash-hint").hidden = false;
-  }
-  function flipFlash() { if ($("#flash-a").hidden) { $("#flash-a").hidden = false; $("#flash-hint").hidden = true; sFlip(); haptic(8); } }
-  function answerFlash(correct) {
-    var c = state.deck[state.deckIndex];
-    recordAnswer(c.a, c.b, correct, 4000);
-    evaluateBadges({}); save();
-    if (correct) sGood(); else sBad();
-    state.deckIndex++;
-    renderFlash();
+    // relaxed: type the answer, no timer; covers the deck once
+    startPlay({ questions: shuffle(deck.slice()), mode: "type", practice: true });
   }
 
   /* ---------------- BADGES screen ---------------- */
@@ -667,11 +653,6 @@
       else if (e.key === "Backspace") keypad("del");
       else if (e.key === "Enter") keypad("enter");
     });
-
-    // flashcards
-    $("#flashcard").addEventListener("click", flipFlash);
-    $("#flash-next").addEventListener("click", function (e) { e.stopPropagation(); sTap(); if ($("#flash-a").hidden) flipFlash(); answerFlash(true); });
-    $("#flash-again").addEventListener("click", function (e) { e.stopPropagation(); sTap(); if ($("#flash-a").hidden) flipFlash(); answerFlash(false); });
 
     // parent gate
     $("#gate-go").addEventListener("click", function () { sTap(); tryGate(); });
