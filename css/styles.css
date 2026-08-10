@@ -53,6 +53,48 @@ body {
 .screen.is-active { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
 
+/* ---------------- profiles ---------------- */
+.screen--profiles { padding-top: 8vh; }
+.profiles-head { text-align: center; margin-bottom: 26px; }
+.profiles__title { font-size: 34px; font-weight: 900; margin: 0;
+  background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.profiles__sub { color: var(--ink-soft); font-weight: 700; margin: 6px 0 0; }
+.profiles-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 420px; margin: 0 auto; }
+.pcard { border: none; background: var(--card); border-radius: 22px; padding: 22px 12px 16px; box-shadow: var(--shadow);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--ink); }
+.pcard:active { transform: scale(.95); }
+.pcard__av { font-size: 54px; line-height: 1; }
+.pcard__name { font-size: 19px; font-weight: 800; }
+.pcard__meta { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+.pcard--add { border: 2px dashed var(--line); background: transparent; box-shadow: none; justify-content: center; min-height: 130px; }
+.pcard--add .pcard__av { color: var(--brand); }
+
+.player-switch { display: inline-flex; align-items: center; gap: 7px; border: none; background: var(--card);
+  box-shadow: var(--shadow-sm); border-radius: 999px; padding: 6px 12px 6px 8px; margin: 0 0 8px; cursor: pointer; color: var(--ink); }
+.player-switch:active { transform: scale(.95); }
+.player-switch__av { font-size: 22px; }
+.player-switch__name { font-weight: 800; font-size: 15px; }
+.player-switch__caret { color: var(--ink-soft); font-weight: 900; font-size: 12px; }
+
+.avatar-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.av-btn { border: none; background: var(--card); border-radius: 12px; padding: 8px 0; font-size: 24px; cursor: pointer; box-shadow: var(--shadow-sm); }
+.av-btn:active { transform: scale(.9); }
+.av-btn.is-on { background: linear-gradient(140deg, var(--brand), var(--brand-2)); box-shadow: 0 6px 14px rgba(91,61,240,.4); }
+.name-input { width: 100%; text-align: center; font-size: 22px; font-weight: 800; padding: 14px; border-radius: 14px;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.name-input:focus { outline: none; border-color: var(--brand); }
+
+.players-manage { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.pm-row { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow-sm); }
+.pm-av { font-size: 24px; }
+.pm-name { flex: 1; font-weight: 800; }
+.pm-name .pm-active { color: var(--brand); font-size: 11px; font-weight: 800; margin-left: 6px; }
+.pm-btn { border: none; background: var(--card-2); color: var(--brand); font-weight: 800; font-size: 13px; padding: 7px 11px; border-radius: 9px; cursor: pointer; }
+.pm-btn--del { color: var(--bad); }
+.pm-btn:active { transform: scale(.92); }
+
+.rep-who { font-weight: 800; color: var(--brand); margin: 0 0 12px; font-size: 15px; }
+
 /* ---------------- dashboard ---------------- */
 .dash-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px 14px; }
 .dash-level { display: flex; align-items: center; gap: 12px; }

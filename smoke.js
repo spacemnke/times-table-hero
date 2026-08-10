@@ -16,8 +16,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const base = `http://localhost:${PORT}/index.html`;
   await page.goto(base, { waitUntil: "networkidle" });
+
+  // First run → create-profile screen
+  await page.waitForSelector('.screen--profile-new.is-active');
+  const backHidden = await page.evaluate(() => getComputedStyle(document.querySelector('#pn-back')).visibility === 'hidden');
+  console.log("✓ first run shows profile creation (back hidden:", backHidden + ")");
+  await page.click('#avatar-grid .av-btn:nth-child(2)');
+  await page.fill('#pn-name', 'Mia');
+  await page.click('#pn-create');
   await page.waitForSelector('.screen--home.is-active');
-  console.log("✓ home/dashboard loaded, title:", await page.title());
+  console.log("✓ created profile, player switch shows:", (await page.textContent('#ps-name')).trim(), (await page.textContent('#ps-av')).trim());
 
   // helper: answer a typed play question correctly via keypad
   async function answerTyped() {
@@ -44,7 +52,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   if (!score.includes(total + " / " + total)) throw new Error("expected perfect daily, got " + score);
 
   // progress persisted
-  const p = await page.evaluate(() => JSON.parse(localStorage.getItem("tth.progress.v2")));
+  const readActive = () => page.evaluate(() => {
+    const reg = JSON.parse(localStorage.getItem("tth.profiles.v1"));
+    return JSON.parse(localStorage.getItem("tth.progress.v2." + reg.activeId));
+  });
+  const p = await readActive();
   console.log("✓ saved: xp =", p.xp, "| totalCorrect =", p.totalCorrect, "| level facts tracked =", Object.keys(p.facts).length);
   if (p.totalCorrect !== total) throw new Error("totalCorrect mismatch");
 
@@ -135,7 +147,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const onCount = await page.$$eval('#focus-picker .mini-btn.is-on', e => e.length);
   console.log("✓ focus picker set to Hard 6–12, tables lit =", onCount);
   if (onCount !== 7) throw new Error("expected 7 focus tables, got " + onCount);
-  const savedFocus = await page.evaluate(() => JSON.parse(localStorage.getItem("tth.progress.v2")).settings.focusTables);
+  const savedFocus = (await readActive()).settings.focusTables;
   if (savedFocus.join() !== "6,7,8,9,10,11,12") throw new Error("focus not saved: " + savedFocus);
   await page.click('.screen--parent.is-active [data-go="home"]');
   const ctaSub = await page.textContent('#cta-sub');
@@ -166,6 +178,36 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForSelector('#learn-table .table-row');
   const r = (await page.$$eval('#learn-table .table-row', e => e.map(x => x.textContent))).find(t => t.includes("8 × 7"));
   console.log("✓ learn 8×7 row:", r.replace(/\s+/g, " ").trim());
+
+  // PROFILES: add a second player, verify isolation
+  await page.click('.screen--learn.is-active [data-go="home"]');
+  const miaXp = (await readActive()).xp;
+  await page.click('#player-switch');
+  await page.waitForSelector('.screen--profiles.is-active');
+  const cards1 = await page.$$eval('.profiles-grid .pcard:not(.pcard--add)', e => e.length);
+  console.log("✓ profile picker shows", cards1, "player(s) + add");
+  await page.click('.profiles-grid .pcard--add');
+  await page.waitForSelector('.screen--profile-new.is-active');
+  await page.click('#avatar-grid .av-btn:nth-child(5)');
+  await page.fill('#pn-name', 'Ava');
+  await page.click('#pn-create');
+  await page.waitForSelector('.screen--home.is-active');
+  const avaName = (await page.textContent('#ps-name')).trim();
+  const avaXp = (await readActive()).xp;
+  console.log("✓ second player active:", avaName, "| her XP:", avaXp, "(fresh, was Mia's", miaXp + ")");
+  if (avaName !== "Ava") throw new Error("expected Ava active");
+  if (avaXp !== 0) throw new Error("new profile should start at 0 XP, got " + avaXp);
+
+  // switch back to Mia — her progress intact
+  await page.click('#player-switch');
+  await page.waitForSelector('.screen--profiles.is-active');
+  const names = await page.$$eval('.profiles-grid .pcard__name', e => e.map(x => x.textContent));
+  console.log("✓ both players listed:", names.filter(n => n !== "Add player").join(", "));
+  await page.click('.profiles-grid .pcard'); // first card = Mia
+  await page.waitForSelector('.screen--home.is-active');
+  const backXp = (await readActive()).xp;
+  console.log("✓ switched back to", (await page.textContent('#ps-name')).trim(), "— XP restored:", backXp);
+  if (backXp !== miaXp) throw new Error("Mia's XP not restored: " + backXp + " vs " + miaXp);
 
   await browser.close();
   server.kill();

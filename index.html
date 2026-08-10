@@ -21,8 +21,36 @@
 <body>
   <div id="app">
 
+    <!-- ============ PROFILES PICKER ============ -->
+    <section class="screen screen--profiles" data-screen="profiles">
+      <div class="profiles-head">
+        <h1 class="profiles__title">Who's playing?</h1>
+        <p class="profiles__sub">Tap your character</p>
+      </div>
+      <div class="profiles-grid" id="profiles-grid"></div>
+    </section>
+
+    <!-- ============ NEW PROFILE ============ -->
+    <section class="screen screen--profile-new" data-screen="profile-new">
+      <div class="topbar">
+        <button class="btn-back" id="pn-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title" id="pn-title">New Player</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Pick a character</p>
+      <div class="avatar-grid" id="avatar-grid"></div>
+      <p class="picker-label">What's your name?</p>
+      <input class="name-input" id="pn-name" type="text" maxlength="12" autocomplete="off"
+             autocapitalize="words" placeholder="Type a name" />
+      <button class="btn-primary" id="pn-create" disabled>Create player 🎉</button>
+    </section>
+
     <!-- ============ HOME / DASHBOARD ============ -->
     <section class="screen screen--home is-active" data-screen="home">
+      <button class="player-switch" id="player-switch" aria-label="Switch player">
+        <span class="player-switch__av" id="ps-av">⭐️</span>
+        <span class="player-switch__name" id="ps-name">Player</span>
+        <span class="player-switch__caret">▾</span>
+      </button>
       <header class="dash-top">
         <div class="dash-level">
           <div class="ring" id="level-ring">
@@ -227,6 +255,7 @@
 
       <!-- report -->
       <div id="parent-report" hidden>
+        <p class="rep-who" id="rep-who"></p>
         <div class="rep-grid">
           <div class="rep-cell"><b id="rep-acc">0%</b><span>Overall accuracy</span></div>
           <div class="rep-cell"><b id="rep-total">0</b><span>Questions answered</span></div>
@@ -271,7 +300,11 @@
           <div class="mini-grid" id="focus-picker"></div>
         </div>
 
-        <button class="btn-secondary btn-reset" id="reset-progress">Reset all progress</button>
+        <h3 class="rep-h">Players</h3>
+        <div class="players-manage" id="players-manage"></div>
+        <button class="chip chip--sm" id="players-add">＋ Add player</button>
+
+        <button class="btn-secondary btn-reset" id="reset-progress">Reset this player's progress</button>
       </div>
     </section>
   </div>

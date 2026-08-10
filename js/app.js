@@ -3,9 +3,11 @@
   "use strict";
 
   var MAX = 12;
-  var STORE_KEY = "tth.progress.v2";
+  var STORE_KEY = "tth.progress.v2";     // per-profile: STORE_KEY + "." + profileId
+  var PROFILES_KEY = "tth.profiles.v1";
   var SOUND_KEY = "tth.sound.v1";
   var RING_C = 119.38; // 2*pi*19
+  var AVATARS = ["🦄", "🐰", "🐱", "🐶", "🦊", "🐨", "🐼", "🐸", "🦁", "🦖", "🐝", "🦋", "🌸", "⭐️", "🚀", "🐙"];
 
   /* ---------------- helpers ---------------- */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -31,7 +33,9 @@
     lastStart: null, parentUnlocked: false, gateAnswer: 0,
   };
 
-  var progress = loadProgress();
+  var reg = null;             // profiles registry { activeId, profiles: [{id,name,avatar}] }
+  var activeId = null;
+  var progress = freshProgress();
   var soundOn = loadSound();
 
   /* ---------------- persistence ---------------- */
@@ -41,10 +45,6 @@
       bestStreak: 0, recent: [], facts: {}, days: {}, badges: {},
       settings: { dailyGoal: 20, focusTables: allTables() } };
   }
-  function loadProgress() {
-    try { var raw = localStorage.getItem(STORE_KEY); if (raw) { var p = JSON.parse(raw); return normalize(p); } } catch (e) {}
-    return freshProgress();
-  }
   function normalize(p) {
     var f = freshProgress();
     for (var k in f) if (!(k in p)) p[k] = f[k];
@@ -53,9 +53,62 @@
     if (!Array.isArray(p.settings.focusTables) || !p.settings.focusTables.length) p.settings.focusTables = allTables();
     return p;
   }
-  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) {} }
+  function pKey(id) { return STORE_KEY + "." + (id || activeId); }
+  function loadProgress() {
+    if (!activeId) return freshProgress();
+    try { var raw = localStorage.getItem(pKey()); if (raw) return normalize(JSON.parse(raw)); } catch (e) {}
+    return freshProgress();
+  }
+  function save() { if (!activeId) return; try { localStorage.setItem(pKey(), JSON.stringify(progress)); } catch (e) {} }
   function loadSound() { try { return localStorage.getItem(SOUND_KEY) !== "off"; } catch (e) { return true; } }
   function saveSound() { try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {} }
+
+  /* ---------------- profiles ---------------- */
+  function genId() { return "p" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+  function profilesLoad() {
+    try { var raw = localStorage.getItem(PROFILES_KEY); if (raw) { var r = JSON.parse(raw); if (r && Array.isArray(r.profiles)) return r; } } catch (e) {}
+    return { activeId: null, profiles: [] };
+  }
+  function profilesSave() { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(reg)); } catch (e) {} }
+  function activeProfile() { for (var i = 0; i < reg.profiles.length; i++) if (reg.profiles[i].id === activeId) return reg.profiles[i]; return null; }
+  function migrateLegacy() {
+    // one-time: fold pre-profiles progress into a first profile
+    if (reg.profiles.length) return;
+    var legacy = null;
+    try { legacy = localStorage.getItem(STORE_KEY); } catch (e) {}
+    if (legacy) {
+      var id = genId();
+      reg.profiles.push({ id: id, name: "Player 1", avatar: "⭐️" });
+      reg.activeId = id;
+      try { localStorage.setItem(pKey(id), legacy); localStorage.removeItem(STORE_KEY); } catch (e) {}
+      profilesSave();
+    }
+  }
+  function setActive(id) {
+    reg.activeId = id; activeId = id; profilesSave();
+    progress = loadProgress();
+    state.parentUnlocked = false; // re-gate the report after a switch
+    updatePlayerSwitch();
+  }
+  function createProfile(name, avatar) {
+    var id = genId();
+    reg.profiles.push({ id: id, name: (name || "Player").slice(0, 12), avatar: avatar || "⭐️" });
+    profilesSave();
+    setActive(id);
+    save(); // persist the fresh progress so the profile exists on disk immediately
+    return id;
+  }
+  function deleteProfile(id) {
+    reg.profiles = reg.profiles.filter(function (p) { return p.id !== id; });
+    try { localStorage.removeItem(pKey(id)); } catch (e) {}
+    if (activeId === id) { activeId = null; reg.activeId = null; }
+    profilesSave();
+    if (!activeId && reg.profiles.length) setActive(reg.profiles[0].id);
+  }
+  function renameProfile(id, name) {
+    var p = reg.profiles.filter(function (x) { return x.id === id; })[0];
+    if (p) { p.name = (name || p.name).slice(0, 12); profilesSave(); }
+  }
 
   /* ---------------- fact stats (commutative merge) ---------------- */
   function factKey(a, b) { return a + "×" + b; }
@@ -513,6 +566,9 @@
   }
   function showReport() {
     $("#parent-report").hidden = false;
+    var who = activeProfile();
+    $("#rep-who").textContent = who ? (who.avatar + "  Showing " + who.name + "'s progress") : "";
+    renderPlayers();
     var acc = progress.totalQ ? progress.totalCorrect / progress.totalQ : 0;
     $("#rep-acc").textContent = Math.round(acc * 100) + "%";
     $("#rep-total").textContent = progress.totalQ;
@@ -602,6 +658,90 @@
   }
   function setFocus(arr) { progress.settings.focusTables = arr.slice(); save(); renderFocusPicker(); renderHome(); }
 
+  /* ---------------- profiles UI ---------------- */
+  function updatePlayerSwitch() {
+    var p = activeProfile();
+    $("#ps-av").textContent = p ? p.avatar : "⭐️";
+    $("#ps-name").textContent = p ? p.name : "Player";
+  }
+  function renderProfiles() {
+    var grid = $("#profiles-grid"); grid.innerHTML = "";
+    reg.profiles.forEach(function (p) {
+      // read that profile's streak without disturbing the active one
+      var streak = profileStreak(p.id);
+      var card = el("button", "pcard");
+      card.appendChild(el("span", "pcard__av", p.avatar));
+      card.appendChild(el("span", "pcard__name", p.name));
+      card.appendChild(el("span", "pcard__meta", streak > 0 ? "🔥 " + streak + " day streak" : "Let's go!"));
+      card.addEventListener("click", function () { sTap(); setActive(p.id); renderHome(); show("home"); });
+      grid.appendChild(card);
+    });
+    var add = el("button", "pcard pcard--add");
+    add.appendChild(el("span", "pcard__av", "＋"));
+    add.appendChild(el("span", "pcard__name", "Add player"));
+    add.addEventListener("click", function () { sTap(); openProfileNew(false); });
+    grid.appendChild(add);
+  }
+  function profileStreak(id) {
+    // compute current streak for any profile by peeking at its stored data
+    var days = null, goal = 20;
+    try { var raw = localStorage.getItem(pKey(id)); if (raw) { var p = JSON.parse(raw); days = p.days || {}; goal = (p.settings && p.settings.dailyGoal) || 20; } } catch (e) {}
+    if (!days) return 0;
+    var met = function (k) { return days[k] && days[k].q >= goal; };
+    var i = met(dayKey(0)) ? 0 : 1, s = 0;
+    while (met(dayKey(i))) { s++; i++; }
+    return s;
+  }
+  var newAvatar = AVATARS[0];
+  function buildAvatarGrid() {
+    var grid = $("#avatar-grid"); grid.innerHTML = "";
+    AVATARS.forEach(function (av, idx) {
+      var b = el("button", "av-btn" + (idx === 0 ? " is-on" : ""), av);
+      b.addEventListener("click", function () {
+        sTap(); newAvatar = av;
+        $all(".av-btn", grid).forEach(function (x) { x.classList.remove("is-on"); });
+        b.classList.add("is-on");
+      });
+      grid.appendChild(b);
+    });
+  }
+  function openProfileNew(isFirst) {
+    newAvatar = AVATARS[0];
+    buildAvatarGrid();
+    $("#pn-name").value = "";
+    $("#pn-create").disabled = true;
+    $("#pn-back").style.visibility = isFirst ? "hidden" : "visible";
+    $("#pn-title").textContent = isFirst ? "Create your player" : "New Player";
+    show("profile-new");
+    setTimeout(function () { $("#pn-name").focus(); }, 250);
+  }
+  function renderPlayers() {
+    var wrap = $("#players-manage"); wrap.innerHTML = "";
+    reg.profiles.forEach(function (p) {
+      var row = el("div", "pm-row");
+      row.appendChild(el("span", "pm-av", p.avatar));
+      var nm = el("span", "pm-name", p.name);
+      if (p.id === activeId) { var tag = el("span", "pm-active", "active"); nm.appendChild(tag); }
+      row.appendChild(nm);
+      var ren = el("button", "pm-btn", "Rename");
+      ren.addEventListener("click", function () {
+        var v = window.prompt("Rename player:", p.name);
+        if (v && v.trim()) { renameProfile(p.id, v.trim()); renderPlayers(); updatePlayerSwitch(); }
+      });
+      row.appendChild(ren);
+      if (reg.profiles.length > 1) {
+        var del = el("button", "pm-btn pm-btn--del", "Delete");
+        del.addEventListener("click", function () {
+          if (window.confirm("Delete " + p.name + " and all their progress? This can't be undone.")) {
+            deleteProfile(p.id); renderPlayers(); updatePlayerSwitch(); showReport();
+          }
+        });
+        row.appendChild(del);
+      }
+      wrap.appendChild(row);
+    });
+  }
+
   /* ---------------- init / wiring ---------------- */
   function init() {
     buildLearn();
@@ -662,9 +802,21 @@
     $("#focus-all").addEventListener("click", function () { sTap(); setFocus(allTables()); });
     $("#focus-hard").addEventListener("click", function () { sTap(); setFocus([6, 7, 8, 9, 10, 11, 12]); });
     $("#reset-progress").addEventListener("click", function () {
-      if (window.confirm("Reset ALL of her stars, streaks and progress? This can't be undone.")) {
+      var who = activeProfile(); var nm = who ? who.name : "this player";
+      if (window.confirm("Reset " + nm + "'s stars, streaks and progress? This can't be undone.")) {
         progress = freshProgress(); save(); showReport(); renderHome();
       }
+    });
+
+    // profiles
+    $("#player-switch").addEventListener("click", function () { sTap(); renderProfiles(); show("profiles"); });
+    $("#pn-back").addEventListener("click", function () { sTap(); renderProfiles(); show("profiles"); });
+    $("#players-add").addEventListener("click", function () { sTap(); openProfileNew(false); });
+    $("#pn-name").addEventListener("input", function () { $("#pn-create").disabled = this.value.trim().length === 0; });
+    $("#pn-name").addEventListener("keydown", function (e) { if (e.key === "Enter" && this.value.trim()) $("#pn-create").click(); });
+    $("#pn-create").addEventListener("click", function () {
+      var name = $("#pn-name").value.trim(); if (!name) return;
+      sTap(); createProfile(name, newAvatar); renderHome(); show("home");
     });
 
     // sound
@@ -672,7 +824,16 @@
     st.addEventListener("click", function () { soundOn = !soundOn; saveSound(); st.textContent = soundOn ? "🔊" : "🔈"; if (soundOn) { ac(); sTap(); } });
     document.addEventListener("touchstart", function once() { ac(); document.removeEventListener("touchstart", once); }, { passive: true });
 
-    renderHome(); show("home");
+    boot();
+  }
+  function boot() {
+    reg = profilesLoad();
+    migrateLegacy();
+    if (!reg.profiles.length) { openProfileNew(true); return; }              // first run → create
+    if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); return; }
+    // more than one → let them choose
+    if (reg.activeId) activeId = reg.activeId;
+    renderProfiles(); show("profiles");
   }
   function deckFromTables(tables) {
     var deck = []; tables.forEach(function (t) { for (var b = 1; b <= MAX; b++) deck.push({ a: t, b: b }); });

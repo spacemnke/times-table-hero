@@ -29,6 +29,12 @@ reason to come back every day.
 - Gentle sound effects & haptics (mute button included), encouraging messages, and
   confetti/level-up celebrations.
 
+**Multiple kids** — each child gets their own **profile** (name + character avatar) with
+completely separate progress, streak, XP, badges and parent report. A "Who's playing?"
+picker appears on launch when there's more than one; tap the player chip at the top of
+the home screen any time to switch. Add or remove players from the picker or the Parent
+Report.
+
 **For the parent — a private report** (see below).
 
 Everything is saved on the device and works offline. No accounts, no ads, no data
