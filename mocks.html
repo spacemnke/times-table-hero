@@ -1,0 +1,174 @@
+<meta charset="utf-8" />
+<title>Quest Land — Style Mockups</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  :root{--bg:#0d0f1a;--card:#161a2b;--ink:#eef0ff;--soft:#9aa0c4;--line:#252a44;}
+  *{box-sizing:border-box;margin:0;}
+  body{background:radial-gradient(120% 80% at 50% -10%,#1c2140,#0b0d18);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;padding:20px 14px 40px;}
+  .wrap{max-width:560px;margin:0 auto;}
+  header{text-align:center;margin:6px 0 22px;}
+  header .ey{font:800 12px/1 ui-monospace,monospace;letter-spacing:.28em;text-transform:uppercase;color:#8f7bff;}
+  header h1{font-size:26px;font-weight:900;margin:8px 0 4px;letter-spacing:-.01em;}
+  header p{color:var(--soft);font-size:14px;font-weight:600;max-width:44ch;margin:0 auto;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:22px;box-shadow:0 16px 40px rgba(0,0,0,.4);}
+  .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:16px 18px 10px;}
+  .head .n{font:900 20px/1 ui-sans-serif,system-ui;}
+  .head .tag{font:800 10px/1 ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:#0d0f1a;padding:6px 10px;border-radius:999px;}
+  .scene{display:block;width:100%;height:auto;background:#000;}
+  .pixel{image-rendering:pixelated;image-rendering:crisp-edges;}
+  .desc{padding:12px 18px 18px;color:var(--soft);font-size:13.5px;font-weight:600;line-height:1.5;}
+  .desc b{color:var(--ink);font-weight:800;}
+  .foot{text-align:center;color:var(--soft);font-size:12px;margin-top:6px;}
+  .a .tag{background:#ffd23f;} .b .tag{background:#9bbc0f;} .c .tag{background:#ff4fd8;}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="ey">Quest Land · art direction</div>
+    <h1>Three visual styles</h1>
+    <p>Same game, three different looks for the adventure land and its heroes. Mockups only — pick a direction (or mix).</p>
+  </header>
+
+  <div class="card a">
+    <div class="head"><span class="n">1 · 8-Bit Arcade</span><span class="tag">retro · pixel</span></div>
+    <canvas id="sA" class="scene pixel" width="320" height="200"></canvas>
+    <div class="desc"><b>Bright NES-era pixel art.</b> Chunky sprites, a punchy limited palette, blocky tiles and coin-boxes, subtle CRT scanlines. Nostalgic, playful, reads great on small screens.</div>
+  </div>
+
+  <div class="card b">
+    <div class="head"><span class="n">2 · Game Boy</span><span class="tag">retro · mono</span></div>
+    <canvas id="sB" class="scene pixel" width="320" height="200"></canvas>
+    <div class="desc"><b>Classic handheld, 4 shades of green.</b> Dot-matrix monochrome with bold outlines. Super distinctive and cohesive; a strong "cool retro" identity, calmer and less busy.</div>
+  </div>
+
+  <div class="card c">
+    <div class="head"><span class="n">3 · Synthwave</span><span class="tag">retro · neon</span></div>
+    <canvas id="sC" class="scene" width="640" height="400"></canvas>
+    <div class="desc"><b>80s neon retro-futurism.</b> Glowing outlines, a striped sunset sun and a perspective grid floor. Smooth (not pixel), high-energy and premium — the "wow" option.</div>
+  </div>
+
+  <div class="foot">Heroes shown: the same 3 characters (unicorn / cat / fox) would be drawn in whichever style you pick.</div>
+</div>
+
+<script>
+(function(){
+  /* ============ shared pixel drawing ============ */
+  function mk(id){var c=document.getElementById(id);return {c:c,x:c.getContext("2d"),W:c.width,H:c.height};}
+  function R(g,px,py,w,h,col){g.fillStyle=col;g.fillRect(px,py,w,h);}
+
+  // chunky unicorn built from blocks (facing right). ox,oy = top-left, B = block px
+  function uni(g,ox,oy,B,P){
+    function b(col,row,w,h,c){R(g,ox+col*B,oy+row*B,(w||1)*B,(h||1)*B,c);}
+    b(0,5,2,4,P.mane);b(1,4,1,1,P.mane2);                 // tail
+    b(2,5,8,3,P.body);b(3,4,6,1,P.body);                   // body
+    b(2,8,1,2,P.shade);b(4,8,1,2,P.shade);b(7,8,1,2,P.shade);b(9,8,1,2,P.shade); // legs
+    b(9,3,4,4,P.body);b(8,4,1,2,P.body);                   // head+neck
+    b(9,2,1,1,P.body);                                     // ear
+    b(7,3,2,3,P.mane);b(6,4,1,2,P.mane);b(8,2,1,1,P.mane); // mane
+    b(7,4,1,1,P.mane2);
+    b(11,1,1,2,P.horn);b(12,0,1,1,P.horn);                 // horn
+    b(12,5,1,1,P.shade);                                   // muzzle
+    b(11,4,1,1,P.eye);                                     // eye
+  }
+  // simple pixel cat + slime to show "characters"
+  function critter(g,ox,oy,B,P,kind){
+    function b(col,row,w,h,c){R(g,ox+col*B,oy+row*B,(w||1)*B,(h||1)*B,c);}
+    if(kind==="cat"){b(1,3,5,4,P.c1);b(1,2,1,1,P.c1);b(5,2,1,1,P.c1);b(0,4,1,2,P.c1);b(6,4,1,3,P.shade);b(4,4,1,1,P.eye);b(2,4,1,1,P.eye);b(3,6,3,1,P.shade);}
+    else{b(0,4,7,3,P.e1);b(1,3,5,1,P.e1);b(2,2,3,1,P.e1);b(2,4,1,1,'#fff');b(4,4,1,1,'#fff');b(2,4,1,1,P.eye===undefined?'#111':P.eye);}
+  }
+
+  function pixelScene(o,PAL,U,mono){
+    var g=o.x,W=o.W,H=o.H;
+    R(g,0,0,W,H,PAL.sky);
+    // stars/clouds
+    if(mono){for(var s=0;s<14;s++){R(g,(s*53)%W,(s*29)%60,3,3,PAL.cloud);}}
+    else{[[24,26],[70,18],[210,30],[260,22]].forEach(function(c){R(g,c[0],c[1],26,8,PAL.cloud);R(g,c[0]+6,c[1]-6,16,8,PAL.cloud);});}
+    // hills
+    for(var i=0;i<W;i+=8){var hy=H-70-Math.round(Math.sin(i*0.03)*10);R(g,i,hy,8,H,PAL.hill);}
+    for(var i2=0;i2<W;i2+=8){var hy2=H-56-Math.round(Math.cos(i2*0.045)*8);R(g,i2,hy2,8,H,PAL.hillD);}
+    // ground band
+    R(g,0,H-40,W,40,PAL.groundTop);R(g,0,H-32,W,32,PAL.dirt);
+    for(var d=0;d<W;d+=16){R(g,d,H-32,2,32,PAL.ground);R(g,d+8,H-20,2,20,PAL.ground);} // brick lines
+    // coin
+    R(g,150,H-92,10,12,PAL.coin);R(g,152,H-90,2,8,PAL.coinHi);
+    // ? boxes
+    [180,196,212].forEach(function(bx){R(g,bx,H-78,14,14,PAL.box);R(g,bx,H-78,14,2,PAL.boxHi);R(g,bx,H-66,14,2,PAL.boxDark);R(g,bx+6,H-73,2,4,PAL.boxDark);R(g,bx+6,H-68,2,2,PAL.boxDark);});
+    // enemy
+    critter(g,254,H-40-14,3,{e1:PAL.enemy,shade:PAL.enemyD,eye:PAL.enemyEye},"slime");
+    // flag / gate
+    R(g,300,H-96,2,56,PAL.pole);R(g,302,H-96,14,10,PAL.flag);
+    // hero
+    uni(g,20,H-40-11*U.B,U.B,U.P);
+    // scanlines
+    if(!mono){g.globalAlpha=.12;for(var y=0;y<H;y+=2){R(g,0,y,W,1,"#000");}g.globalAlpha=1;}
+    else{ // dot matrix + LCD tint
+      g.globalAlpha=.10;for(var yy=0;yy<H;yy+=2)for(var xx=0;xx<W;xx+=2)R(g,xx,yy,1,1,"#0f380f");g.globalAlpha=1;
+    }
+  }
+
+  /* ---- Palette A: 8-bit arcade ---- */
+  var arcade={sky:"#5c94fc",cloud:"#ffffff",hill:"#3aa64a",hillD:"#2f8f42",groundTop:"#7cc659",dirt:"#c9803f",ground:"#a8632f",
+    coin:"#ffd23f",coinHi:"#fff2a8",box:"#ffb020",boxHi:"#ffd77a",boxDark:"#c97a00",enemy:"#8b6cf0",enemyD:"#6a41d8",enemyEye:"#241a4a",pole:"#c0c0d0",flag:"#ff4fa3"};
+  var arcadeUni={B:5,P:{body:"#ffffff",shade:"#d9c9f2",mane:"#ff3f9a",mane2:"#ff8ec8",horn:"#ffd23f",eye:"#3a1a5e"}};
+
+  /* ---- Palette B: Game Boy (4 greens) ---- */
+  var D="#0f380f",M1="#306230",M2="#8bac0f",L="#9bbc0f";
+  // classic GB: dark characters/objects on a light land so everything pops
+  var gb={sky:L,cloud:M1,hill:M2,hillD:M1,groundTop:M2,dirt:M1,ground:D,coin:M2,coinHi:L,box:M2,boxHi:L,boxDark:D,enemy:D,enemyD:M1,enemyEye:L,pole:D,flag:D};
+  var gbUni={B:5,P:{body:D,shade:M1,mane:M2,mane2:M2,horn:M2,eye:L}};
+
+  pixelScene(mk("sA"),arcade,arcadeUni,false);
+  pixelScene(mk("sB"),gb,gbUni,true);
+
+  /* ============ Synthwave (smooth, neon) ============ */
+  (function(){
+    var o=mk("sC"),g=o.x,W=o.W,H=o.H;
+    var sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#160a2e");sky.addColorStop(.5,"#3a1160");sky.addColorStop(.72,"#8a1a6a");sky.addColorStop(.86,"#ff6a3d");sky.addColorStop(1,"#ffd06b");
+    g.fillStyle=sky;g.fillRect(0,0,W,H);
+    var hz=H*0.62;
+    // stars
+    for(var s=0;s<70;s++){var sx=(s*137)%W,sy=(s*71)%(hz-60);g.globalAlpha=.5+.5*Math.abs(Math.sin(s));g.fillStyle="#fff";g.fillRect(sx,sy,2,2);}g.globalAlpha=1;
+    // sun
+    var cx=W/2,cy=hz-60,rad=110;g.save();g.beginPath();g.arc(cx,cy,rad,0,7);g.clip();var sun=g.createLinearGradient(0,cy-rad,0,cy+rad);sun.addColorStop(0,"#fff2a8");sun.addColorStop(.5,"#ff5ca8");sun.addColorStop(1,"#7a1f8f");g.fillStyle=sun;g.fillRect(cx-rad,cy-rad,rad*2,rad*2);
+    g.fillStyle="#160a2e";for(var b=0;b<8;b++){var yy=cy+8+b*(rad/6);g.fillRect(cx-rad,yy,rad*2,Math.max(2,b));}g.restore();
+    g.shadowColor="rgba(255,120,200,.5)";g.shadowBlur=40;g.strokeStyle="rgba(255,150,220,.5)";g.lineWidth=3;g.beginPath();g.arc(cx,cy,rad,0,7);g.stroke();g.shadowBlur=0;
+    // mountains silhouette
+    g.fillStyle="#2a1150";g.beginPath();g.moveTo(0,hz);for(var m=0;m<=W;m+=40){g.lineTo(m,hz-Math.abs(Math.sin(m*0.01)*46)-16);}g.lineTo(W,hz);g.closePath();g.fill();
+    // grid floor
+    g.fillStyle="#0d0620";g.fillRect(0,hz,W,H-hz);
+    g.strokeStyle="rgba(0,240,255,.55)";g.lineWidth=2;g.shadowColor="rgba(0,240,255,.7)";g.shadowBlur=8;
+    g.beginPath();g.moveTo(0,hz);g.lineTo(W,hz);g.stroke();
+    for(var vx=-10;vx<=20;vx++){var X=cx+(vx*54);g.beginPath();g.moveTo(cx+(X-cx)*0.18,hz);g.lineTo(X*1.9-cx*0.9,H);g.stroke();}
+    for(var r=1;r<=9;r++){var t=r/9,yy2=hz+(H-hz)*(t*t);g.beginPath();g.moveTo(0,yy2);g.lineTo(W,yy2);g.stroke();}
+    g.shadowBlur=0;
+    // neon coin
+    neonCircle(g,150,hz-70,16,"#ffe14a","#ff9f1c");
+    // neon gate posts
+    g.strokeStyle="#00f0ff";g.shadowColor="#00f0ff";g.shadowBlur=16;g.lineWidth=5;g.strokeRect(430,hz-150,90,150);g.shadowBlur=0;
+    // neon hero (unicorn silhouette, glowing outline)
+    neonUni(g,150,hz+8,110);
+    // scanlines
+    g.globalAlpha=.10;g.fillStyle="#000";for(var y=0;y<H;y+=3)g.fillRect(0,y,W,1);g.globalAlpha=1;
+    function neonCircle(g,x,y,r,c1,c2){g.save();g.shadowColor=c1;g.shadowBlur=20;var gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,c1);gr.addColorStop(1,c2);g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,7);g.fill();g.restore();}
+    function neonUni(g,cx,fy,H2){var s=H2/100;g.save();g.translate(cx,fy);g.scale(s,s);
+      // silhouette path (body/head/horn/legs/tail)
+      g.beginPath();
+      g.moveTo(-42,-18);g.quadraticCurveTo(-62,-8,-54,20);g.quadraticCurveTo(-40,8,-34,4); // tail
+      g.lineTo(-34,-2);g.quadraticCurveTo(-40,-40,0,-42);g.quadraticCurveTo(18,-44,24,-30); // back to neck
+      g.lineTo(30,-58);g.lineTo(36,-30); // horn
+      g.quadraticCurveTo(46,-20,40,-6);g.quadraticCurveTo(44,2,34,4); // head/muzzle
+      g.quadraticCurveTo(20,10,6,8);g.lineTo(6,26);g.lineTo(0,26);g.lineTo(0,10); // front leg
+      g.lineTo(-18,10);g.lineTo(-18,26);g.lineTo(-24,26);g.lineTo(-24,8); // back leg
+      g.quadraticCurveTo(-40,6,-42,-18);g.closePath();
+      var fill=g.createLinearGradient(0,-58,0,26);fill.addColorStop(0,"#2a0f3e");fill.addColorStop(1,"#12061f");g.fillStyle=fill;g.fill();
+      g.shadowColor="#ff3df0";g.shadowBlur=18;g.strokeStyle="#ff6ef0";g.lineWidth=3;g.stroke();
+      // neon mane + horn accents
+      g.shadowColor="#00f0ff";g.shadowBlur=14;g.strokeStyle="#68f0ff";g.lineWidth=3;g.beginPath();g.moveTo(20,-34);g.quadraticCurveTo(6,-22,-10,-24);g.stroke();
+      g.strokeStyle="#ffe14a";g.shadowColor="#ffe14a";g.beginPath();g.moveTo(30,-58);g.lineTo(33,-40);g.stroke();
+      // eye
+      g.shadowBlur=6;g.fillStyle="#fff";g.beginPath();g.arc(33,-16,2.4,0,7);g.fill();
+      g.restore();}
+  })();
+})();
+</script>
