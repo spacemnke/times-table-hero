@@ -1,0 +1,302 @@
+<meta charset="utf-8" />
+<title>Quest Land — Level 1 Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<style>
+  :root{
+    --ink:#241a4a; --ink-soft:#6a6291; --paper:#ffffff; --paper-2:#f4f1ff; --edge:#e7e1f7;
+    --violet:#5b3df0; --violet-2:#8a5bff; --magenta:#ff3d81; --gold:#f2a516; --heart:#ff5c6c; --mint:#24b866;
+    --shadow:0 12px 30px rgba(70,40,150,.18);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;
+    color:var(--ink); background:linear-gradient(180deg,#b8e6ff,#e9f7ee); background-attachment:fixed;
+    -webkit-user-select:none;user-select:none; display:flex; flex-direction:column; align-items:center; min-height:100%;
+  }
+  .frame{ width:100%; max-width:540px; padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 10px); display:flex; flex-direction:column; gap:10px; }
+  .titlebar{ display:flex; align-items:center; justify-content:space-between; padding:6px 6px 0; }
+  .titlebar h1{ font-size:18px; margin:0; font-weight:900; letter-spacing:-.01em; }
+  .titlebar .world{ font-size:12px; font-weight:800; color:var(--violet); background:var(--paper); padding:5px 11px; border-radius:999px; box-shadow:var(--shadow); }
+
+  .stage{ position:relative; width:100%; border-radius:20px; overflow:hidden; box-shadow:var(--shadow); background:#bfe8ff; }
+  canvas{ display:block; width:100%; height:auto; }
+  .stage-hint{ position:absolute; left:0; right:0; bottom:8px; text-align:center; color:#fff; font-weight:800; font-size:13px;
+    text-shadow:0 2px 6px rgba(0,0,0,.35); pointer-events:none; opacity:.9; }
+
+  /* keypad panel */
+  .panel{ background:var(--paper); border-radius:20px; box-shadow:var(--shadow); padding:14px; }
+  .panel.hidden{ display:none; }
+  .gq{ text-align:center; font-size:34px; font-weight:900; margin:2px 0 8px; }
+  .abox{ max-width:220px; margin:0 auto 6px; background:var(--paper-2); border:3px solid transparent; border-radius:14px; padding:8px; text-align:center; }
+  .abox.good{ border-color:var(--mint);} .abox.bad{ border-color:var(--heart); animation:shake .35s ease;}
+  .adisp{ font-size:34px; font-weight:900; color:var(--violet); letter-spacing:2px; }
+  .adisp.ph{ color:var(--ink-soft); opacity:.5; }
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:300px; margin:6px auto 0; }
+  .key{ border:none; border-radius:14px; padding:14px 0; font-size:24px; font-weight:800; background:var(--paper-2); color:var(--ink); cursor:pointer; box-shadow:0 3px 0 var(--edge); }
+  .key:active{ transform:translateY(2px); box-shadow:none; }
+  .key.enter{ background:linear-gradient(120deg,var(--violet),var(--magenta)); color:#fff; }
+  .key.del{ color:var(--ink-soft); }
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  /* overlays */
+  .overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(28,18,60,.55); color:#fff; text-align:center; padding:20px; backdrop-filter:blur(2px); }
+  .overlay.hidden{ display:none; }
+  .overlay h2{ font-size:32px; margin:0; font-weight:900; }
+  .overlay p{ margin:0; font-weight:700; opacity:.95; }
+  .overlay .stars{ font-size:40px; letter-spacing:4px; }
+  .btn{ border:none; border-radius:14px; padding:14px 22px; font-size:17px; font-weight:900; cursor:pointer;
+    background:linear-gradient(120deg,var(--violet),var(--magenta)); color:#fff; box-shadow:var(--shadow); }
+  .btn.ghost{ background:#fff; color:var(--violet); }
+  .note{ text-align:center; color:var(--ink-soft); font-size:12px; font-weight:600; padding:2px 10px; }
+  .note b{ color:var(--ink); }
+</style>
+
+<div class="frame">
+  <div class="titlebar">
+    <h1>🌼 Meadow Springs</h1>
+    <span class="world">Level 1 · prototype</span>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="c" width="900" height="506" aria-label="A side-scrolling adventure level"></canvas>
+    <div class="stage-hint" id="hint">Tap to jump &amp; grab coins ✨</div>
+
+    <div class="overlay hidden" id="startOv">
+      <h2>Ready? 🏃‍♀️</h2>
+      <p>Run to each gate, then type the answer to smash through!</p>
+      <button class="btn" id="startBtn">Start the quest ⚡️</button>
+    </div>
+    <div class="overlay hidden" id="winOv">
+      <h2 id="winTitle">Level complete! 🏰</h2>
+      <div class="stars" id="winStars">⭐️⭐️⭐️</div>
+      <p id="winMsg"></p>
+      <button class="btn" id="winAgain">Play again</button>
+    </div>
+    <div class="overlay hidden" id="failOv">
+      <h2>Out of hearts! 💔</h2>
+      <p>So close — give the level another go.</p>
+      <button class="btn" id="failRetry">Retry level</button>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="panel">
+    <div class="gq" id="gq">7 × 8</div>
+    <div class="abox" id="abox"><span class="adisp ph" id="adisp">?</span></div>
+    <div class="keypad" id="keypad">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key del" data-k="del">⌫</button><button class="key" data-k="0">0</button><button class="key enter" data-k="enter">✓</button>
+    </div>
+  </div>
+
+  <p class="note">Prototype of the <b>gallop &amp; gate</b> loop · 6 gates → the castle. Real version: 20 gates, adaptive facts, coins → outfits.</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var c = document.getElementById("c"), ctx = c.getContext("2d");
+  var W = 900, H = 506, GROUND = 430;
+  var TABLES = [2,5,10,3,4]; // Meadow Springs mix
+  var GATES = 6, GAP = 1500, GATE0 = 780;
+
+  var state, cam, speed, nextGate, hearts, coins, hero, question, input, solved, particles, coinsList, bushes, shakeT, dashBoost, t0, cloudOff;
+
+  function reset(){
+    state = "start"; cam = 0; speed = 260; nextGate = 0; hearts = 3; coins = 0;
+    hero = { x: 180, y: GROUND, vy: 0, ground: true, run: 0 };
+    question = null; input = ""; solved = {}; particles = []; shakeT = 0; dashBoost = 0; cloudOff = 0;
+    // scatter coins & bushes between gates
+    coinsList = []; bushes = [];
+    for (var g = 0; g < GATES; g++){
+      var base = GATE0 + g*GAP;
+      for (var k = 0; k < 5; k++){
+        var cx = base - GAP + 260 + k*180 + (k*57 % 60);
+        var high = (k % 2 === 1);
+        coinsList.push({ x: cx, y: high ? GROUND-120 : GROUND-40, got:false });
+      }
+      bushes.push({ x: base - GAP + 420 }); bushes.push({ x: base - GAP + 980 });
+    }
+    showStart(true); showPanel(false); showWin(false); showFail(false);
+    hint("Tap to jump & grab coins ✨");
+  }
+
+  /* ---------- ui helpers ---------- */
+  function $(id){ return document.getElementById(id); }
+  function showStart(v){ $("startOv").classList.toggle("hidden", !v); }
+  function showWin(v){ $("winOv").classList.toggle("hidden", !v); }
+  function showFail(v){ $("failOv").classList.toggle("hidden", !v); }
+  function showPanel(v){ $("panel").classList.toggle("hidden", !v); }
+  function hint(txt){ $("hint").textContent = txt; $("hint").style.opacity = txt ? .9 : 0; }
+
+  /* ---------- audio ---------- */
+  var ac=null; function AC(){ if(!ac){ var A=window.AudioContext||window.webkitAudioContext; if(A) ac=new A(); } return ac; }
+  function beep(f,d,type,when,v){ var x=AC(); if(!x) return; var t=x.currentTime+(when||0),o=x.createOscillator(),g=x.createGain();
+    o.type=type||"sine";o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v||.15,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(x.destination);o.start(t);o.stop(t+d+.02); }
+  function sCoin(){ beep(880,.08,"triangle",0,.12); beep(1320,.08,"triangle",.05,.1); }
+  function sGood(){ beep(660,.1,"sine",0); beep(990,.14,"sine",.09); }
+  function sBad(){ beep(180,.22,"sine",0); }
+  function sJump(){ beep(520,.09,"square",0,.08); }
+  function sWin(){ [523,659,784,1046].forEach(function(f,i){ beep(f,.16,"sine",i*.11); }); }
+  function haptic(m){ if(navigator.vibrate){ try{navigator.vibrate(m);}catch(e){} } }
+
+  /* ---------- input ---------- */
+  function jump(){ if(state!=="run") return; if(hero.ground){ hero.vy = -560; hero.ground=false; sJump(); } }
+  c.addEventListener("pointerdown", function(){ AC(); jump(); });
+  document.addEventListener("keydown", function(e){
+    if(state==="gate"){ if(e.key>="0"&&e.key<="9") key(e.key); else if(e.key==="Backspace") key("del"); else if(e.key==="Enter") key("enter"); }
+    else if(e.key===" "){ e.preventDefault(); jump(); }
+  });
+  $("keypad").addEventListener("click", function(e){ var b=e.target.closest(".key"); if(b){ AC(); key(b.getAttribute("data-k")); } });
+
+  function updateDisp(){ var d=$("adisp"); if(input===""){ d.textContent="?"; d.classList.add("ph"); } else { d.textContent=input; d.classList.remove("ph"); } }
+  function key(k){
+    if(state!=="gate") return;
+    if(k==="del"){ input=input.slice(0,-1); updateDisp(); return; }
+    if(k==="enter"){ if(input!=="") submit(parseInt(input,10)); return; }
+    if(input.length>=3) return; if(input===""&&k==="0") return;
+    input += k; updateDisp();
+    var ans = question.a*question.b;
+    if(parseInt(input,10)===ans) submit(ans);
+  }
+  function submit(val){
+    var ans = question.a*question.b;
+    if(val===ans){
+      $("abox").className="abox good"; sGood(); haptic(12);
+      solved[nextGate]=true; coins+=5; burstCoins();
+      setTimeout(function(){
+        showPanel(false); $("abox").className="abox";
+        state="run"; dashBoost=0.9; nextGate++; input="";
+        hint(nextGate>=GATES ? "Dash to the castle! 🏰" : "Nice! Tap to jump ✨");
+      }, 420);
+    } else {
+      hearts--; $("abox").className="abox bad"; sBad(); haptic([10,40,10]); shakeT=0.35; input=""; updateDisp();
+      if(hearts<=0){ setTimeout(function(){ showPanel(false); state="fail"; showFail(true); }, 400); }
+    }
+  }
+
+  function burstCoins(){ for(var i=0;i<14;i++){ particles.push({ x:hero.x+40, y:hero.y-40, vx:(Math.random()*2-.4)*160, vy:-(Math.random()*260+120), life:1 }); } coins+=0; }
+
+  /* ---------- gate arrival ---------- */
+  function pick(){ var a=TABLES[Math.floor(Math.random()*TABLES.length)]; var b=1+Math.floor(Math.random()*12); return {a:a,b:b}; }
+  function gateWorldX(i){ return GATE0 + i*GAP; }
+
+  /* ---------- update ---------- */
+  var last=0;
+  function frame(ts){
+    if(!t0) t0=ts; var dt=Math.min(.05,(ts-(last||ts))/1000); last=ts;
+    cloudOff += dt*14;
+    if(state==="run"){
+      var sp = speed*(1+dashBoost); dashBoost=Math.max(0,dashBoost-dt*1.6);
+      cam += sp*dt;
+      hero.run += dt*sp*0.03;
+      // jump physics
+      if(!hero.ground){ hero.vy += 1500*dt; hero.y += hero.vy*dt; if(hero.y>=GROUND){ hero.y=GROUND; hero.vy=0; hero.ground=true; } }
+      // collect coins
+      var hwx = cam + hero.x;
+      for(var i=0;i<coinsList.length;i++){ var co=coinsList[i]; if(co.got) continue;
+        if(Math.abs(co.x-hwx)<34 && Math.abs(co.y-hero.y)<60){ co.got=true; coins++; sCoin(); particles.push({x:hero.x,y:hero.y-30,vx:0,vy:-160,life:.6,coin:true}); } }
+      // reach next gate?
+      if(nextGate<GATES){ var gx=gateWorldX(nextGate); if(gx-cam <= 560){ arriveGate(); } }
+      else { // heading to castle
+        var cx=gateWorldX(GATES); if(cx-cam <= 480){ win(); } }
+    }
+    // particles
+    for(var p=particles.length-1;p>=0;p--){ var pt=particles[p]; pt.x+=pt.vx*dt; pt.vy+=1400*dt; pt.y+=pt.vy*dt; pt.life-=dt*1.2; if(pt.life<=0) particles.splice(p,1); }
+    if(shakeT>0) shakeT-=dt;
+    draw();
+    requestAnimationFrame(frame);
+  }
+  function arriveGate(){ state="gate"; question=pick(); input=""; updateDisp();
+    $("gq").textContent=question.a+" × "+question.b; showPanel(true); hint(""); }
+  function win(){ state="win"; sWin(); haptic([15,60,15,60,15]);
+    var stars=hearts>=3?3:hearts===2?2:1; var row=""; for(var i=0;i<3;i++) row+= i<stars?"⭐️":"☆";
+    $("winStars").textContent=row; $("winTitle").textContent= stars===3?"Perfect run! 🏰":"Level complete! 🏰";
+    $("winMsg").textContent="🪙 "+coins+" coins earned · "+hearts+" ❤️ left"; showWin(true); hint(""); }
+
+  /* ---------- draw ---------- */
+  function draw(){
+    ctx.save();
+    var sx = shakeT>0 ? (Math.random()*2-1)*6 : 0, sy = shakeT>0 ? (Math.random()*2-1)*4 : 0;
+    ctx.clearRect(0,0,W,H); ctx.translate(sx,sy);
+
+    // sky
+    var sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#8fd3ff"); sky.addColorStop(1,"#d9f3ff");
+    ctx.fillStyle=sky; ctx.fillRect(-10,-10,W+20,H+20);
+    // sun
+    ctx.fillStyle="rgba(255,240,170,.9)"; ctx.beginPath(); ctx.arc(760,90,44,0,7); ctx.fill();
+    // clouds (parallax)
+    ctx.fillStyle="rgba(255,255,255,.9)";
+    for(var i=0;i<4;i++){ var cxp=((i*260 - (cam*0.15+cloudOff)) % (W+300)); if(cxp<-150) cxp+=W+300; cloud(cxp,70+ (i%2)*40); }
+    // far hills (parallax)
+    hills(cam*0.25, 300, "#bfe6a8"); hills(cam*0.45, 350, "#a3d98a");
+    // ground
+    ctx.fillStyle="#8bd06a"; ctx.fillRect(-10,GROUND+18,W+20,H);
+    ctx.fillStyle="#7cc659"; ctx.fillRect(-10,GROUND+18,W+20,10);
+
+    // bushes
+    for(var b=0;b<bushes.length;b++){ var bx=bushes[b].x-cam; if(bx>-60&&bx<W+60) bush(bx,GROUND+16); }
+    // coins
+    for(var k=0;k<coinsList.length;k++){ var co=coinsList[k]; if(co.got) continue; var cxs=co.x-cam; if(cxs>-40&&cxs<W+40) coin(cxs,co.y); }
+    // gates (monsters)
+    for(var g=nextGate;g<GATES;g++){ if(solved[g]) continue; var gx=gateWorldX(g)-cam; if(gx>-80&&gx<W+120) gate(gx, g); }
+    // castle
+    var castX=gateWorldX(GATES)-cam; if(castX>-120&&castX<W+160){ ctx.font="96px system-ui"; ctx.textAlign="center"; ctx.fillText("🏰",castX,GROUND+6); }
+
+    // hero
+    hero_draw(hero.x, hero.y);
+    // particles (coins)
+    for(var p=0;p<particles.length;p++){ var pt=particles[p]; ctx.globalAlpha=Math.max(0,pt.life); ctx.font="22px system-ui"; ctx.textAlign="center"; ctx.fillText("🪙",pt.x,pt.y); ctx.globalAlpha=1; }
+
+    ctx.restore();
+    hud();
+  }
+  function cloud(x,y){ ctx.beginPath(); ctx.arc(x,y,26,0,7); ctx.arc(x+30,y-10,32,0,7); ctx.arc(x+66,y,26,0,7); ctx.rect(x-6,y,78,26); ctx.fill(); }
+  function hills(off,base,col){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(-10,GROUND+20);
+    for(var x=-10;x<=W+10;x+=40){ var y=base - Math.sin((x+off)*0.007)*46 - Math.cos((x+off)*0.013)*20; ctx.lineTo(x,y); }
+    ctx.lineTo(W+10,GROUND+20); ctx.closePath(); ctx.fill(); }
+  function bush(x,y){ ctx.font="46px system-ui"; ctx.textAlign="center"; ctx.fillText("🌿",x,y); }
+  function coin(x,y){ var s=1+Math.sin((cam+x)*0.02)*0.12; ctx.save(); ctx.translate(x,y); ctx.scale(s,1); ctx.font="30px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🪙",0,0); ctx.restore(); ctx.textBaseline="alphabetic"; }
+  function gate(x,g){
+    // stone posts + banner + monster
+    ctx.fillStyle="#9b8bbf"; ctx.fillRect(x-6,GROUND-120,12,138); ctx.fillRect(x+64,GROUND-120,12,138);
+    ctx.fillStyle="#b7a9d6"; ctx.fillRect(x-14,GROUND-132,98,16);
+    ctx.font="52px system-ui"; ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillText("👹",x+35,GROUND+6);
+  }
+  var HERO_EMOJI="🦄";
+  function hero_draw(x,y){
+    var bob = hero.ground ? Math.abs(Math.sin(hero.run*6))*6 : 0;
+    // shadow
+    ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(x,GROUND+10,26,8,0,0,7); ctx.fill();
+    ctx.font="54px system-ui"; ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillText(HERO_EMOJI, x, y - bob + 8);
+  }
+  function hud(){
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    // hearts
+    ctx.font="26px system-ui"; var hh=""; for(var i=0;i<3;i++) hh += i<hearts?"❤️":"🤍"; ctx.fillText(hh, 16, 40);
+    // coins
+    ctx.fillStyle="rgba(40,20,80,.9)"; ctx.font="700 22px ui-rounded,system-ui,sans-serif"; ctx.textAlign="right";
+    ctx.fillText("🪙 "+coins, W-16, 40);
+    // gate progress
+    ctx.textAlign="center"; ctx.fillStyle="rgba(40,20,80,.75)"; ctx.font="700 18px ui-rounded,system-ui,sans-serif";
+    var gi=Math.min(nextGate+ (state==="gate"?1:0), GATES); ctx.fillText("Gate "+Math.min(nextGate+1,GATES)+" / "+GATES, W/2, 34);
+  }
+
+  /* ---------- controls ---------- */
+  $("startBtn").addEventListener("click", function(){ AC(); showStart(false); state="run"; });
+  $("winAgain").addEventListener("click", function(){ reset(); state="run"; showStart(false); });
+  $("failRetry").addEventListener("click", function(){ reset(); state="run"; showStart(false); });
+
+  // expose for automated testing
+  window.__proto = {
+    get state(){return state;}, get q(){return question;}, get hearts(){return hearts;}, get coins(){return coins;}, get gate(){return nextGate;}
+  };
+
+  reset();
+  requestAnimationFrame(frame);
+})();
+</script>
