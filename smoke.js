@@ -160,10 +160,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Daily Quest is the adventure — check its questions all come from the focused tables
   await page.click('#daily-challenge');
   await page.waitForSelector('.screen--adv.is-active');
-  const advQs = await page.evaluate(() => window.__adv.q ? window.__adv.q : null);
-  // read the full adaptive question set built for this run (all left operands must be ≥6)
+  await page.waitForSelector('#adv-mapOv:not(.hidden)');
+  await page.evaluate(() => window.__adv.start(1));   // enter Meadow
+  // arrive at the first gate to expose a question, then inspect (all left operands must be ≥6)
   const okFocus = await page.evaluate(() => {
-    // arrive at the first gate to expose a question, then inspect
     return new Promise(resolve => {
       const start = Date.now();
       const iv = setInterval(() => {
@@ -174,7 +174,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   });
   console.log("✓ adventure first gate left-operand ≥6:", okFocus);
   if (okFocus !== true) throw new Error("adventure served a table below 6 despite focus");
-  await page.click('#adv-quit');
+  await page.click('#adv-quit');                       // back to map
+  await page.waitForSelector('#adv-mapOv:not(.hidden)');
+  await page.click('#adv-map-close');                  // map → home
 
   // LEARN (we're back on home after quitting the quest)
   await page.waitForSelector('.screen--home.is-active');
