@@ -41,13 +41,14 @@
   /* ---------------- persistence ---------------- */
   function allTables() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
   function freshProgress() {
-    return { v: 2, xp: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
+    return { v: 2, xp: 0, coins: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
       bestStreak: 0, recent: [], facts: {}, days: {}, badges: {},
       settings: { dailyGoal: 20, focusTables: allTables(), streakFreeze: true } };
   }
   function normalize(p) {
     var f = freshProgress();
     for (var k in f) if (!(k in p)) p[k] = f[k];
+    if (typeof p.coins !== "number") p.coins = 0;
     if (!p.settings) p.settings = {};
     if (typeof p.settings.dailyGoal !== "number") p.settings.dailyGoal = 20;
     if (!Array.isArray(p.settings.focusTables) || !p.settings.focusTables.length) p.settings.focusTables = allTables();
@@ -256,7 +257,7 @@
     var msg;
     if (done >= goal) msg = "Goal smashed today! 🎉 Come back tomorrow to grow your streak.";
     else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
-    else msg = "Do your Daily Challenge to keep your streak alive!";
+    else msg = "Start your Daily Quest to keep your streak alive!";
     if (streak > 0 && !det.todayMet) {
       msg += det.freezeReady
         ? "  ❄️ Streak freeze is ready — one missed day is okay."
@@ -763,6 +764,161 @@
     });
   }
 
+  /* ---------------- ADVENTURE (side-scroller daily quest) ---------------- */
+  var AW = 900, AH = 506, AGROUND = 430, AGATE0 = 720, AGAP = 1150, START_HEARTS = 5;
+  var adv = null, advCtx = null, advRAF = null, advLast = 0;
+
+  function aBeep(f, d, type, v) { tone(f, d, type, 0, v); }
+  function aCoinSnd() { tone(880, .07, "triangle", 0, .1); tone(1320, .07, "triangle", .04, .09); }
+  function aJumpSnd() { tone(520, .08, "square", 0, .07); }
+
+  function startAdventure() {
+    ac();
+    var cv = $("#adv-canvas"); advCtx = cv.getContext("2d");
+    var len = clamp(progress.settings.dailyGoal, 10, 25);
+    var qs = buildQuestions(focusTables(), len);
+    var prof = activeProfile();
+    adv = {
+      qs: qs, total: qs.length, next: 0, hearts: START_HEARTS, coins: 0, correct: 0, wrong: 0,
+      xpEarned: 0, combo: 0, maxCombo: 0, cam: 0, speed: 300, dash: 0, cloud: 0, shakeT: 0,
+      hero: { x: 180, y: AGROUND, vy: 0, ground: true, run: 0 }, heroEm: prof ? prof.avatar : "🦄",
+      state: "run", question: null, input: "", solved: {}, particles: [], coinsList: [], bushes: [],
+      qStart: 0, levelBefore: levelFromXp(progress.xp), goalMet: false, badgesBefore: Object.keys(progress.badges).length,
+    };
+    // scatter coins & bushes across the level
+    for (var g = 0; g < adv.total; g++) {
+      var base = AGATE0 + g * AGAP;
+      for (var k = 0; k < 5; k++) adv.coinsList.push({ x: base - AGAP + 260 + k * 180 + (k * 57 % 60), y: (k % 2) ? AGROUND - 120 : AGROUND - 40, got: false });
+      adv.bushes.push({ x: base - AGAP + 420 }); adv.bushes.push({ x: base - AGAP + 980 });
+    }
+    $("#adv-panel").hidden = true; $("#adv-win").hidden = true; $("#adv-fail").hidden = true;
+    $("#adv-hint").style.opacity = ".92";
+    var w = activeProfile();
+    $("#adv-world").textContent = "🌼 Meadow Springs";
+    show("adventure");
+    advLast = 0; if (advRAF) cancelAnimationFrame(advRAF); advRAF = requestAnimationFrame(advFrame);
+  }
+  function advStop() { if (advRAF) cancelAnimationFrame(advRAF); advRAF = null; adv = null; }
+  function aGateX(i) { return AGATE0 + i * AGAP; }
+
+  function advFrame(ts) {
+    if (!adv) return;
+    var dt = Math.min(.05, (ts - (advLast || ts)) / 1000); advLast = ts;
+    adv.cloud += dt * 14;
+    if (adv.state === "run") {
+      var sp = adv.speed * (1 + adv.dash); adv.dash = Math.max(0, adv.dash - dt * 1.6);
+      adv.cam += sp * dt; adv.hero.run += dt * sp * .03;
+      if (!adv.hero.ground) { adv.hero.vy += 1500 * dt; adv.hero.y += adv.hero.vy * dt; if (adv.hero.y >= AGROUND) { adv.hero.y = AGROUND; adv.hero.vy = 0; adv.hero.ground = true; } }
+      var hwx = adv.cam + adv.hero.x;
+      for (var i = 0; i < adv.coinsList.length; i++) { var co = adv.coinsList[i]; if (co.got) continue; if (Math.abs(co.x - hwx) < 34 && Math.abs(co.y - adv.hero.y) < 60) { co.got = true; adv.coins++; progress.coins = (progress.coins || 0) + 1; aCoinSnd(); adv.particles.push({ x: adv.hero.x, y: adv.hero.y - 30, vx: 0, vy: -160, life: .6 }); } }
+      if (adv.next < adv.total) { if (aGateX(adv.next) - adv.cam <= 560) advArrive(); }
+      else if (aGateX(adv.total) - adv.cam <= 480) { advWin(); }
+    }
+    for (var p = adv.particles.length - 1; p >= 0; p--) { var pt = adv.particles[p]; pt.x += pt.vx * dt; pt.vy += 1400 * dt; pt.y += pt.vy * dt; pt.life -= dt * 1.2; if (pt.life <= 0) adv.particles.splice(p, 1); }
+    if (adv.shakeT > 0) adv.shakeT -= dt;
+    advDraw();
+    if (adv) advRAF = requestAnimationFrame(advFrame);
+  }
+  function advArrive() {
+    adv.state = "gate"; adv.question = adv.qs[adv.next]; adv.input = ""; adv.qStart = Date.now();
+    advDisp(); $("#adv-q").textContent = adv.question.a + " × " + adv.question.b;
+    $("#adv-panel").hidden = false; $("#adv-hint").style.opacity = "0";
+  }
+  function advJump() { if (adv && adv.state === "run" && adv.hero.ground) { adv.hero.vy = -560; adv.hero.ground = false; aJumpSnd(); } }
+  function advDisp() { var d = $("#adv-disp"); if (adv.input === "") { d.textContent = "?"; d.classList.add("ph"); } else { d.textContent = adv.input; d.classList.remove("ph"); } }
+  function advKey(k) {
+    if (!adv || adv.state !== "gate") return;
+    if (k === "del") { adv.input = adv.input.slice(0, -1); advDisp(); return; }
+    if (k === "enter") { if (adv.input !== "") advSubmit(parseInt(adv.input, 10)); return; }
+    if (adv.input.length >= 3) return; if (adv.input === "" && k === "0") return;
+    adv.input += k; advDisp();
+    if (parseInt(adv.input, 10) === adv.question.a * adv.question.b) advSubmit(adv.question.a * adv.question.b);
+  }
+  function advSubmit(val) {
+    var q = adv.question, ans = q.a * q.b, ms = Date.now() - adv.qStart, correct = val === ans;
+    var justMet = recordAnswer(q.a, q.b, correct, ms);
+    if (justMet) adv.goalMet = true;
+    if (correct) {
+      $("#adv-abox").className = "adv-abox good"; sGood(); haptic(12);
+      adv.correct++; adv.combo++; adv.maxCombo = Math.max(adv.maxCombo, adv.combo);
+      var speed = ms < 1500 ? 8 : ms < 3000 ? 5 : ms < 5000 ? 2 : 0;
+      var gained = Math.round((10 + speed) * (1 + Math.min(adv.combo, 6) * .08));
+      progress.xp += gained; adv.xpEarned += gained;
+      progress.coins = (progress.coins || 0) + 5; adv.coins += 5;
+      adv.solved[adv.next] = true; save();
+      for (var b = 0; b < 12; b++) adv.particles.push({ x: adv.hero.x + 40, y: adv.hero.y - 40, vx: (Math.random() * 2 - .4) * 150, vy: -(Math.random() * 240 + 120), life: 1 });
+      setTimeout(function () {
+        if (!adv) return; $("#adv-panel").hidden = true; $("#adv-abox").className = "adv-abox";
+        adv.state = "run"; adv.dash = .9; adv.next++; adv.input = "";
+        $("#adv-hint").style.opacity = ".92"; $("#adv-hint").textContent = adv.next >= adv.total ? "Dash to the castle! 🏰" : "Nice! Tap to jump ✨";
+      }, 420);
+    } else {
+      adv.wrong++; adv.hearts--; adv.combo = 0; $("#adv-abox").className = "adv-abox bad"; sBad(); haptic([10, 40, 10]);
+      adv.shakeT = .35; adv.input = ""; advDisp(); save();
+      if (adv.hearts <= 0) setTimeout(function () { if (adv) { $("#adv-panel").hidden = true; adv.state = "fail"; $("#adv-fail").hidden = false; } }, 400);
+    }
+  }
+  function advWin() {
+    adv.state = "win";
+    var lost = START_HEARTS - adv.hearts, stars = lost === 0 ? 3 : lost <= 2 ? 2 : 1, perfect = adv.wrong === 0;
+    if (perfect) { progress.xp += 20; adv.xpEarned += 20; }
+    var newly = evaluateBadges({ perfect: perfect, quizLen: adv.total }); save();
+    var leveled = levelFromXp(progress.xp) > adv.levelBefore;
+    var row = ""; for (var i = 0; i < 3; i++) row += i < stars ? "⭐️" : "☆";
+    $("#adv-win-stars").textContent = row;
+    $("#adv-win-title").textContent = perfect ? "Perfect run! 🏰" : "Level complete! 🏰";
+    var msg = "🪙 " + adv.coins + " coins · ✦ +" + adv.xpEarned + " XP";
+    if (adv.goalMet) msg = "🔥 Daily goal done!  " + msg;
+    $("#adv-win-msg").textContent = msg;
+    var uw = $("#adv-win-unlocks"); uw.innerHTML = "";
+    if (leveled) uw.appendChild(el("div", "badge-pop", "🌟 Level " + levelFromXp(progress.xp) + "!"));
+    newly.forEach(function (bd) { uw.appendChild(el("div", "badge-pop", bd.icon + " " + bd.name)); });
+    $("#adv-win").hidden = false;
+    sWin(); advBurst(); haptic([15, 60, 15, 60, 15]);
+  }
+  function advBurst() {
+    var host = $("#adv-burst"); host.innerHTML = "";
+    var pal = ["#5b3df0", "#ff3d81", "#ffb020", "#12c8d6", "#27c96a", "#8a5bff"];
+    for (var i = 0; i < 46; i++) { var c = el("span", "confetti"); c.style.left = randInt(100) + "%"; c.style.background = pal[randInt(pal.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + "s"; c.style.animationDelay = (Math.random() * .3) + "s"; host.appendChild(c); }
+    setTimeout(function () { host.innerHTML = ""; }, 3400);
+  }
+
+  /* --- adventure drawing --- */
+  function advDraw() {
+    var x = advCtx; x.save();
+    var sx = adv.shakeT > 0 ? (Math.random() * 2 - 1) * 6 : 0, sy = adv.shakeT > 0 ? (Math.random() * 2 - 1) * 4 : 0;
+    x.clearRect(0, 0, AW, AH); x.translate(sx, sy);
+    var sky = x.createLinearGradient(0, 0, 0, AH); sky.addColorStop(0, "#8fd3ff"); sky.addColorStop(1, "#d9f3ff");
+    x.fillStyle = sky; x.fillRect(-10, -10, AW + 20, AH + 20);
+    x.fillStyle = "rgba(255,240,170,.9)"; x.beginPath(); x.arc(760, 90, 44, 0, 7); x.fill();
+    x.fillStyle = "rgba(255,255,255,.9)";
+    for (var i = 0; i < 4; i++) { var cxp = ((i * 260 - (adv.cam * .15 + adv.cloud)) % (AW + 300)); if (cxp < -150) cxp += AW + 300; aCloud(x, cxp, 70 + (i % 2) * 40); }
+    aHills(x, adv.cam * .25, 300, "#bfe6a8"); aHills(x, adv.cam * .45, 350, "#a3d98a");
+    x.fillStyle = "#8bd06a"; x.fillRect(-10, AGROUND + 18, AW + 20, AH); x.fillStyle = "#7cc659"; x.fillRect(-10, AGROUND + 18, AW + 20, 10);
+    x.textAlign = "center"; x.textBaseline = "alphabetic";
+    for (var b = 0; b < adv.bushes.length; b++) { var bx = adv.bushes[b].x - adv.cam; if (bx > -60 && bx < AW + 60) { x.font = "46px system-ui"; x.fillText("🌿", bx, AGROUND + 16); } }
+    for (var k = 0; k < adv.coinsList.length; k++) { var co = adv.coinsList[k]; if (co.got) continue; var csx = co.x - adv.cam; if (csx > -40 && csx < AW + 40) { x.font = "30px system-ui"; x.fillText("🪙", csx, co.y); } }
+    for (var g = adv.next; g < adv.total; g++) { if (adv.solved[g]) continue; var gx = aGateX(g) - adv.cam; if (gx > -80 && gx < AW + 120) aGate(x, gx); }
+    var castX = aGateX(adv.total) - adv.cam; if (castX > -120 && castX < AW + 160) { x.font = "96px system-ui"; x.fillText("🏰", castX, AGROUND + 6); }
+    var bob = adv.hero.ground ? Math.abs(Math.sin(adv.hero.run * 6)) * 6 : 0;
+    x.fillStyle = "rgba(0,0,0,.18)"; x.beginPath(); x.ellipse(adv.hero.x, AGROUND + 10, 26, 8, 0, 0, 7); x.fill();
+    x.font = "54px system-ui"; x.fillText(adv.heroEm, adv.hero.x, adv.hero.y - bob + 8);
+    for (var q = 0; q < adv.particles.length; q++) { var pt = adv.particles[q]; x.globalAlpha = Math.max(0, pt.life); x.font = "22px system-ui"; x.fillText("🪙", pt.x, pt.y); x.globalAlpha = 1; }
+    x.restore();
+    // HUD
+    x.textAlign = "left"; x.textBaseline = "alphabetic"; x.font = "26px system-ui";
+    var hh = ""; for (var h = 0; h < START_HEARTS; h++) hh += h < adv.hearts ? "❤️" : "🤍"; x.fillText(hh, 14, 38);
+    x.fillStyle = "rgba(40,20,80,.9)"; x.font = "700 22px ui-rounded,system-ui,sans-serif"; x.textAlign = "right"; x.fillText("🪙 " + adv.coins, AW - 14, 38);
+    x.textAlign = "center"; x.fillStyle = "rgba(40,20,80,.72)"; x.font = "700 18px ui-rounded,system-ui,sans-serif"; x.fillText("Gate " + Math.min(adv.next + 1, adv.total) + " / " + adv.total, AW / 2, 32);
+  }
+  function aCloud(x, cx, cy) { x.beginPath(); x.arc(cx, cy, 26, 0, 7); x.arc(cx + 30, cy - 10, 32, 0, 7); x.arc(cx + 66, cy, 26, 0, 7); x.rect(cx - 6, cy, 78, 26); x.fill(); }
+  function aHills(x, off, base, col) { x.fillStyle = col; x.beginPath(); x.moveTo(-10, AGROUND + 20); for (var px = -10; px <= AW + 10; px += 40) { var y = base - Math.sin((px + off) * .007) * 46 - Math.cos((px + off) * .013) * 20; x.lineTo(px, y); } x.lineTo(AW + 10, AGROUND + 20); x.closePath(); x.fill(); }
+  function aGate(x, gx) {
+    x.fillStyle = "#9b8bbf"; x.fillRect(gx - 6, AGROUND - 120, 12, 138); x.fillRect(gx + 64, AGROUND - 120, 12, 138);
+    x.fillStyle = "#b7a9d6"; x.fillRect(gx - 14, AGROUND - 132, 98, 16);
+    x.font = "52px system-ui"; x.textAlign = "center"; x.fillText("👹", gx + 35, AGROUND + 6);
+  }
+
   /* ---------------- init / wiring ---------------- */
   function init() {
     buildLearn();
@@ -795,10 +951,17 @@
       b.addEventListener("click", function () { sTap(); $all("#quiz-length .seg__btn").forEach(function (x) { x.classList.remove("is-on"); }); b.classList.add("is-on"); state.quizLen = parseInt(b.getAttribute("data-len"), 10); });
     });
 
-    $("#daily-challenge").addEventListener("click", function () {
-      sTap(); ac();
-      startPlay({ tables: focusTables(), len: clamp(progress.settings.dailyGoal, 10, 25), mode: "type", isDaily: true });
-    });
+    $("#daily-challenge").addEventListener("click", function () { sTap(); startAdventure(); });
+
+    // adventure controls
+    function advHome() { advStop(); renderHome(); show("home"); }
+    $("#adv-quit").addEventListener("click", function () { sTap(); advHome(); });
+    $("#adv-win-home").addEventListener("click", function () { sTap(); advHome(); });
+    $("#adv-fail-home").addEventListener("click", function () { sTap(); advHome(); });
+    $("#adv-win-again").addEventListener("click", function () { sTap(); startAdventure(); });
+    $("#adv-fail-retry").addEventListener("click", function () { sTap(); startAdventure(); });
+    $("#adv-keypad").addEventListener("click", function (e) { var b = e.target.closest(".key"); if (b) { ac(); advKey(b.getAttribute("data-k")); } });
+    $("#adv-canvas").addEventListener("pointerdown", function () { ac(); advJump(); });
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
     $("#practice-start").addEventListener("click", function () { sTap(); startPractice(deckFromTables(state.practiceTables)); });
     $("#practice-weak").addEventListener("click", function () { sTap(); startPractice(weakFacts(15)); });
@@ -809,6 +972,12 @@
     // keypad
     $all(".key").forEach(function (k) { k.addEventListener("click", function () { sTap(); keypad(k.getAttribute("data-key")); }); });
     document.addEventListener("keydown", function (e) {
+      if ($(".screen--adv").classList.contains("is-active") && adv && adv.state === "gate") {
+        if (e.key >= "0" && e.key <= "9") advKey(e.key);
+        else if (e.key === "Backspace") advKey("del");
+        else if (e.key === "Enter") advKey("enter");
+        return;
+      }
       if (!$(".screen--play").classList.contains("is-active") || !state.play || state.play.mode !== "type") return;
       if (e.key >= "0" && e.key <= "9") keypad(e.key);
       else if (e.key === "Backspace") keypad("del");
@@ -878,4 +1047,11 @@
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () { navigator.serviceWorker.register("service-worker.js").catch(function () {}); });
   }
+
+  // test hook (harmless in production)
+  window.__adv = {
+    get state() { return adv ? adv.state : null; }, get q() { return adv ? adv.question : null; },
+    get hearts() { return adv ? adv.hearts : null; }, get coins() { return adv ? adv.coins : null; },
+    get next() { return adv ? adv.next : null; }, get total() { return adv ? adv.total : null; },
+  };
 })();

@@ -84,7 +84,7 @@
       <button class="cta" id="daily-challenge">
         <span class="cta__icon">⚡️</span>
         <span class="cta__text">
-          <span class="cta__title">Daily Challenge</span>
+          <span class="cta__title">Daily Quest</span>
           <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
         </span>
         <span class="cta__go">➜</span>
@@ -201,6 +201,52 @@
 
       <!-- choose mode -->
       <div class="answers" id="play-answers" hidden></div>
+    </section>
+
+    <!-- ============ ADVENTURE (side-scroller daily quest) ============ -->
+    <section class="screen screen--adv" data-screen="adventure">
+      <div class="adv-top">
+        <button class="btn-back" id="adv-quit" aria-label="Quit quest">‹</button>
+        <h2 class="topbar__title" id="adv-world">🌼 Meadow Springs</h2>
+        <div class="topbar__spacer"></div>
+      </div>
+
+      <div class="adv-stage" id="adv-stage">
+        <canvas id="adv-canvas" width="900" height="506" aria-label="A side-scrolling math adventure"></canvas>
+        <div class="adv-hint" id="adv-hint">Tap to jump &amp; grab coins ✨</div>
+
+        <div class="adv-ov" id="adv-win" hidden>
+          <div class="adv-ov__burst" id="adv-burst" aria-hidden="true"></div>
+          <h2 id="adv-win-title">Level complete! 🏰</h2>
+          <div class="adv-ov__stars" id="adv-win-stars">⭐️⭐️⭐️</div>
+          <p id="adv-win-msg"></p>
+          <div class="adv-ov__unlocks" id="adv-win-unlocks"></div>
+          <div class="adv-ov__btns">
+            <button class="btn-primary" id="adv-win-again">Play again</button>
+            <button class="btn-secondary" id="adv-win-home">Home</button>
+          </div>
+        </div>
+
+        <div class="adv-ov" id="adv-fail" hidden>
+          <h2>Out of hearts! 💔</h2>
+          <p>So close — give the quest another go.</p>
+          <div class="adv-ov__btns">
+            <button class="btn-primary" id="adv-fail-retry">Try again</button>
+            <button class="btn-secondary" id="adv-fail-home">Home</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="adv-panel" id="adv-panel" hidden>
+        <div class="adv-q" id="adv-q">7 × 8</div>
+        <div class="adv-abox" id="adv-abox"><span class="adv-disp ph" id="adv-disp">?</span></div>
+        <div class="keypad adv-keypad" id="adv-keypad">
+          <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+          <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+          <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+          <button class="key key--del" data-k="del">⌫</button><button class="key" data-k="0">0</button><button class="key key--enter" data-k="enter">✓</button>
+        </div>
+      </div>
     </section>
 
     <!-- ============ RESULTS ============ -->

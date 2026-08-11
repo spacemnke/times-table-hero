@@ -237,6 +237,32 @@ body {
 @keyframes rightpop { 0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);} }
 @keyframes shake { 0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);} }
 
+/* ---------------- adventure ---------------- */
+.adv-top { display: flex; align-items: center; gap: 10px; padding: 4px 0 10px; min-height: 48px; }
+.adv-stage { position: relative; width: 100%; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); background: #bfe8ff; }
+.adv-stage canvas { display: block; width: 100%; height: auto; }
+.adv-hint { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; color: #fff; font-weight: 800;
+  font-size: 13px; text-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: none; opacity: .92; }
+.adv-panel { margin-top: 12px; }
+.adv-q { text-align: center; font-size: 34px; font-weight: 900; margin: 2px 0 8px; }
+.adv-abox { max-width: 220px; margin: 0 auto 4px; background: var(--card); border: 3px solid transparent; border-radius: 14px;
+  padding: 8px; text-align: center; box-shadow: var(--shadow-sm); }
+.adv-abox.good { border-color: var(--good); } .adv-abox.bad { border-color: var(--bad); animation: shake .35s ease; }
+.adv-disp { font-size: 34px; font-weight: 900; color: var(--brand); letter-spacing: 2px; }
+.adv-disp.ph { color: var(--ink-soft); opacity: .5; }
+.adv-keypad { max-width: 320px; }
+
+.adv-ov { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 20px; color: #fff; background: rgba(28,18,60,.62); backdrop-filter: blur(2px); overflow: hidden; }
+.adv-ov[hidden] { display: none; }
+.adv-ov h2 { font-size: 30px; margin: 0; font-weight: 900; }
+.adv-ov p { margin: 0; font-weight: 700; opacity: .95; }
+.adv-ov__stars { font-size: 42px; letter-spacing: 4px; }
+.adv-ov__unlocks { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.adv-ov__btns { display: flex; gap: 10px; margin-top: 6px; }
+.adv-ov__btns .btn-primary, .adv-ov__btns .btn-secondary { margin-top: 0; width: auto; padding: 14px 22px; }
+.adv-ov__burst { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
 /* ---------------- results ---------------- */
 .screen--results { text-align: center; padding-top: 5vh; position: relative; }
 .results__title { font-size: 32px; font-weight: 900; margin: 6px 0; }

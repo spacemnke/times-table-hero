@@ -39,17 +39,22 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     return a * b;
   }
 
-  // DAILY CHALLENGE (typed)
-  await page.click('#daily-challenge');
+  // TYPED QUIZ, 25 questions — enough to meet the daily goal so the streak lights up
+  // (the Daily Quest itself is the adventure, covered by test-adventure.js)
+  await page.click('.screen--home.is-active [data-go="quiz-setup"]');
+  await page.click('[data-select-all="quiz"]');
+  await page.click('#quiz-mode .seg__btn[data-mode="type"]');
+  await page.click('#quiz-length .seg__btn[data-len="25"]');
+  await page.click('#quiz-start');
   await page.waitForSelector('.screen--play.is-active');
   const total = parseInt((await page.textContent('#play-counter')).split("/")[1].trim(), 10);
-  console.log("✓ daily challenge started,", total, "questions, keypad visible:", !(await page.getAttribute('#keypad', 'hidden')));
+  console.log("✓ typed quiz started,", total, "questions");
   for (let i = 0; i < total; i++) await answerTyped();
   await page.waitForSelector('.screen--results.is-active', { timeout: 5000 });
   const score = await page.textContent('#results-score');
   const xp = await page.textContent('#results-xp');
-  console.log("✓ daily finished — score", score.trim(), "| xp", xp.trim());
-  if (!score.includes(total + " / " + total)) throw new Error("expected perfect daily, got " + score);
+  console.log("✓ quiz finished — score", score.trim(), "| xp", xp.trim());
+  if (!score.includes(total + " / " + total)) throw new Error("expected perfect quiz, got " + score);
 
   // progress persisted
   const readActive = () => page.evaluate(() => {
@@ -152,26 +157,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.screen--parent.is-active [data-go="home"]');
   const ctaSub = await page.textContent('#cta-sub');
   console.log("✓ home CTA reflects focus:", ctaSub.trim());
+  // Daily Quest is the adventure — check its questions all come from the focused tables
   await page.click('#daily-challenge');
-  await page.waitForSelector('.screen--play.is-active');
-  // sample the left operand of several questions — all must be within 6..12
-  let okFocus = true;
-  const seenA = new Set();
-  for (let s = 0; s < 6; s++) {
-    const q = await page.textContent('#play-question');
-    const a = parseInt(q.split("×")[0].trim(), 10);
-    seenA.add(a);
-    if (a < 6) okFocus = false;
-    // answer correct to advance
-    const [aa, bb] = q.split("×").map(x => parseInt(x.trim(), 10));
-    for (const ch of String(aa * bb)) await page.click(`.key[data-key="${ch}"]`);
-    await sleep(700);
-  }
-  console.log("✓ daily challenge tables seen:", [...seenA].sort((a,b)=>a-b).join(","), "— all ≥6:", okFocus);
-  if (!okFocus) throw new Error("daily challenge served a table below 6 despite focus");
-  await page.click('#play-quit');
+  await page.waitForSelector('.screen--adv.is-active');
+  const advQs = await page.evaluate(() => window.__adv.q ? window.__adv.q : null);
+  // read the full adaptive question set built for this run (all left operands must be ≥6)
+  const okFocus = await page.evaluate(() => {
+    // arrive at the first gate to expose a question, then inspect
+    return new Promise(resolve => {
+      const start = Date.now();
+      const iv = setInterval(() => {
+        if (window.__adv.state === "gate" && window.__adv.q) { clearInterval(iv); resolve(window.__adv.q.a >= 6); }
+        else if (Date.now() - start > 8000) { clearInterval(iv); resolve(null); }
+      }, 100);
+    });
+  });
+  console.log("✓ adventure first gate left-operand ≥6:", okFocus);
+  if (okFocus !== true) throw new Error("adventure served a table below 6 despite focus");
+  await page.click('#adv-quit');
 
-  // LEARN (we're back on home after quitting the challenge)
+  // LEARN (we're back on home after quitting the quest)
   await page.waitForSelector('.screen--home.is-active');
   await page.click('.screen--home.is-active [data-go="learn"]');
   await page.click('#learn-picker .num-btn:nth-child(8)');

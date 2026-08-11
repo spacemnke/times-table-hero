@@ -13,8 +13,10 @@ Designed for around age 10 — real recall (typed answers), a proper game loop, 
 reason to come back every day.
 
 **For the kid**
-- **⚡️ Daily Challenge** — one tap starts a set of questions that *adapts to her weak
-  spots* and counts toward her daily goal & streak.
+- **⚡️ Daily Quest (adventure)** — a side-scroller where her chosen hero gallops across
+  Meadow Springs, and each gate is a math wall she breaks through by typing the answer.
+  The questions *adapt to her weak spots*; finishing feeds her streak, XP, coins & badges.
+  (This is the start of the v2.0 "Quest Land" — more worlds, a coin shop and outfits to come.)
 - **🎮 Quiz** — pick tables, choose **Type** (number pad) or **Choose** (multiple
   choice) and 10 / 15 / 25 questions. Timed feel with a combo multiplier.
 - **🧠 Practice** — relaxed, untimed: she **types** the answer on the number pad (no
