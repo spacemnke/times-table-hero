@@ -793,8 +793,8 @@
     ];
     function charPower(id) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === id) return CHARS[i].power || null; return null; }
     // one signature trap per world; caught => solve a bonus question to escape
-    var TRAP_BY_WORLD = ["bush", "plant", "mouse", "net", "ice", "vine", "hoop", "cage"];
-    var TRAP_LABEL = { bush: "SPIKY BUSH!", plant: "CHOMP PLANT!", mouse: "MOUSE TRAP!", net: "CAUGHT IN A NET!", ice: "FROZEN SOLID!", vine: "VINE SNARE!", hoop: "RING OF FIRE!", cage: "CAGED — CRACK THE CODE!" };
+    var TRAP_BY_WORLD = ["bush", "plant", "mouse", "net", "ice", "giant", "hoop", "cage"];
+    var TRAP_LABEL = { bush: "SPIKY BUSH!", plant: "CHOMP PLANT!", mouse: "MOUSE TRAP!", net: "CAUGHT IN A NET!", ice: "FROZEN SOLID!", vine: "VINE SNARE!", giant: "GIANT STOMP!", hoop: "RING OF FIRE!", cage: "CAGED — CRACK THE CODE!" };
     // segment layout archetypes for variety
     var CHUNKS = ["boxes", "hop", "gauntlet", "trapchunk", "moving", "coinarc"];
 
@@ -1073,10 +1073,48 @@
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
       if (!th.night) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
-      var h = G.hero; if (!(h.inv > 0 && Math.floor(G.t * 16) % 2)) { var B = Math.max(2, Math.round(PIXW * 0.15 / 14)); var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2); if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); } drawHeroPix(x, hbxp, hby, B, HEROTYPE); }
+      var h = G.hero; if (G.state !== "trapped" && !(h.inv > 0 && Math.floor(G.t * 16) % 2)) { var B = Math.max(2, Math.round(PIXW * 0.15 / 14)); var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2); if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); } drawHeroPix(x, hbxp, hby, B, HEROTYPE); }
       for (var q = 0; q < G.particles.length; q++) { var ptc = G.particles[q]; if (ptc.life <= 0) continue; var ppx = FX(ptc.wx), ppy = FY(ptc.y); if (ptc.kind === "coin") pxCoin(ppx, ppy, ptc.wx); else P(ppx, ppy, 2, 2, ptc.kind === "star" ? "#ffe14a" : "#ffffff"); }
       x.restore();
+      if (G.state === "trapped") drawCapture();
       x.globalAlpha = .08; for (var y2 = 0; y2 < H; y2 += 2) P(0, y2, W, 1, "#000"); x.globalAlpha = 1;
+    }
+    // dramatic "you're caught" tableau shown in the open area above the math sheet while you solve to escape
+    function drawCapture() {
+      var W = PIXW, H = PIXH, cx = Math.round(W * 0.5), cy = Math.round(H * 0.24);
+      var tr = G.traps[G.trapIndex], type = tr ? tr.type : "bush", ph = G.t;
+      x.globalAlpha = .42; P(0, 0, W, Math.round(H * 0.5), "#0a0a1a"); x.globalAlpha = 1;
+      disc(cx, cy, SZ(74), "rgba(255,255,255,.05)");
+      var B = Math.max(3, Math.round(W * 0.22 / 14));
+      var hh = 12 * B, hx = cx - 7 * B, footBase = cy + 6 * B, hyTop = footBase - hh;
+      var jit = Math.round(Math.sin(ph * 26) * 2);
+      drawHeroPix(x, hx + jit, hyTop, B, HEROTYPE);
+      if (type === "giant") {
+        var press = Math.abs(Math.sin(ph * 3)), soleB = hyTop - SZ(3) - Math.round(press * SZ(16)), fw = SZ(82), fh = SZ(26);
+        P(cx - SZ(19), 0, SZ(38), soleB - fh + SZ(4), "#d8b48a"); P(cx - SZ(19), 0, SZ(9), soleB - fh + SZ(4), "#eccfa8"); P(cx + SZ(10), 0, SZ(9), soleB - fh + SZ(4), "#c99a6e");
+        P(cx - fw / 2, soleB - fh, fw, fh, "#e6bd92"); P(cx - fw / 2, soleB - SZ(6), fw, SZ(6), "#caa070");
+        for (var t = 0; t < 5; t++) P(cx - fw / 2 + SZ(6) + t * SZ(15), soleB - SZ(3), SZ(11), SZ(7), "#f2d6b0");
+        if (press > 0.7) for (var d = 0; d < 8; d++) P(cx - fw / 2 + d * SZ(11), hyTop - SZ(1), SZ(4), SZ(2), "#fff");
+      } else if (type === "plant") {
+        var op = SZ(6) + Math.round(Math.abs(Math.sin(ph * 4)) * SZ(12));
+        P(cx - SZ(32), hyTop - SZ(6) - op, SZ(64), SZ(18), "#ff3b46"); for (var u = -28; u <= 28; u += 9) P(cx + SZ(u), hyTop - SZ(6) - op + SZ(16), SZ(4), SZ(9), "#fff");
+        P(cx - SZ(32), footBase - SZ(4) + op, SZ(64), SZ(16), "#ff3b46"); for (var u2 = -28; u2 <= 28; u2 += 9) P(cx + SZ(u2), footBase - SZ(4) + op - SZ(9), SZ(4), SZ(9), "#fff");
+      } else if (type === "mouse") {
+        var slam = Math.abs(Math.sin(ph * 5)), barY = hyTop - SZ(8) + Math.round(slam * SZ(10));
+        P(cx - SZ(40), footBase, SZ(80), SZ(9), "#a9743f"); P(cx - SZ(36), barY, SZ(72), SZ(7), "#d2dae6"); P(cx - SZ(36), barY, SZ(7), footBase - barY, "#d2dae6"); P(cx + SZ(30), barY, SZ(7), footBase - barY, "#d2dae6");
+      } else if (type === "net") {
+        for (var i = -36; i <= 36; i += 8) P(cx + SZ(i), hyTop - SZ(10), SZ(3), hh + SZ(22), "#e6ecff");
+        for (var j = -10; j < hh + 22; j += 8) P(cx - SZ(36), hyTop - SZ(10) + SZ(j), SZ(72), SZ(3), "#e6ecff");
+      } else if (type === "ice") {
+        x.globalAlpha = .5; P(cx - SZ(30), hyTop - SZ(12), SZ(60), hh + SZ(26), "#bfe4ff"); x.globalAlpha = 1;
+        P(cx - SZ(30), hyTop - SZ(12), SZ(60), SZ(4), "#eaf6ff"); P(cx - SZ(30), hyTop - SZ(12), SZ(6), hh + SZ(26), "#eaf6ff"); P(cx + SZ(20), hyTop - SZ(4), SZ(5), hh + SZ(10), "#eaf6ff");
+      } else if (type === "hoop") {
+        for (var a = 0; a < 18; a++) { var an = a / 18 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(44)) - SZ(3), cy + Math.round(Math.sin(an) * SZ(44)) - SZ(3), SZ(9), SZ(9), (a + Math.floor(ph * 8)) % 2 ? "#ff5a1a" : "#ffd23f"); }
+      } else if (type === "cage") {
+        for (var v = -32; v <= 32; v += 10) P(cx + SZ(v), hyTop - SZ(14), SZ(4), hh + SZ(24), "#7a5aff"); P(cx - SZ(32), hyTop - SZ(14), SZ(64), SZ(5), "#7a5aff"); P(cx - SZ(32), footBase + SZ(8), SZ(64), SZ(5), "#7a5aff");
+      } else {
+        for (var s = 0; s < 16; s++) { var sa = s / 16 * 6.283, rr = SZ(36) + Math.round(Math.sin(ph * 4) * SZ(3)); P(cx + Math.round(Math.cos(sa) * rr) - SZ(3), cy + Math.round(Math.sin(sa) * rr) - SZ(3), SZ(9), SZ(9), "#8be04a"); }
+      }
     }
     function disc(cx, cy, r, c) { x.fillStyle = c; for (var yy = -r; yy <= r; yy++) { var ww = Math.floor(Math.sqrt(r * r - yy * yy)); x.fillRect(cx - ww, cy + yy, ww * 2 + 1, 1); } }
     function pxCloud(cx, cy, c) { P(cx, cy, 20, 5, c); P(cx + 4, cy - 4, 12, 5, c); P(cx - 3, cy + 2, 26, 4, c); }
@@ -1130,6 +1168,7 @@
       else if (type === "net") { for (var i = -22; i <= 22; i += 6) P(cx + SZ(i), gY - SZ(50), SZ(3), SZ(50), "#e6ecff"); for (var j = 0; j < 52; j += 6) P(cx - SZ(22), gY - SZ(j), SZ(44), SZ(3), "#e6ecff"); disc(cx, gY - SZ(24), SZ(6), "#9fb0e0"); }
       else if (type === "ice") { P(cx - SZ(22), gY - SZ(54), SZ(44), SZ(54), "rgba(150,220,255,.78)"); P(cx - SZ(22), gY - SZ(54), SZ(10), SZ(54), "rgba(230,248,255,.9)"); P(cx + SZ(8), gY - SZ(38), SZ(5), SZ(26), "rgba(230,248,255,.75)"); P(cx - SZ(22), gY - SZ(54), SZ(44), SZ(3), "#bfe4ff"); }
       else if (type === "vine") { P(cx - SZ(3), gY - SZ(70), SZ(6), SZ(40), "#357a35"); disc(cx, gY - SZ(30), SZ(18), "#4aa84a"); disc(cx, gY - SZ(30), SZ(11), "#2f8f42"); P(cx - SZ(12), gY - SZ(30), SZ(24), SZ(5), "#256a25"); }
+      else if (type === "giant") { var stomp = Math.abs(Math.sin(ph * 3)), soleY = gY - SZ(30) - Math.round(stomp * SZ(20)); disc(cx, gY, SZ(26), "rgba(0,0,0,.22)"); P(cx - SZ(19), 0, SZ(38), soleY - SZ(20), "#d8b48a"); P(cx - SZ(19), 0, SZ(9), soleY - SZ(20), "#eccfa8"); P(cx - SZ(26), soleY - SZ(24), SZ(52), SZ(24), "#e6bd92"); P(cx - SZ(26), soleY - SZ(6), SZ(52), SZ(6), "#caa070"); for (var gt = 0; gt < 5; gt++) P(cx - SZ(24) + gt * SZ(10), soleY - SZ(3), SZ(7), SZ(6), "#f2d6b0"); }
       else if (type === "hoop") { for (var a = 0; a < 14; a++) { var an = a / 14 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(26)) - SZ(3), gY - SZ(32) + Math.round(Math.sin(an) * SZ(26)) - SZ(3), SZ(7), SZ(7), (a + Math.floor(ph * 6)) % 2 ? "#ff5a1a" : "#ffd23f"); } disc(cx, gY - SZ(32), SZ(14), "rgba(255,120,30,.25)"); }
       else { P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(56), "#1a1236"); for (var v = -22; v <= 22; v += 8) P(cx + SZ(v), gY - SZ(54), SZ(4), SZ(54), "#7a5aff"); P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(26), gY - SZ(5), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(7), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); P(cx + SZ(2), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); }
       // pulsing warning mark floating above
