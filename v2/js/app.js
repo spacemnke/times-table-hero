@@ -799,7 +799,7 @@
     var CHUNKS = ["boxes", "hop", "gauntlet", "trapchunk", "moving", "coinarc"];
 
     function resize() {
-      var w = cv.clientWidth || Math.min(window.innerWidth, 540), h = cv.clientHeight || window.innerHeight;
+      var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight;
       LH = 760; LW = Math.round(760 * w / h); GROUND = Math.round(LH * 0.70); HEROX = Math.round(LW * 0.20);
       PIXH = 300; PIXW = Math.max(120, Math.round(PIXH * w / h)); sx = PIXH / LH;
       cv.width = PIXW; cv.height = PIXH;
@@ -1246,6 +1246,7 @@
       cv = $("#adv-c"); x = cv.getContext("2d");
       var ci = $("#adv-coin-icon"); ci.width = 8; ci.height = 8; var cig = ci.getContext("2d"); cig.imageSmoothingEnabled = false; coinPix(cig);
       window.addEventListener("resize", function () { if (running) resize(); });
+      window.addEventListener("orientationchange", function () { if (running) { resize(); setTimeout(function () { if (running) resize(); }, 300); } });
       cv.addEventListener("pointerdown", function () { ac(); jump(); });
       cv.addEventListener("pointerup", jumpRelease);
       $("#adv-kpad").addEventListener("click", function (e) { var b = e.target.closest(".key"); if (b) { ac(); key(b.getAttribute("data-k")); } });
