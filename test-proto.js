@@ -15,9 +15,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   page.on("pageerror", e => errors.push("pageerror: " + e.message));
 
   await page.goto(`http://localhost:${PORT}/quest-proto.html?test=1`, { waitUntil: "networkidle" });
-  await page.waitForSelector('#startOv:not(.hidden)');
-  console.log("✓ prototype loaded (test/invincible mode)");
-  await page.click('#startBtn');
+  await page.waitForSelector('#mapOv:not(.hidden)');
+  console.log("✓ prototype loaded (level map, test/invincible mode)");
+  await page.evaluate(() => window.__proto.start(1));
 
   const total = await page.evaluate(() => window.__proto.total);
   console.log("✓ started — gates:", total);
