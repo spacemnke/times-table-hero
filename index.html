@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=1786465309" />
 </head>
 <body>
   <div id="app">
@@ -84,7 +84,7 @@
       <button class="cta" id="daily-challenge">
         <span class="cta__icon">⚡️</span>
         <span class="cta__text">
-          <span class="cta__title">Daily Challenge</span>
+          <span class="cta__title">Daily Quest</span>
           <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
         </span>
         <span class="cta__go">➜</span>
@@ -201,6 +201,71 @@
 
       <!-- choose mode -->
       <div class="answers" id="play-answers" hidden></div>
+    </section>
+
+    <!-- ============ ADVENTURE — 8-bit Quest Land (daily quest) ============ -->
+    <section class="screen screen--adv" data-screen="adventure">
+      <div id="adv-game">
+        <canvas id="adv-c" aria-label="A side-scrolling math adventure"></canvas>
+
+        <div class="adv8-hud hidden" id="adv-hud">
+          <div class="adv8-box" id="adv-hearts"></div>
+          <div class="adv8-box adv8-hmid"><span id="adv-gate">GATE 1/4</span><small id="adv-level">MEADOW</small></div>
+          <div class="adv8-box" id="adv-coins"><canvas id="adv-coin-icon" width="8" height="8"></canvas><span id="adv-coinN">0</span><span class="adv8-gem" aria-hidden="true">◆</span><span id="adv-gemN">0</span></div>
+        </div>
+        <div id="adv-pmap" class="hidden"><div id="adv-pmapTrack"></div><div id="adv-pmapFill"></div><div id="adv-pmapTicks"></div><canvas id="adv-pmapHero" width="12" height="12"></canvas></div>
+        <div id="adv-tapHint" class="hidden">TAP = JUMP · HOLD = HIGHER · TAP AGAIN = DOUBLE</div>
+        <button id="adv-quit" class="hidden" aria-label="Back to map">‹ MAP</button>
+
+        <div id="adv-math" class="hidden">
+          <div id="adv-sheet">
+            <div class="adv8-tag">◆ GATE — SOLVE TO PASS ◆</div>
+            <div id="adv-mq">7 × 8</div>
+            <div id="adv-mabox"><span id="adv-mdisp" class="ph">?</span></div>
+            <div class="adv8-kpad" id="adv-kpad">
+              <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+              <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+              <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+              <button class="key key--del" data-k="del" aria-label="delete">⌫</button>
+              <button class="key" data-k="0">0</button>
+              <button class="key key--enter" data-k="enter" aria-label="enter">✓</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="adv-mapOv" class="adv8-ov">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <button class="adv8-close" id="adv-map-close" aria-label="Back home">✕</button>
+            <h1>★ QUEST LAND ★</h1>
+            <p>Pick your hero, then a level. Beat one to unlock the next!</p>
+            <div id="adv-charRow"></div>
+            <div class="adv8-hint" id="adv-gemInfo"></div>
+            <canvas id="adv-mapCanvas" width="260" height="150"></canvas>
+            <div class="adv8-hint">Locked levels open as you win.</div>
+          </div>
+        </div>
+
+        <div id="adv-winOv" class="adv8-ov hidden">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <div class="adv8-burst" id="adv-burst" aria-hidden="true"></div>
+            <h1 id="adv-winTitle">LEVEL CLEAR!</h1>
+            <div class="adv8-starrow" id="adv-winStars"></div>
+            <p id="adv-winMsg"></p>
+            <div class="adv8-unlocks" id="adv-winUnlocks"></div>
+            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-nextBtn">NEXT ➜</button><button class="adv8-btn ghost" id="adv-mapBtn">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn">HOME</button></div>
+          </div>
+        </div>
+
+        <div id="adv-failOv" class="adv8-ov hidden">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <h1>GAME OVER</h1><p>Out of hearts — give it another go!</p>
+            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-retryBtn">RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ============ RESULTS ============ -->
@@ -321,6 +386,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=1786465309"></script>
 </body>
 </html>
