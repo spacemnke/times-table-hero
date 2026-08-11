@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#5b3df0" />
+
+  <title>Times Table Hero</title>
+  <meta name="description" content="Master the times tables up to 12 — with streaks, levels and badges." />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Table Hero" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ PROFILES PICKER ============ -->
+    <section class="screen screen--profiles" data-screen="profiles">
+      <div class="profiles-head">
+        <h1 class="profiles__title">Who's playing?</h1>
+        <p class="profiles__sub">Tap your character</p>
+      </div>
+      <div class="profiles-grid" id="profiles-grid"></div>
+    </section>
+
+    <!-- ============ NEW PROFILE ============ -->
+    <section class="screen screen--profile-new" data-screen="profile-new">
+      <div class="topbar">
+        <button class="btn-back" id="pn-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title" id="pn-title">New Player</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Pick a character</p>
+      <div class="avatar-grid" id="avatar-grid"></div>
+      <p class="picker-label">What's your name?</p>
+      <input class="name-input" id="pn-name" type="text" maxlength="12" autocomplete="off"
+             autocapitalize="words" placeholder="Type a name" />
+      <button class="btn-primary" id="pn-create" disabled>Create player 🎉</button>
+    </section>
+
+    <!-- ============ HOME / DASHBOARD ============ -->
+    <section class="screen screen--home is-active" data-screen="home">
+      <button class="player-switch" id="player-switch" aria-label="Switch player">
+        <span class="player-switch__av" id="ps-av">⭐️</span>
+        <span class="player-switch__name" id="ps-name">Player</span>
+        <span class="player-switch__caret">▾</span>
+      </button>
+      <header class="dash-top">
+        <div class="dash-level">
+          <div class="ring" id="level-ring">
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <circle class="ring__bg" cx="22" cy="22" r="19"></circle>
+              <circle class="ring__fg" id="level-ring-fg" cx="22" cy="22" r="19"></circle>
+            </svg>
+            <span class="ring__num" id="level-num">1</span>
+          </div>
+          <div class="dash-level__meta">
+            <span class="dash-rank" id="rank-name">Rookie</span>
+            <span class="dash-xp" id="xp-text">0 XP</span>
+          </div>
+        </div>
+        <button class="streak-pill" data-go="badges" aria-label="Your streak and badges">
+          <span class="streak-flame" id="streak-flame">🔥</span>
+          <span class="streak-num" id="streak-num">0</span>
+          <span class="streak-freeze" id="streak-freeze" hidden title="Streak freeze ready">❄️</span>
+        </button>
+      </header>
+
+      <div class="daily-card">
+        <div class="daily-card__head">
+          <span class="daily-card__title">Today's goal</span>
+          <span class="daily-card__count"><b id="daily-done">0</b> / <span id="daily-goal">20</span></span>
+        </div>
+        <div class="goalbar"><div class="goalbar__fill" id="daily-fill"></div></div>
+        <p class="daily-card__msg" id="daily-msg">Do your Daily Challenge to keep your streak alive!</p>
+      </div>
+
+      <button class="cta" id="daily-challenge">
+        <span class="cta__icon">⚡️</span>
+        <span class="cta__text">
+          <span class="cta__title">Daily Quest</span>
+          <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
+        </span>
+        <span class="cta__go">➜</span>
+      </button>
+
+      <div class="menu">
+        <button class="tile tile--quiz" data-go="quiz-setup">
+          <span class="tile__emoji">🎮</span><span class="tile__label">Quiz</span>
+        </button>
+        <button class="tile tile--practice" data-go="practice-setup">
+          <span class="tile__emoji">🧠</span><span class="tile__label">Practice</span>
+        </button>
+        <button class="tile tile--learn" data-go="learn">
+          <span class="tile__emoji">📚</span><span class="tile__label">Learn</span>
+        </button>
+        <button class="tile tile--badges" data-go="badges">
+          <span class="tile__emoji">🏅</span><span class="tile__label">Badges</span>
+        </button>
+      </div>
+
+      <button class="grownup-link" data-go="parent">🔒 Grown-ups</button>
+    </section>
+
+    <!-- ============ LEARN ============ -->
+    <section class="screen screen--learn" data-screen="learn">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Learn</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Pick a table to study</p>
+      <div class="number-grid" id="learn-picker"></div>
+      <div class="table-list" id="learn-table" hidden></div>
+    </section>
+
+    <!-- ============ QUIZ SETUP ============ -->
+    <section class="screen screen--setup" data-screen="quiz-setup">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Quiz</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Which tables?</p>
+      <div class="number-grid number-grid--multi" id="quiz-picker"></div>
+      <div class="setup-actions">
+        <button class="chip" data-select-all="quiz">All 1–12</button>
+        <button class="chip" data-clear="quiz">Clear</button>
+      </div>
+      <div class="seg" id="quiz-mode">
+        <span class="seg__label">Answers:</span>
+        <button class="seg__btn is-on" data-mode="type">⌨️ Type</button>
+        <button class="seg__btn" data-mode="choose">👆 Choose</button>
+      </div>
+      <div class="seg" id="quiz-length">
+        <span class="seg__label">Questions:</span>
+        <button class="seg__btn" data-len="10">10</button>
+        <button class="seg__btn is-on" data-len="15">15</button>
+        <button class="seg__btn" data-len="25">25</button>
+      </div>
+      <button class="btn-primary" id="quiz-start" disabled>Start Quiz ➜</button>
+    </section>
+
+    <!-- ============ PRACTICE SETUP ============ -->
+    <section class="screen screen--setup" data-screen="practice-setup">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Practice</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="picker-label">Which tables? (type the answers · no timer)</p>
+      <div class="number-grid number-grid--multi" id="practice-picker"></div>
+      <div class="setup-actions">
+        <button class="chip" data-select-all="practice">All 1–12</button>
+        <button class="chip" data-clear="practice">Clear</button>
+        <button class="chip chip--accent" id="practice-weak">🎯 My tricky ones</button>
+      </div>
+      <button class="btn-primary" id="practice-start" disabled>Start Practice ➜</button>
+    </section>
+
+    <!-- ============ PLAY (typed / choose quiz + daily challenge) ============ -->
+    <section class="screen screen--play" data-screen="play">
+      <div class="topbar">
+        <button class="btn-back" id="play-quit" aria-label="Quit">‹</button>
+        <div class="quiz-progress"><div class="quiz-progress__bar" id="play-bar"></div></div>
+        <div class="combo" id="combo" hidden>x<span id="combo-num">2</span> 🔥</div>
+      </div>
+
+      <div class="play-scoreline">
+        <span id="play-counter">1 / 15</span>
+        <span id="play-xp">✦ 0 XP</span>
+      </div>
+
+      <div class="timerbar" id="timerbar" hidden><div class="timerbar__fill" id="timerbar-fill"></div></div>
+
+      <div class="question" id="play-question">7 × 8</div>
+
+      <!-- type mode -->
+      <div class="answer-box" id="answer-box">
+        <span id="answer-display" class="answer-display">?</span>
+      </div>
+      <div class="feedback" id="play-feedback" aria-live="polite"></div>
+
+      <div class="keypad" id="keypad">
+        <button class="key" data-key="1">1</button>
+        <button class="key" data-key="2">2</button>
+        <button class="key" data-key="3">3</button>
+        <button class="key" data-key="4">4</button>
+        <button class="key" data-key="5">5</button>
+        <button class="key" data-key="6">6</button>
+        <button class="key" data-key="7">7</button>
+        <button class="key" data-key="8">8</button>
+        <button class="key" data-key="9">9</button>
+        <button class="key key--del" data-key="del">⌫</button>
+        <button class="key" data-key="0">0</button>
+        <button class="key key--enter" data-key="enter">✓</button>
+      </div>
+
+      <!-- choose mode -->
+      <div class="answers" id="play-answers" hidden></div>
+    </section>
+
+    <!-- ============ ADVENTURE — 8-bit Quest Land (daily quest) ============ -->
+    <section class="screen screen--adv" data-screen="adventure">
+      <div id="adv-game">
+        <canvas id="adv-c" aria-label="A side-scrolling math adventure"></canvas>
+
+        <div class="adv8-hud hidden" id="adv-hud">
+          <div class="adv8-box" id="adv-hearts"></div>
+          <div class="adv8-box adv8-hmid"><span id="adv-gate">GATE 1/4</span><small id="adv-level">MEADOW</small></div>
+          <div class="adv8-box" id="adv-coins"><canvas id="adv-coin-icon" width="8" height="8"></canvas><span id="adv-coinN">0</span></div>
+        </div>
+        <div id="adv-pmap" class="hidden"><div id="adv-pmapTrack"></div><div id="adv-pmapFill"></div><div id="adv-pmapTicks"></div><canvas id="adv-pmapHero" width="12" height="12"></canvas></div>
+        <div id="adv-tapHint" class="hidden">TAP = JUMP · HOLD = HIGHER · TAP AGAIN = DOUBLE</div>
+        <button id="adv-quit" class="hidden" aria-label="Back to map">‹ MAP</button>
+
+        <div id="adv-math" class="hidden">
+          <div id="adv-sheet">
+            <div class="adv8-tag">◆ GATE — SOLVE TO PASS ◆</div>
+            <div id="adv-mq">7 × 8</div>
+            <div id="adv-mabox"><span id="adv-mdisp" class="ph">?</span></div>
+            <div class="adv8-kpad" id="adv-kpad">
+              <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+              <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+              <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+              <button class="key key--del" data-k="del" aria-label="delete">⌫</button>
+              <button class="key" data-k="0">0</button>
+              <button class="key key--enter" data-k="enter" aria-label="enter">✓</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="adv-mapOv" class="adv8-ov">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <button class="adv8-close" id="adv-map-close" aria-label="Back home">✕</button>
+            <h1>★ QUEST LAND ★</h1>
+            <p>Pick your hero, then a level. Beat one to unlock the next!</p>
+            <div id="adv-charRow"></div>
+            <canvas id="adv-mapCanvas" width="260" height="150"></canvas>
+            <div class="adv8-hint">Locked levels open as you win.</div>
+          </div>
+        </div>
+
+        <div id="adv-winOv" class="adv8-ov hidden">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <div class="adv8-burst" id="adv-burst" aria-hidden="true"></div>
+            <h1 id="adv-winTitle">LEVEL CLEAR!</h1>
+            <div class="adv8-starrow" id="adv-winStars"></div>
+            <p id="adv-winMsg"></p>
+            <div class="adv8-unlocks" id="adv-winUnlocks"></div>
+            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-nextBtn">NEXT ➜</button><button class="adv8-btn ghost" id="adv-mapBtn">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn">HOME</button></div>
+          </div>
+        </div>
+
+        <div id="adv-failOv" class="adv8-ov hidden">
+          <div class="adv8-scrim"></div>
+          <div class="adv8-panel">
+            <h1>GAME OVER</h1><p>Out of hearts — give it another go!</p>
+            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-retryBtn">RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section class="screen screen--results" data-screen="results">
+      <div class="results-burst" id="results-burst" aria-hidden="true"></div>
+      <h2 class="results__title" id="results-title">Great job!</h2>
+      <div class="results__score" id="results-score">12 / 15</div>
+      <div class="results__stars" id="results-stars"></div>
+      <div class="results__row">
+        <div class="results__stat"><b id="results-xp">+0</b><span>XP earned</span></div>
+        <div class="results__stat"><b id="results-acc">0%</b><span>accuracy</span></div>
+        <div class="results__stat"><b id="results-streak">0</b><span>day streak</span></div>
+      </div>
+      <div class="badge-unlocks" id="badge-unlocks"></div>
+      <p class="results__msg" id="results-msg"></p>
+      <div class="results-actions">
+        <button class="btn-primary" id="results-again">Play again</button>
+        <button class="btn-secondary" data-go="home">Home</button>
+      </div>
+    </section>
+
+    <!-- ============ BADGES / REWARDS (kid) ============ -->
+    <section class="screen screen--badges" data-screen="badges">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">My Rewards</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b id="hs-level">1</b><span>Level</span></div>
+        <div class="hero-stat"><b id="hs-streak">0</b><span>Day streak 🔥</span></div>
+        <div class="hero-stat"><b id="hs-best">0</b><span>Best streak</span></div>
+      </div>
+      <p class="picker-label">Badges</p>
+      <div class="badge-grid" id="badge-grid"></div>
+    </section>
+
+    <!-- ============ PARENT REPORT (gated) ============ -->
+    <section class="screen screen--parent" data-screen="parent">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Parent Report</h2><div class="topbar__spacer"></div>
+      </div>
+
+      <!-- gate -->
+      <div class="gate" id="parent-gate">
+        <div class="gate__lock">🔒</div>
+        <p class="gate__label">Grown-up check — solve to continue:</p>
+        <div class="gate__q" id="gate-q">13 × 14</div>
+        <input class="gate__input" id="gate-input" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="?" />
+        <p class="gate__err" id="gate-err" hidden>Not quite — try again.</p>
+        <button class="btn-primary" id="gate-go">Unlock</button>
+      </div>
+
+      <!-- report -->
+      <div id="parent-report" hidden>
+        <p class="rep-who" id="rep-who"></p>
+        <div class="rep-grid">
+          <div class="rep-cell"><b id="rep-acc">0%</b><span>Overall accuracy</span></div>
+          <div class="rep-cell"><b id="rep-total">0</b><span>Questions answered</span></div>
+          <div class="rep-cell"><b id="rep-time">0m</b><span>Time practising</span></div>
+          <div class="rep-cell"><b id="rep-streak">0</b><span>Current streak</span></div>
+        </div>
+
+        <h3 class="rep-h">Practice this week</h3>
+        <div class="activity" id="rep-activity"></div>
+        <p class="rep-note" id="rep-active-note"></p>
+
+        <h3 class="rep-h">Accuracy by table</h3>
+        <div class="tablebars" id="rep-tablebars"></div>
+
+        <h3 class="rep-h">Trickiest facts <span class="rep-sub">(needs the most work)</span></h3>
+        <div class="tricky" id="rep-tricky"></div>
+
+        <h3 class="rep-h">Fact mastery map</h3>
+        <p class="rep-note">Each square is a fact. Green = strong, red = needs work, grey = not tried yet.</p>
+        <div class="heatmap" id="rep-heatmap"></div>
+
+        <h3 class="rep-h">Settings</h3>
+        <div class="goal-setter">
+          <span>Daily goal</span>
+          <div class="goal-stepper">
+            <button class="step" id="goal-minus">–</button>
+            <b id="goal-value">20</b>
+            <button class="step" id="goal-plus">+</button>
+            <span class="goal-unit">questions/day</span>
+          </div>
+        </div>
+
+        <div class="focus-block">
+          <div class="focus-head">
+            <span>Daily Challenge tables</span>
+            <span class="focus-actions">
+              <button class="chip chip--sm" id="focus-all">All 1–12</button>
+              <button class="chip chip--sm" id="focus-hard">Hard 6–12</button>
+            </span>
+          </div>
+          <p class="rep-note">Tap to choose which tables her Daily Challenge draws from.</p>
+          <div class="mini-grid" id="focus-picker"></div>
+        </div>
+
+        <div class="toggle-row">
+          <span class="toggle-row__label">Streak freeze ❄️
+            <span class="toggle-row__hint">Forgive one missed day (once a week) so an off day doesn't reset the streak.</span>
+          </span>
+          <button class="switch" id="freeze-toggle" role="switch" aria-checked="true"><span class="switch__dot"></span></button>
+        </div>
+
+        <h3 class="rep-h">Players</h3>
+        <div class="players-manage" id="players-manage"></div>
+        <button class="chip chip--sm" id="players-add">＋ Add player</button>
+
+        <button class="btn-secondary btn-reset" id="reset-progress">Reset this player's progress</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="sound-toggle-wrap">
+    <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
