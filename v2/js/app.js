@@ -812,7 +812,7 @@
         speed: 200 + (n - 1) * 18, pit: 145 + (n - 1) * 26, enemySpeed: 58 + (n - 1) * 16,
         moving: n >= 2, hearts: 3,
         trapType: TRAP_BY_WORLD[(n - 1) % 8],
-        trapChance: Math.min(0.92, 0.42 + (n - 1) * 0.08),   // more traps deeper
+        trapChance: Math.min(0.95, 0.6 + (n - 1) * 0.05),   // more traps deeper
         enemyChance: Math.min(0.95, 0.5 + (n - 1) * 0.07),
         gemChance: 0.5
       };
@@ -849,8 +849,12 @@
         var b = gx[seg] - SEG; if (b <= 200) continue;
         addChunk(CHUNKS[(seg * 3 + level * 2 + seg) % CHUNKS.length], b, seg, cf);
       }
-      // signature trap per world, density scales with level
-      for (seg = 1; seg < gx.length; seg++) { var bt = gx[seg] - SEG; if (bt <= 200) continue; if (Math.random() < cf.trapChance) G.traps.push({ x: bt + SEG * 0.34, type: cf.trapType, done: false, sprung: false }); }
+      // signature trap per world — first two zones always trapped so every run meets one early; a 2nd appears deeper
+      for (seg = 1; seg < gx.length; seg++) {
+        var bt = gx[seg] - SEG; if (bt <= 200) continue;
+        if (seg <= 2 || Math.random() < cf.trapChance) G.traps.push({ x: bt + SEG * 0.34, type: cf.trapType, done: false, sprung: false });
+        if (level >= 3 && Math.random() < cf.trapChance - 0.3) G.traps.push({ x: bt + SEG * 0.80, type: cf.trapType, done: false, sprung: false });
+      }
       // shiny purple coins: rare, placed high so you must jump for them
       for (seg = 1; seg < gx.length; seg++) { if (seg % 2 === 0 && Math.random() < cf.gemChance) G.gemsA.push({ x: gx[seg] - SEG * 0.72, hAbove: 300 + (seg % 3) * 22, got: false }); }
       if (!G.gemsA.length) G.gemsA.push({ x: gx[Math.min(1, gx.length - 1)] - SEG * 0.72, hAbove: 320, got: false });
@@ -1104,15 +1108,32 @@
       if (Math.floor(spin * 3) % 2) { P(cx + SZ(7), cy - SZ(9), 2, 2, "#ffffff"); P(cx - SZ(9), cy + SZ(5), 2, 2, "#ffffff"); }
     }
     function pxTrap(type, cx, gY, ph, sprung) {
-      if (type === "bush") { disc(cx, gY - SZ(15), SZ(19), "#2f8f42"); disc(cx - SZ(11), gY - SZ(9), SZ(12), "#3aa64a"); disc(cx + SZ(11), gY - SZ(9), SZ(12), "#3aa64a"); [-15, -5, 5, 15].forEach(function (o, k) { P(cx + SZ(o), gY - SZ(32) - (k % 2 ? SZ(4) : 0), SZ(3), SZ(13), "#ff5ca8"); }); }
-      else if (type === "plant") { P(cx - SZ(3), gY - SZ(26), SZ(6), SZ(26), "#2f8f52"); var op = (Math.sin(ph * 6) > 0 ? SZ(8) : SZ(2)); disc(cx, gY - SZ(38), SZ(15), "#ff4f5a"); P(cx - SZ(15), gY - SZ(44) - op, SZ(30), SZ(7), "#ff8ea0"); for (var t = -11; t <= 11; t += 6) P(cx + SZ(t), gY - SZ(44) - op, SZ(2), SZ(5), "#fff"); }
-      else if (type === "mouse") { P(cx - SZ(20), gY - SZ(8), SZ(40), SZ(8), "#a9743f"); P(cx - SZ(20), gY - SZ(8), SZ(40), SZ(2), "#c98f50"); var bar = (Math.sin(ph * 7) > 0 ? SZ(30) : SZ(7)); P(cx - SZ(18), gY - SZ(8) - bar, SZ(3), bar, "#c0c8d4"); P(cx - SZ(18), gY - SZ(8) - bar, SZ(30), SZ(3), "#c0c8d4"); disc(cx + SZ(8), gY - SZ(4), SZ(4), "#ffd23f"); }
-      else if (type === "net") { for (var i = -18; i <= 18; i += 6) P(cx + SZ(i), gY - SZ(40), SZ(2), SZ(40), "#cfd6ff"); for (var j = 0; j < 42; j += 6) P(cx - SZ(18), gY - SZ(j), SZ(36), SZ(2), "#cfd6ff"); }
-      else if (type === "ice") { P(cx - SZ(18), gY - SZ(44), SZ(36), SZ(44), "rgba(150,220,255,.72)"); P(cx - SZ(18), gY - SZ(44), SZ(8), SZ(44), "rgba(224,246,255,.85)"); P(cx + SZ(6), gY - SZ(30), SZ(4), SZ(20), "rgba(224,246,255,.7)"); }
-      else if (type === "vine") { P(cx - SZ(2), gY - SZ(62), SZ(4), SZ(32), "#357a35"); disc(cx, gY - SZ(26), SZ(14), "#4aa84a"); P(cx - SZ(9), gY - SZ(26), SZ(18), SZ(4), "#2f8f42"); }
-      else if (type === "hoop") { for (var a = 0; a < 12; a++) { var an = a / 12 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(22)) - SZ(2), gY - SZ(28) + Math.round(Math.sin(an) * SZ(22)) - SZ(2), SZ(5), SZ(5), (a + Math.floor(ph * 6)) % 2 ? "#ff8a2a" : "#ffd23f"); } }
-      else { P(cx - SZ(22), gY - SZ(48), SZ(44), SZ(48), "#241a4a"); for (var v = -18; v <= 18; v += 8) P(cx + SZ(v), gY - SZ(46), SZ(3), SZ(46), "#6a5aa8"); P(cx - SZ(22), gY - SZ(48), SZ(44), SZ(4), "#6a5aa8"); P(cx - SZ(22), gY - SZ(4), SZ(44), SZ(4), "#6a5aa8"); }
-      if (sprung) { P(cx - SZ(24), gY - SZ(56), SZ(48), SZ(3), "#ff4f5a"); }
+      // hazard stripe on the ground so it never reads as decoration
+      for (var hz = -26; hz < 26; hz += 8) P(cx + SZ(hz), gY + SZ(2), SZ(4), SZ(4), (Math.floor(hz / 4) % 2 ? "#ff3b30" : "#241018"));
+      var wob = Math.round(Math.sin(ph * 4) * SZ(2)); cx += wob;
+      if (type === "bush") {
+        disc(cx, gY - SZ(28), SZ(26), "#1f6e2a"); disc(cx, gY - SZ(28), SZ(17), "#3aa64a");
+        for (var s = 0; s < 12; s++) { var sa = s / 12 * 6.283; P(cx + Math.round(Math.cos(sa) * SZ(28)) - SZ(3), gY - SZ(28) + Math.round(Math.sin(sa) * SZ(28)) - SZ(3), SZ(7), SZ(7), "#8be04a"); }
+        P(cx - SZ(9), gY - SZ(33), SZ(6), SZ(7), "#fff"); P(cx + SZ(3), gY - SZ(33), SZ(6), SZ(7), "#fff"); P(cx - SZ(7), gY - SZ(31), SZ(3), SZ(3), "#111"); P(cx + SZ(5), gY - SZ(31), SZ(3), SZ(3), "#111");
+      }
+      else if (type === "plant") {
+        P(cx - SZ(4), gY - SZ(34), SZ(8), SZ(34), "#2f8f52"); var op = (Math.sin(ph * 6) > 0 ? SZ(12) : SZ(3));
+        disc(cx, gY - SZ(48), SZ(20), "#ff3b46"); P(cx - SZ(20), gY - SZ(54) - op, SZ(40), SZ(9), "#ff6a78");
+        for (var t = -15; t <= 15; t += 6) { P(cx + SZ(t), gY - SZ(56) - op, SZ(3), SZ(7), "#fff"); P(cx + SZ(t), gY - SZ(48) + op, SZ(3), SZ(7), "#fff"); }
+        P(cx - SZ(8), gY - SZ(50), SZ(5), SZ(6), "#fff"); P(cx - SZ(6), gY - SZ(48), SZ(2), SZ(2), "#111");
+      }
+      else if (type === "mouse") {
+        P(cx - SZ(24), gY - SZ(10), SZ(48), SZ(10), "#a9743f"); P(cx - SZ(24), gY - SZ(10), SZ(48), SZ(3), "#c98f50");
+        var bar = (Math.sin(ph * 7) > 0 ? SZ(38) : SZ(9)); P(cx - SZ(22), gY - SZ(10) - bar, SZ(4), bar, "#d2dae6"); P(cx - SZ(22), gY - SZ(10) - bar, SZ(40), SZ(4), "#d2dae6"); P(cx + SZ(18), gY - SZ(10) - bar, SZ(4), bar, "#d2dae6");
+        disc(cx + SZ(6), gY - SZ(5), SZ(6), "#ffd23f"); P(cx + SZ(4), gY - SZ(7), SZ(2), SZ(2), "#c98f00");
+      }
+      else if (type === "net") { for (var i = -22; i <= 22; i += 6) P(cx + SZ(i), gY - SZ(50), SZ(3), SZ(50), "#e6ecff"); for (var j = 0; j < 52; j += 6) P(cx - SZ(22), gY - SZ(j), SZ(44), SZ(3), "#e6ecff"); disc(cx, gY - SZ(24), SZ(6), "#9fb0e0"); }
+      else if (type === "ice") { P(cx - SZ(22), gY - SZ(54), SZ(44), SZ(54), "rgba(150,220,255,.78)"); P(cx - SZ(22), gY - SZ(54), SZ(10), SZ(54), "rgba(230,248,255,.9)"); P(cx + SZ(8), gY - SZ(38), SZ(5), SZ(26), "rgba(230,248,255,.75)"); P(cx - SZ(22), gY - SZ(54), SZ(44), SZ(3), "#bfe4ff"); }
+      else if (type === "vine") { P(cx - SZ(3), gY - SZ(70), SZ(6), SZ(40), "#357a35"); disc(cx, gY - SZ(30), SZ(18), "#4aa84a"); disc(cx, gY - SZ(30), SZ(11), "#2f8f42"); P(cx - SZ(12), gY - SZ(30), SZ(24), SZ(5), "#256a25"); }
+      else if (type === "hoop") { for (var a = 0; a < 14; a++) { var an = a / 14 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(26)) - SZ(3), gY - SZ(32) + Math.round(Math.sin(an) * SZ(26)) - SZ(3), SZ(7), SZ(7), (a + Math.floor(ph * 6)) % 2 ? "#ff5a1a" : "#ffd23f"); } disc(cx, gY - SZ(32), SZ(14), "rgba(255,120,30,.25)"); }
+      else { P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(56), "#1a1236"); for (var v = -22; v <= 22; v += 8) P(cx + SZ(v), gY - SZ(54), SZ(4), SZ(54), "#7a5aff"); P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(26), gY - SZ(5), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(7), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); P(cx + SZ(2), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); }
+      // pulsing warning mark floating above
+      if (!sprung) { var wy = gY - SZ(74), on = Math.floor(ph * 3) % 2; var wc = on ? "#ff3b30" : "#ffd23f"; P(cx - SZ(2), wy, SZ(5), SZ(11), wc); P(cx - SZ(2), wy + SZ(13), SZ(5), SZ(4), wc); }
     }
 
     /* ---- HUD (pixel) ---- */
@@ -1214,7 +1235,12 @@
       get gems() { return progress.gems || 0; }, get level() { return level; },
       start: function (n) { startLevel(n || 1); }, openMap: openMap,
       forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: G.cf.trapType, done: false, sprung: false }); springTrap(G.traps.length - 1); },
-      setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow
+      setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
+      get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
+      get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
+      get chunks() { return G ? G.gates.length : 0; },
+      warp: function (wx) { if (G) { while (G.nextGate < G.gates.length && G.gates[G.nextGate].x < wx - 60) { G.gates[G.nextGate].solved = true; G.nextGate++; } G.hero.wx = wx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.cam = wx - HEROX; } },
+      unwarp: function () {}
     };
 
     return { init: advInit, startDaily: startDaily, exitHome: exitHome };
