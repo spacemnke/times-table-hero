@@ -789,12 +789,28 @@
       { id: "unicorn", name: "LUNA" }, { id: "cat", name: "PIXEL" }, { id: "fox", name: "RUSTY" },
       { id: "robo", name: "BOLT", cost: 5, power: "heart", note: "+1 HEART" },
       { id: "comet", name: "COMET", cost: 12, power: "jump", note: "SUPER JUMP" },
-      { id: "nova", name: "NOVA", cost: 22, power: "star", note: "STARTS SUPER" }
+      { id: "nova", name: "NOVA", cost: 22, power: "star", note: "STARTS SUPER" },
+      { id: "draco", name: "DRACO", cost: 35, power: "shield", note: "TRAP SHIELD" },
+      { id: "orbit", name: "ORBIT", cost: 50, power: "magnet", note: "COIN MAGNET" }
     ];
     function charPower(id) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === id) return CHARS[i].power || null; return null; }
-    // one signature trap per world; caught => solve a bonus question to escape
-    var TRAP_BY_WORLD = ["bush", "plant", "mouse", "net", "ice", "giant", "hoop", "cage"];
-    var TRAP_LABEL = { bush: "SPIKY BUSH!", plant: "CHOMP PLANT!", mouse: "MOUSE TRAP!", net: "CAUGHT IN A NET!", ice: "FROZEN SOLID!", vine: "VINE SNARE!", giant: "GIANT STOMP!", hoop: "RING OF FIRE!", cage: "CAGED — CRACK THE CODE!" };
+    // each world rolls among a themed pool of traps; caught => solve a bonus question to escape
+    var TRAP_POOL = [
+      ["bush", "rps", "police"],        // MEADOW
+      ["plant", "net", "booger"],       // BEACH
+      ["mouse", "rps", "police"],       // CANDY
+      ["net", "booger", "snowball"],    // OCEAN
+      ["ice", "snowball", "iceblock"],  // SNOW
+      ["giant", "plant", "vine"],       // JUNGLE
+      ["hoop", "star", "giant"],        // VOLCANO
+      ["cage", "star", "booger"]        // SPACE
+    ];
+    var TRAP_LABEL = {
+      bush: "SPIKY BUSH!", plant: "CHOMP PLANT!", mouse: "MOUSE TRAP!", net: "CAUGHT IN A NET!",
+      ice: "FROZEN SOLID!", vine: "VINE SNARE!", giant: "GIANT STOMP!", hoop: "RING OF FIRE!",
+      cage: "CAGED — CRACK THE CODE!", snowball: "SNOWBALL FIGHT!", iceblock: "FALLING ICE!",
+      star: "FALLING STAR!", rps: "ROCK-PAPER-SCISSORS!", police: "BUSTED — COPS!", booger: "SNOT ATTACK!"
+    };
     // segment layout archetypes for variety
     var CHUNKS = ["boxes", "hop", "gauntlet", "trapchunk", "moving", "coinarc"];
 
@@ -811,7 +827,7 @@
       return {
         speed: 200 + (n - 1) * 18, pit: 145 + (n - 1) * 26, enemySpeed: 58 + (n - 1) * 16,
         moving: n >= 2, hearts: 3,
-        trapType: TRAP_BY_WORLD[(n - 1) % 8],
+        trapPool: TRAP_POOL[(n - 1) % 8],
         trapChance: Math.min(0.95, 0.6 + (n - 1) * 0.05),   // more traps deeper
         enemyChance: Math.min(0.95, 0.5 + (n - 1) * 0.07),
         gemChance: 0.5
@@ -826,7 +842,7 @@
       G = {
         cf: cf, theme: th, state: "run", cam: 0, speed: cf.speed, t: 0,
         maxHearts: maxH, hearts: (keepHearts != null ? keepHearts : maxH), coins: 0, gemRun: 0, nextGate: 0,
-        power: power, jumpBoost: power === "jump",
+        power: power, jumpBoost: power === "jump", shield: power === "shield", magnet: power === "magnet",
         hero: { wx: HEROX, y: GROUND, vy: 0, ground: true, hold: false, dbl: false, coyote: 0, inv: 0, power: power === "star" ? 6 : 0, run: 0 },
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
@@ -852,8 +868,8 @@
       // signature trap per world — first two zones always trapped so every run meets one early; a 2nd appears deeper
       for (seg = 1; seg < gx.length; seg++) {
         var bt = gx[seg] - SEG; if (bt <= 200) continue;
-        if (seg <= 2 || Math.random() < cf.trapChance) G.traps.push({ x: bt + SEG * 0.34, type: cf.trapType, done: false, sprung: false });
-        if (level >= 3 && Math.random() < cf.trapChance - 0.3) G.traps.push({ x: bt + SEG * 0.80, type: cf.trapType, done: false, sprung: false });
+        if (seg <= 2 || Math.random() < cf.trapChance) G.traps.push({ x: bt + SEG * 0.34, type: pick(cf.trapPool), done: false, sprung: false });
+        if (level >= 3 && Math.random() < cf.trapChance - 0.3) G.traps.push({ x: bt + SEG * 0.80, type: pick(cf.trapPool), done: false, sprung: false });
       }
       // shiny purple coins: rare, placed high so you must jump for them
       for (seg = 1; seg < gx.length; seg++) { if (seg % 2 === 0 && Math.random() < cf.gemChance) G.gemsA.push({ x: gx[seg] - SEG * 0.72, hAbove: 300 + (seg % 3) * 22, got: false }); }
@@ -983,12 +999,13 @@
           var headY = h.y - HEROSIZE * 0.9;
           for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used) continue; var by = GROUND - bx.hAbove; if (h.vy < 0 && h.wx >= bx.x - 8 && h.wx <= bx.x + bx.w + 8 && headY <= by + bx.h && headY >= by - 12) { bx.used = true; bx.pop = .2; h.vy = 80; addCoins(1); aCoin(); G.particles.push({ wx: bx.x + bx.w / 2, y: by - 14, vx: 0, vy: -220, life: .7, kind: "coin" }); } }
           if (G.star && !G.star.taken) { var syv = GROUND - G.star.hAbove; if (Math.abs(G.star.x - h.wx) < 50 && Math.abs(syv - (h.y - 40)) < 66) { G.star.taken = true; h.power = 6.5; aStar(); haptic([12, 30, 12]); } }
-          for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cy = GROUND - co.hAbove; var dx = co.x - h.wx, dy = cy - (h.y - 40); if (h.power > 0 && Math.abs(dx) < 300 && Math.abs(dy) < 300) { co.x -= dx * Math.min(1, dt * 9); co.hAbove += dy * Math.min(1, dt * 9); } if (Math.abs(co.x - h.wx) < 38 && Math.abs((GROUND - co.hAbove) - (h.y - 40)) < 54) { co.got = true; addCoins(1); aCoin(); } }
+          var mag = h.power > 0 || G.magnet;
+          for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cy = GROUND - co.hAbove; var dx = co.x - h.wx, dy = cy - (h.y - 40); if (mag && Math.abs(dx) < 300 && Math.abs(dy) < 300) { co.x -= dx * Math.min(1, dt * 9); co.hAbove += dy * Math.min(1, dt * 9); } if (Math.abs(co.x - h.wx) < 38 && Math.abs((GROUND - co.hAbove) - (h.y - 40)) < 54) { co.got = true; addCoins(1); aCoin(); } }
           for (var e = 0; e < G.enemies.length; e++) { var en = G.enemies[e]; if (!en.alive) continue; en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } var eTop = GROUND - 52; if (Math.abs(en.x - h.wx) < 40) { if (h.power > 0) { en.alive = false; addCoins(3); aStomp(); coinBurst(en.x, eTop); } else if (h.vy > 0 && h.y <= eTop + 22 && h.y >= eTop - 40) { en.alive = false; h.vy = -620; addCoins(3); aStomp(); haptic(15); coinBurst(en.x, eTop); } else if (!TEST && h.inv <= 0 && h.y > eTop - 28) { hurt(); } } }
           // shiny purple coins (magnetised while super)
-          for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (h.power > 0 && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
+          for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (mag && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
           // traps: run into one on the ground and you're caught (jump over to dodge; smash through while super)
-          for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (!TEST) { springTrap(tp); break; } } }
+          for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST) { springTrap(tp); break; } } }
           for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; if (!fl.hit && h.wx >= fl.x) { fl.hit = true; G.lastCP = fl.x; aFlag(); } }
           if (h.y > GROUND + 420) respawn();
           if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; arrive(); } } else if (h.wx >= G.castleX - 80) { win(); }
@@ -1042,7 +1059,9 @@
       // ---- special unlockable heroes (objects) ----
       robo: { rows: ["..........y...", "..........y...", ".....MMMMMMM..", ".....MEEEEEM..", "MMMMMMEEEEEM..", "MMbMMMMMMMMM..", "MMMMMMMMMMMM..", "MMMMMMMMMMMM..", ".TT..TT..TT...", ".TT..TT..TT...", "..............", ".............."], map: { M: "#b8c2d0", E: "#37e0ff", b: "#ff5c6c", T: "#4a5566", y: "#ffd23f" } },
       comet: { rows: ["..............", "..........RRR.", ".......RRRRRR.", "..fWWWWWWWRRR.", "ffFWWwWWWWWRR.", "ffFWWwWWWWWRR.", "..fWWWWWWWRRR.", ".......RRRRRR.", "..........RRR.", "....RR........", "....RR........", ".............."], map: { R: "#ff4f5a", W: "#eef2f8", w: "#37c0ff", f: "#ffb020", F: "#ffe06a" } },
-      nova: { rows: [".......S......", "t.....SSS.....", ".tt..SSSSS....", "..ttSSSSSSS...", "...SSSSSSSSS..", "..SSSSSoSSSS..", "...SSSSSSSS...", "...SS...SS....", "..SS.....SS...", ".SS.......SS..", "..............", ".............."], map: { S: "#ffe14a", o: "#7a5a00", t: "#ff9ec7" } }
+      nova: { rows: [".......S......", "t.....SSS.....", ".tt..SSSSS....", "..ttSSSSSSS...", "...SSSSSSSSS..", "..SSSSSoSSSS..", "...SSSSSSSS...", "...SS...SS....", "..SS.....SS...", ".SS.......SS..", "..............", ".............."], map: { S: "#ffe14a", o: "#7a5a00", t: "#ff9ec7" } },
+      draco: { rows: ["........g.g..", "........ggg..", "..t....gGGGh.", ".ttg..GGGGoG.", "gtGGGGGGGGGGm", "gGGwwGGGGGGG.", "gGGwwwGGGGG..", "gGGGGGGGGG...", ".g..g..g.g...", ".g..g..g.g...", "..............", ".............."], map: { G: "#3aa64a", g: "#2f8f42", o: "#111", m: "#ff5c6c", w: "#8be06a", t: "#57bf3a", h: "#ffd23f" } },
+      orbit: { rows: ["..............", "..............", ".....DDDD.....", "...DDddddDD...", "..DddddddddD..", ".SSSSSSSSSSSS", "SSSSSSSSSSSSSS", ".LzLzLzLzLzL.", "..............", "...b......b...", "..............", ".............."], map: { D: "#c8d0e0", d: "#37e0ff", S: "#9aa6b8", L: "#ffd23f", z: "#ff5c6c", b: "#7ce0ff" } }
     };
     var heroBuf = document.createElement("canvas"); heroBuf.width = 14; heroBuf.height = 12; var hbx = heroBuf.getContext("2d");
     function drawHeroPix(g, bx, by, B, type) { var H = HERO_MAP[type] || HERO_MAP.unicorn; hbx.clearRect(0, 0, 14, 12); spr(hbx, 0, 0, H.rows, H.map); g.imageSmoothingEnabled = false; g.drawImage(heroBuf, 0, 0, 14, 12, bx, by, 14 * B, 12 * B); }
@@ -1112,6 +1131,29 @@
         for (var a = 0; a < 18; a++) { var an = a / 18 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(44)) - SZ(3), cy + Math.round(Math.sin(an) * SZ(44)) - SZ(3), SZ(9), SZ(9), (a + Math.floor(ph * 8)) % 2 ? "#ff5a1a" : "#ffd23f"); }
       } else if (type === "cage") {
         for (var v = -32; v <= 32; v += 10) P(cx + SZ(v), hyTop - SZ(14), SZ(4), hh + SZ(24), "#7a5aff"); P(cx - SZ(32), hyTop - SZ(14), SZ(64), SZ(5), "#7a5aff"); P(cx - SZ(32), footBase + SZ(8), SZ(64), SZ(5), "#7a5aff");
+      } else if (type === "snowball") {
+        for (var k = 0; k < 6; k++) { var tt = (ph * 1.6 + k * 0.28) % 1; var bx2 = cx + SZ(60) - Math.round(tt * SZ(84)); var by2 = cy - SZ(22) + Math.round(Math.sin(k * 1.7) * SZ(22)); disc(bx2, by2, SZ(7), "#fff"); }
+        disc(cx - SZ(6), cy - SZ(4), SZ(7), "rgba(255,255,255,.92)"); disc(cx + SZ(7), cy + SZ(5), SZ(6), "rgba(255,255,255,.92)"); disc(cx + SZ(2), cy - SZ(10), SZ(5), "rgba(255,255,255,.92)");
+      } else if (type === "iceblock") {
+        var drop = (Math.sin(ph * 3) * 0.5 + 0.5), byy = hyTop - SZ(34) + Math.round(drop * SZ(30));
+        x.globalAlpha = .62; P(cx - SZ(24), byy, SZ(48), SZ(32), "#bfe4ff"); x.globalAlpha = 1; P(cx - SZ(24), byy, SZ(48), SZ(4), "#eaf6ff"); P(cx - SZ(24), byy, SZ(6), SZ(32), "#eaf6ff");
+        x.globalAlpha = .5; P(cx - SZ(42), hyTop + SZ(12), SZ(20), SZ(20), "#bfe4ff"); P(cx + SZ(24), hyTop + SZ(20), SZ(18), SZ(18), "#bfe4ff"); x.globalAlpha = 1;
+      } else if (type === "star") {
+        var mx = cx + SZ(4), my = hyTop - SZ(22);
+        for (var tr2 = 0; tr2 < 6; tr2++) P(mx + SZ(22) + tr2 * SZ(7), my - SZ(22) - tr2 * SZ(7), SZ(6), SZ(6), tr2 % 2 ? "#ff8a2a" : "#ffd23f");
+        disc(mx, my, SZ(26), "rgba(255,150,40,.3)"); pxStar(mx, my, SZ(22));
+      } else if (type === "rps") {
+        var gg = Math.floor(ph * 2) % 3, hy = hyTop - SZ(30);
+        if (gg === 0) disc(cx, hy, SZ(19), "#f2d6b0"); else if (gg === 1) P(cx - SZ(22), hy - SZ(11), SZ(44), SZ(26), "#f2d6b0"); else { P(cx - SZ(5), hy - SZ(20), SZ(6), SZ(34), "#f2d6b0"); P(cx + SZ(6), hy - SZ(20), SZ(6), SZ(34), "#f2d6b0"); }
+      } else if (type === "police") {
+        var pf = Math.floor(ph * 4) % 2; x.globalAlpha = .35; P(0, 0, W, SZ(10), pf ? "#ff3b30" : "#3a6bff"); x.globalAlpha = 1;
+        for (var v3 = -30; v3 <= 30; v3 += 10) P(cx + SZ(v3), hyTop - SZ(12), SZ(4), hh + SZ(22), "#c8d0e0");
+        P(cx - SZ(17), hyTop - SZ(26), SZ(15), SZ(11), pf ? "#ff3b30" : "#3a6bff"); P(cx + SZ(2), hyTop - SZ(26), SZ(15), SZ(11), pf ? "#3a6bff" : "#ff3b30");
+      } else if (type === "booger") {
+        disc(cx, hyTop - SZ(30), SZ(20), "#f2c9a0"); P(cx - SZ(7), hyTop - SZ(24), SZ(6), SZ(8), "#a9743f"); P(cx + SZ(3), hyTop - SZ(24), SZ(6), SZ(8), "#a9743f");
+        var wf = Math.sin(ph * 8) > 0 ? SZ(6) : 0; P(cx - SZ(36), hyTop - SZ(36) - wf, SZ(15), SZ(8), "#fff"); P(cx + SZ(22), hyTop - SZ(36) - wf, SZ(15), SZ(8), "#fff");
+        for (var s3 = 0; s3 < 3; s3++) { var t3 = (ph * 1.2 + s3 * 0.33) % 1; disc(cx - SZ(7) + s3 * SZ(8), hyTop - SZ(8) + Math.round(t3 * SZ(34)), SZ(5), "#8fd14a"); }
+        disc(cx, cy + SZ(2), SZ(8), "rgba(120,200,60,.8)");
       } else {
         for (var s = 0; s < 16; s++) { var sa = s / 16 * 6.283, rr = SZ(36) + Math.round(Math.sin(ph * 4) * SZ(3)); P(cx + Math.round(Math.cos(sa) * rr) - SZ(3), cy + Math.round(Math.sin(sa) * rr) - SZ(3), SZ(9), SZ(9), "#8be04a"); }
       }
@@ -1170,6 +1212,12 @@
       else if (type === "vine") { P(cx - SZ(3), gY - SZ(70), SZ(6), SZ(40), "#357a35"); disc(cx, gY - SZ(30), SZ(18), "#4aa84a"); disc(cx, gY - SZ(30), SZ(11), "#2f8f42"); P(cx - SZ(12), gY - SZ(30), SZ(24), SZ(5), "#256a25"); }
       else if (type === "giant") { var stomp = Math.abs(Math.sin(ph * 3)), soleY = gY - SZ(30) - Math.round(stomp * SZ(20)); disc(cx, gY, SZ(26), "rgba(0,0,0,.22)"); P(cx - SZ(19), 0, SZ(38), soleY - SZ(20), "#d8b48a"); P(cx - SZ(19), 0, SZ(9), soleY - SZ(20), "#eccfa8"); P(cx - SZ(26), soleY - SZ(24), SZ(52), SZ(24), "#e6bd92"); P(cx - SZ(26), soleY - SZ(6), SZ(52), SZ(6), "#caa070"); for (var gt = 0; gt < 5; gt++) P(cx - SZ(24) + gt * SZ(10), soleY - SZ(3), SZ(7), SZ(6), "#f2d6b0"); }
       else if (type === "hoop") { for (var a = 0; a < 14; a++) { var an = a / 14 * 6.283; P(cx + Math.round(Math.cos(an) * SZ(26)) - SZ(3), gY - SZ(32) + Math.round(Math.sin(an) * SZ(26)) - SZ(3), SZ(7), SZ(7), (a + Math.floor(ph * 6)) % 2 ? "#ff5a1a" : "#ffd23f"); } disc(cx, gY - SZ(32), SZ(14), "rgba(255,120,30,.25)"); }
+      else if (type === "snowball") { disc(cx, gY - SZ(13), SZ(15), "#f4faff"); disc(cx, gY - SZ(32), SZ(11), "#f4faff"); P(cx - SZ(5), gY - SZ(34), SZ(3), SZ(3), "#111"); P(cx + SZ(2), gY - SZ(34), SZ(3), SZ(3), "#111"); P(cx - SZ(1), gY - SZ(31), SZ(5), SZ(2), "#ff8a2a"); P(cx - SZ(16), gY - SZ(24), SZ(10), SZ(3), "#8a5a2a"); disc(cx + SZ(20), gY - SZ(22) - Math.round(Math.abs(Math.sin(ph * 5)) * SZ(6)), SZ(6), "#fff"); }
+      else if (type === "iceblock") { var dd = Math.round((Math.sin(ph * 3) + 1) * SZ(9)); P(cx - SZ(3), gY - SZ(58), SZ(6), SZ(12), "#bfe4ff"); P(cx - SZ(15), gY - SZ(42) - dd, SZ(30), SZ(30), "rgba(150,220,255,.82)"); P(cx - SZ(15), gY - SZ(42) - dd, SZ(30), SZ(4), "#eaf6ff"); P(cx - SZ(15), gY - SZ(42) - dd, SZ(5), SZ(30), "#eaf6ff"); }
+      else if (type === "star") { pxStar(cx, gY - SZ(26), SZ(18)); disc(cx, gY - SZ(2), SZ(18), "rgba(255,190,50,.28)"); for (var ss = 0; ss < 3; ss++) P(cx - SZ(20) + ss * SZ(14), gY - SZ(6), SZ(3), SZ(3), "#ffe06a"); }
+      else if (type === "rps") { P(cx - SZ(13), gY - SZ(34), SZ(26), SZ(34), "#8b6cf0"); P(cx - SZ(13), gY - SZ(34), SZ(26), SZ(5), "#a98bff"); P(cx - SZ(8), gY - SZ(28), SZ(6), SZ(6), "#fff"); P(cx + SZ(3), gY - SZ(28), SZ(6), SZ(6), "#fff"); P(cx - SZ(6), gY - SZ(26), SZ(3), SZ(3), "#111"); P(cx + SZ(5), gY - SZ(26), SZ(3), SZ(3), "#111"); var gg = Math.floor(ph * 2) % 3; if (gg === 0) disc(cx, gY - SZ(48), SZ(9), "#f2d6b0"); else if (gg === 1) P(cx - SZ(11), gY - SZ(54), SZ(22), SZ(12), "#f2d6b0"); else { P(cx - SZ(3), gY - SZ(56), SZ(3), SZ(15), "#f2d6b0"); P(cx + SZ(3), gY - SZ(56), SZ(3), SZ(15), "#f2d6b0"); } }
+      else if (type === "police") { var pf = Math.floor(ph * 4) % 2; P(cx - SZ(20), gY - SZ(16), SZ(40), SZ(16), "#e8ecff"); for (var pb = -14; pb <= 14; pb += 9) P(cx + SZ(pb), gY - SZ(16), SZ(3), SZ(16), "#2a3350"); P(cx - SZ(20), gY - SZ(16), SZ(40), SZ(4), "#ffd23f"); P(cx - SZ(12), gY - SZ(28), SZ(11), SZ(9), pf ? "#ff3b30" : "#3a6bff"); P(cx + SZ(1), gY - SZ(28), SZ(11), SZ(9), pf ? "#3a6bff" : "#ff3b30"); }
+      else if (type === "booger") { var bwf = Math.sin(ph * 8) > 0 ? SZ(4) : 0; disc(cx, gY - SZ(28), SZ(13), "#f2c9a0"); P(cx - SZ(5), gY - SZ(24), SZ(4), SZ(5), "#a9743f"); P(cx + SZ(2), gY - SZ(24), SZ(4), SZ(5), "#a9743f"); P(cx - SZ(22), gY - SZ(34) - bwf, SZ(11), SZ(6), "#fff"); P(cx + SZ(12), gY - SZ(34) - bwf, SZ(11), SZ(6), "#fff"); disc(cx - SZ(2), gY - SZ(12) + Math.round(Math.abs(Math.sin(ph * 6)) * SZ(6)), SZ(4), "#8fd14a"); }
       else { P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(56), "#1a1236"); for (var v = -22; v <= 22; v += 8) P(cx + SZ(v), gY - SZ(54), SZ(4), SZ(54), "#7a5aff"); P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(26), gY - SZ(5), SZ(52), SZ(5), "#7a5aff"); P(cx - SZ(7), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); P(cx + SZ(2), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); }
       // pulsing warning mark floating above
       if (!sprung) { var wy = gY - SZ(74), on = Math.floor(ph * 3) % 2; var wc = on ? "#ff3b30" : "#ffd23f"; P(cx - SZ(2), wy, SZ(5), SZ(11), wc); P(cx - SZ(2), wy + SZ(13), SZ(5), SZ(4), wc); }
@@ -1272,9 +1320,10 @@
       get state() { return G ? G.state : null; }, get q() { return G ? G.question : null; },
       get hearts() { return G ? G.hearts : null; }, get maxHearts() { return G ? G.maxHearts : null; }, get coins() { return G ? G.coins : null; },
       get next() { return G ? G.nextGate : null; }, get total() { return G ? G.gates.length : null; },
-      get gems() { return progress.gems || 0; }, get level() { return level; },
+      get gems() { return progress.gems || 0; }, get level() { return level; }, get shield() { return G ? !!G.shield : null; },
       start: function (n) { startLevel(n || 1); }, openMap: openMap,
-      forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: G.cf.trapType, done: false, sprung: false }); springTrap(G.traps.length - 1); },
+      forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: pick(G.cf.trapPool), done: false, sprung: false }); springTrap(G.traps.length - 1); },
+      forceTrapType: function (t) { if (!G) return; G.traps.push({ x: G.hero.wx, type: t, done: false, sprung: false }); springTrap(G.traps.length - 1); },
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
