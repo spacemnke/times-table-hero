@@ -41,8 +41,8 @@
   /* ---------------- persistence ---------------- */
   function allTables() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
   function freshProgress() {
-    return { v: 2, xp: 0, coins: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
-      bestStreak: 0, recent: [], facts: {}, days: {}, badges: {},
+    return { v: 2, xp: 0, coins: 0, gems: 0, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0,
+      bestStreak: 0, recent: [], facts: {}, days: {}, badges: {}, secretsFound: {},
       settings: { dailyGoal: 20, focusTables: allTables(), streakFreeze: true } };
   }
   function normalize(p) {
@@ -793,7 +793,13 @@
       { id: "draco", name: "DRACO", cost: 35, power: "shield", note: "TRAP SHIELD" },
       { id: "orbit", name: "ORBIT", cost: 50, power: "magnet", note: "COIN MAGNET" }
     ];
-    function charPower(id) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === id) return CHARS[i].power || null; return null; }
+    // exclusive heroes found ONLY by discovering a world's hidden path (never purchasable)
+    var SECRET_CHARS = {
+      2: { id: "shelly", name: "SHELLY", power: "magnet", note: "TREASURE MAGNET", from: "BEACH" }
+    };
+    // hidden "World B" palette — a sunset pirate cove, distinct from the bright-blue Beach
+    var SECRET_THEME = { name: "PIRATE COVE", prop: "palm", sky: "#ff9e5c", sky2: "#ffd39a", cloud: "#fff0dc", mtn: "#d99a6a", mtnS: "#ffe0b0", h1: "#f2c860", h2: "#d6a448", grass: "#f0d98e", dirt: "#d8a45c", dirtL: "#bd8a44", water: "#2f9fb0" };
+    function charPower(id) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === id) return CHARS[i].power || null; for (var wk in SECRET_CHARS) if (SECRET_CHARS[wk].id === id) return SECRET_CHARS[wk].power || null; return null; }
     // each world rolls among a themed pool of traps; caught => solve a bonus question to escape
     var TRAP_POOL = [
       ["bush", "rps", "police"],        // MEADOW
@@ -848,7 +854,7 @@
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
         grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [],
-        bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: ""
+        bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0
       };
       build(cf); buildPmap();
     }
@@ -863,6 +869,14 @@
       pits.forEach(function (p) { var mid = (p[0] + p[1]) / 2; for (var k = -2; k <= 2; k++) G.coinsA.push({ x: mid + k * 40, hAbove: 160 - Math.abs(k) * 24, got: false }); });
       // Beach: leaping fish jump out of the water gaps (time your jump past them)
       if (G.theme.name === "BEACH") { pits.forEach(function (p, fi) { if (fi % 1 === 0) G.fish.push({ x: (p[0] + p[1]) / 2, amp: 210, period: 1.5, phase: (fi * 1.7) % 3 }); }); }
+      // HIDDEN PATH: a golden warp portal up on a ledge — jump onto it to dive into a secret "World B".
+      // Only reachable by a deliberate leap (a coin arc hints the climb); ground-runners sail right past it.
+      if (SECRET_CHARS[level]) {
+        var wpx = (G.gates[2] ? G.gates[2].x : gx[Math.min(2, gx.length - 1)]) - SEG * 0.5;
+        G.platforms.push({ x: wpx - 60, hAbove: 150, w: 120, mv: false, amp: 0, period: 2, phase: 0, warp: true });
+        G.warp = { x0: wpx - 58, x1: wpx + 58, top: GROUND - 150, x: wpx, done: false };
+        for (var wc = 0; wc < 5; wc++) G.coinsA.push({ x: wpx - 150 + wc * 42, hAbove: 60 + wc * 24, got: false });
+      }
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
@@ -1003,6 +1017,7 @@
       if (!running) { looping = false; return; }
       var dt = Math.min(.045, (ts - (last || ts)) / 1000); last = ts;
       if (G) {
+        if (G.enterPending && !G.secretWorld) { var __ew = G.enterPending; G.enterPending = 0; enterSecret(__ew); }
         G.cloud += dt * 14; G.t += dt; var h = G.hero;
         if (G.state === "run") {
           var sp = G.speed * (1 + G.dash); G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
@@ -1014,6 +1029,8 @@
           for (var pi2 = 0; pi2 < G.pipes.length; pi2++) { var pp2 = G.pipes[pi2]; var ptp2 = GROUND - pp2.h; if (h.wx >= pp2.x - 2 && h.wx <= pp2.x + pp2.w + 2 && h.vy >= 0 && h.y <= ptp2 + 4 && ny >= ptp2) { if (landTop === null || ptp2 < landTop) landTop = ptp2; } }
           if (landTop === null) { if ((groundAt(h.wx) || TEST) && h.vy >= 0 && ny >= GROUND && h.y <= GROUND + 4) landTop = GROUND; }
           if (landTop !== null) { h.y = landTop; h.vy = 0; h.ground = true; h.dbl = false; h.coyote = .1; } else { if (h.ground) h.coyote = .1; h.ground = false; h.y = ny; }
+          // hidden warp: land on the golden ledge portal and dive into the secret world
+          if (G.warp && !G.warp.done && h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1 && Math.abs(h.y - G.warp.top) < 12) { G.warp.done = true; G.enterPending = level; aStar(); haptic([12, 30, 12]); }
           var headY = h.y - HEROSIZE * 0.9;
           for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used) continue; var by = GROUND - bx.hAbove; if (h.vy < 0 && h.wx >= bx.x - 8 && h.wx <= bx.x + bx.w + 8 && headY <= by + bx.h && headY >= by - 12) { bx.used = true; bx.pop = .2; h.vy = 80; if (bx.power) { spawnPowerup(bx.x + bx.w / 2, by - 20); } else { addCoins(1); aCoin(); G.particles.push({ wx: bx.x + bx.w / 2, y: by - 14, vx: 0, vy: -220, life: .7, kind: "coin" }); } } }
           for (var bkr = 0; bkr < G.bricks.length; bkr++) { var bk = G.bricks[bkr]; if (bk.used) continue; var bky = GROUND - bk.hAbove; if (h.vy < 0 && h.wx >= bk.x - 8 && h.wx <= bk.x + bk.w + 8 && headY <= bky + bk.h && headY >= bky - 12) { if (G.bigT > 0) { bk.used = true; aStomp(); coinBurst(bk.x + bk.w / 2, bky); } else { h.vy = 80; if (!bk.tapped) { bk.tapped = true; addCoins(1); aCoin(); } } } }
@@ -1029,8 +1046,9 @@
           for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0 || G.bigT > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST) { springTrap(tp); break; } } }
           for (var fsh = 0; fsh < G.fish.length; fsh++) { var fz = G.fish[fsh]; var fph = Math.sin((G.t / fz.period + fz.phase) * Math.PI * 2); if (fph > 0) { var ffy = GROUND - fph * fz.amp; if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && Math.abs(fz.x - h.wx) < 42 && Math.abs(ffy - (h.y - 40)) < 52) hurt(); } }
           for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; if (!fl.hit && h.wx >= fl.x) { fl.hit = true; G.lastCP = fl.x; aFlag(); } }
+          if (G.chest && !G.chest.taken && Math.abs(G.chest.x - h.wx) < 46) { G.chest.taken = true; aWin(); haptic([12, 30, 12]); for (var cg = 0; cg < 10; cg++) G.particles.push({ wx: G.chest.x, y: GROUND - 40, vx: (cg - 5) * 60, vy: -260 - cg * 12, life: 1, kind: "star" }); }
           if (h.y > GROUND + 420) respawn();
-          if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; arrive(); } } else if (h.wx >= G.castleX - 80) { win(); }
+          if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; arrive(); } } else if (h.wx >= G.castleX - 80) { if (G.secretWorld) winSecret(); else win(); }
           if (h.power > 0 && Math.random() < .5) sparkle(h.wx, h.y - HEROSIZE * 0.4);
         }
         for (var f2 = 0; f2 < G.flags.length; f2++) { var fg = G.flags[f2]; if (fg.hit && fg.raise < 1) fg.raise = Math.min(1, fg.raise + dt * 3); }
@@ -1079,6 +1097,68 @@
       setTimeout(function () { host.innerHTML = ""; }, 3400);
     }
 
+    /* ---- hidden "World B": a self-contained secret level reached via the warp portal ---- */
+    function enterSecret(worldN) {
+      var mainG = G;
+      var retX = (mainG.warp ? mainG.warp.x1 : mainG.hero.wx) + SEG * 0.9;   // exit drops you ahead in the main level (a shortcut)
+      var keepH = mainG.hearts;
+      G = {
+        cf: mainG.cf, theme: SECRET_THEME, state: "run", cam: 0, speed: 190, t: 0,
+        maxHearts: mainG.maxHearts, hearts: keepH, coins: 0, gemRun: 0, nextGate: 0,
+        power: mainG.power, jumpBoost: mainG.jumpBoost, shield: mainG.shield, magnet: mainG.magnet,
+        hero: { wx: HEROX, y: GROUND, vy: 0, ground: true, hold: false, dbl: false, coyote: 0, inv: 1, power: mainG.magnet ? 0 : 0, run: 0 },
+        question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
+        correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
+        deck: buildQuestions(focusTables(), 3), deckI: 0,
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [],
+        bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
+      };
+      buildSecretMap();
+      buildPmap();
+      showPow("SECRET COVE!");
+      aStar();
+    }
+    function buildSecretMap() {
+      var START = 700, gap = 1150, gx = [], i;
+      for (i = 0; i < 3; i++) gx.push(START + i * gap);
+      G.gates = gx.map(function (v) { return { x: v, solved: false }; });
+      G.castleX = gx[gx.length - 1] + 950;
+      G.grounds = [[-400, G.castleX + 600]];   // one solid boardwalk — forgiving, no killer pits
+      G.flags = [{ x: HEROX, hit: true, raise: 1 }];
+      for (i = 0; i < gx.length; i++) G.flags.push({ x: gx[i] - gap * 0.5, hit: false, raise: 0, half: true });
+      // treasure everywhere: gem arcs, coin trails, a few ? boxes & platforms to play on
+      for (var s = 0; s < gx.length; s++) {
+        var b = gx[s] - gap;
+        for (var k = 0; k < 5; k++) G.gemsA.push({ x: b + 260 + k * 66, hAbove: 150 + Math.round(Math.sin(k * 1.3) * 46), got: false });
+        for (var c = 0; c < 6; c++) G.coinsA.push({ x: b + 560 + c * 42, hAbove: 60, got: false });
+        G.boxes.push({ x: b + 420, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        G.platforms.push({ x: b + 120, hAbove: 210, w: 118, mv: false, amp: 0, period: 2, phase: 0 });
+      }
+      // big treasure chest just before the exit
+      G.chest = { x: G.castleX - 240, taken: false };
+      for (var g3 = 0; g3 < 9; g3++) G.gemsA.push({ x: G.chest.x - 70 + g3 * 20, hAbove: 120 + (g3 % 3) * 34, got: false });
+      G.props = []; for (var pr = 0; pr < 40; pr++) G.props.push({ x: pr * 260 + ((pr * 53) % 120), s: 52 + ((pr * 37) % 26) });
+    }
+    function winSecret() {
+      var w = G.secretWorld, ret = G.returnTo, hpts = G.hearts;
+      progress.secretsFound = progress.secretsFound || {};
+      var first = !progress.secretsFound[w];
+      progress.secretsFound[w] = true;
+      var chestGems = first ? 10 : 5; progress.gems = (progress.gems || 0) + chestGems;
+      progress.xp += 15; save();
+      var sc = SECRET_CHARS[w], newHero = first && !!sc;
+      aWin(); haptic([15, 60, 15, 60, 15]);
+      // seamlessly return to the main level, dropped at the next gate (skips the platforming after the portal — the shortcut payoff)
+      G = ret.g;
+      G.hearts = hpts;
+      var dropX = (G.nextGate < G.gates.length) ? G.gates[G.nextGate].x - 56 : G.castleX - 90;
+      G.hero.wx = dropX; G.hero.y = GROUND; G.hero.vy = 0; G.hero.ground = true; G.hero.inv = 1.4; G.cam = dropX - HEROX;
+      G.state = "run";
+      for (var cg = 0; cg < 14; cg++) G.particles.push({ wx: dropX, y: GROUND - 40, vx: (cg - 7) * 55, vy: -240 - cg * 10, life: 1.1, kind: cg % 2 ? "star" : "coin" });
+      showPow(newHero ? ("NEW HERO: " + sc.name + "!") : ("TREASURE! +" + chestGems + " ◆"));
+      if (newHero) buildCharRow();
+    }
+
     /* ================= PIXEL ART ================= */
     function P(bx, by, bw, bh, c) { x.fillStyle = c; x.fillRect(bx | 0, by | 0, Math.max(1, bw | 0), Math.max(1, bh | 0)); }
     function FX(wx) { return Math.round((wx - G.cam) * sx); }
@@ -1094,7 +1174,9 @@
       comet: { rows: ["..............", "..........RRR.", ".......RRRRRR.", "..fWWWWWWWRRR.", "ffFWWwWWWWWRR.", "ffFWWwWWWWWRR.", "..fWWWWWWWRRR.", ".......RRRRRR.", "..........RRR.", "....RR........", "....RR........", ".............."], map: { R: "#ff4f5a", W: "#eef2f8", w: "#37c0ff", f: "#ffb020", F: "#ffe06a" } },
       nova: { rows: [".......S......", "t.....SSS.....", ".tt..SSSSS....", "..ttSSSSSSS...", "...SSSSSSSSS..", "..SSSSSoSSSS..", "...SSSSSSSS...", "...SS...SS....", "..SS.....SS...", ".SS.......SS..", "..............", ".............."], map: { S: "#ffe14a", o: "#7a5a00", t: "#ff9ec7" } },
       draco: { rows: ["........g.g..", "........ggg..", "..t....gGGGh.", ".ttg..GGGGoG.", "gtGGGGGGGGGGm", "gGGwwGGGGGGG.", "gGGwwwGGGGG..", "gGGGGGGGGG...", ".g..g..g.g...", ".g..g..g.g...", "..............", ".............."], map: { G: "#3aa64a", g: "#2f8f42", o: "#111", m: "#ff5c6c", w: "#8be06a", t: "#57bf3a", h: "#ffd23f" } },
-      orbit: { rows: ["..............", "..............", ".....DDDD.....", "...DDddddDD...", "..DddddddddD..", ".SSSSSSSSSSSS", "SSSSSSSSSSSSSS", ".LzLzLzLzLzL.", "..............", "...b......b...", "..............", ".............."], map: { D: "#c8d0e0", d: "#37e0ff", S: "#9aa6b8", L: "#ffd23f", z: "#ff5c6c", b: "#7ce0ff" } }
+      orbit: { rows: ["..............", "..............", ".....DDDD.....", "...DDddddDD...", "..DddddddddD..", ".SSSSSSSSSSSS", "SSSSSSSSSSSSSS", ".LzLzLzLzLzL.", "..............", "...b......b...", "..............", ".............."], map: { D: "#c8d0e0", d: "#37e0ff", S: "#9aa6b8", L: "#ffd23f", z: "#ff5c6c", b: "#7ce0ff" } },
+      // ---- secret-only hero: SHELLY the treasure crab ----
+      shelly: { rows: ["...r......r..", "...W......W..", "...e......e..", ".ccRRRRRRcc..", "cccRRRRRRccc.", ".ccRRRRRRcc..", "..RRRhRRRR...", "..RRRRRRRR...", ".R.R.RR.R.R..", "R..R.RR.R..R.", ".............", "............."], map: { R: "#ff5a44", r: "#d63626", c: "#ff8360", W: "#ffffff", e: "#2a1010", h: "#ffd23f" } }
     };
     var heroBuf = document.createElement("canvas"); heroBuf.width = 14; heroBuf.height = 12; var hbx = heroBuf.getContext("2d");
     function drawHeroPix(g, bx, by, B, type) { var H = HERO_MAP[type] || HERO_MAP.unicorn; hbx.clearRect(0, 0, 14, 12); spr(hbx, 0, 0, H.rows, H.map); g.imageSmoothingEnabled = false; g.drawImage(heroBuf, 0, 0, 14, 12, bx, by, 14 * B, 12 * B); }
@@ -1129,6 +1211,8 @@
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
+      if (G.warp && !G.warp.done) { var wpxs = FX(G.warp.x); if (wpxs > -30 && wpxs < W + 30) pxWarp(wpxs, FY(G.warp.top), G.t); }
+      if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
       for (var brn = 0; brn < G.bricks.length; brn++) { var bkk = G.bricks[brn]; if (bkk.used) continue; var brs = FX(bkk.x); if (brs > W + 8 || brs < -8) continue; pxBrick(brs, FY(GROUND - bkk.hAbove), SZ(bkk.w), SZ(bkk.h), th); }
       for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used && bx.usedGone) continue; var bxs = FX(bx.x), bpop = bx.pop ? SZ(bx.pop * 36) : 0; if (bxs > W + 8 || bxs < -8) continue; pxBox(bxs, FY(GROUND - bx.hAbove) - bpop, SZ(bx.w), SZ(bx.h), bx.used, bx.power); if (bx.pop) bx.pop = Math.max(0, bx.pop - .03); }
       for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; var fxs = FX(fl.x); if (fxs > W + 8 || fxs < -8) continue; pxFlag(fxs, gY, fl.raise || 0, fl.half); }
@@ -1238,6 +1322,30 @@
     function pxBrick(px, py, w, h, th) { P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
+    // golden warp portal on a ledge — the hidden entrance to World B
+    function pxWarp(cx, topY, t) {
+      var w = SZ(46), h = SZ(46), lx = cx - w / 2, bob = Math.round(Math.sin(t * 3) * SZ(2));
+      // golden pipe body
+      P(lx, topY, w, h, "#e0a020"); P(lx, topY, SZ(6), h, "#ffe27a"); P(lx + w - SZ(5), topY, SZ(5), h, "#b57a00");
+      P(lx - SZ(6), topY - SZ(14), w + SZ(12), SZ(16), "#e0a020"); P(lx - SZ(6), topY - SZ(14), w + SZ(12), SZ(5), "#ffe27a"); P(lx - SZ(6), topY - SZ(14), SZ(8), SZ(16), "#ffe27a");
+      // swirling dark portal mouth
+      var mc = cx, my = topY - SZ(6);
+      for (var r = SZ(10); r > 0; r -= SZ(3)) { var on = (Math.floor(t * 6 + r) % 2) === 0; disc(mc, my, r, on ? "#3a1a6a" : "#7a4fd0"); }
+      disc(mc, my, SZ(3), "#fff2a8");
+      // floating "?" + sparkles above
+      var qy = topY - SZ(30) + bob; P(mc - SZ(2), qy, SZ(6), SZ(3), "#fff"); P(mc + SZ(2), qy + SZ(3), SZ(3), SZ(4), "#fff"); P(mc - SZ(1), qy + SZ(8), SZ(3), SZ(3), "#fff");
+      if (Math.floor(t * 5) % 2) { P(mc - SZ(14), topY - SZ(20), SZ(3), SZ(3), "#fff2a8"); P(mc + SZ(14), topY - SZ(10), SZ(3), SZ(3), "#fff2a8"); }
+    }
+    // treasure chest at the end of the secret cove
+    function pxChest(cx, gY, t) {
+      var w = SZ(52), hh = SZ(34), lx = cx - w / 2, by = gY - hh;
+      P(lx, by, w, hh, "#8a5a2a"); P(lx, by, w, SZ(6), "#a9713f"); P(lx, gY - SZ(8), w, SZ(8), "#6b4520");
+      P(lx, by, SZ(5), hh, "#6b4520"); P(lx + w - SZ(5), by, SZ(5), hh, "#6b4520");
+      // gold bands + lid
+      P(lx, by + SZ(12), w, SZ(5), "#ffd23f"); P(lx + w / 2 - SZ(4), by + SZ(10), SZ(8), SZ(12), "#ffd23f"); P(lx + w / 2 - SZ(2), by + SZ(14), SZ(4), SZ(4), "#8a5a00");
+      // shine
+      if (Math.floor(t * 4) % 2) { P(lx + SZ(6), by - SZ(6), SZ(3), SZ(3), "#fff2a8"); P(lx + w - SZ(9), by - SZ(3), SZ(3), SZ(3), "#fff2a8"); }
+    }
     function pxStar(cx, cy, r) { P(cx - 1, cy - r, 2, r * 2, C.star); P(cx - r, cy - 1, r * 2, 2, C.star); P(cx - Math.round(r * .6), cy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), C.star); P(cx - 2, cy - 2, 4, 4, "#fff2a8"); }
     function pxGate(gxs, gY) { var hh = SZ(150); P(gxs - SZ(46), gY - hh, SZ(20), hh, C.stone); P(gxs + SZ(26), gY - hh, SZ(20), hh, C.stone); P(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(18), C.stoneD); var ly = gY - SZ(90); P(gxs - SZ(10), ly, SZ(20), SZ(18), C.lock); P(gxs - SZ(6), ly - SZ(8), SZ(12), SZ(8), C.stoneD); P(gxs - SZ(3), ly + SZ(6), SZ(6), SZ(6), "#8a5a00"); }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
@@ -1319,6 +1427,7 @@
         if (!open) { mg.fillStyle = "#101828"; mg.fillRect(p.x - R + 2, p.y + R - 11, 11, 9); mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - R + 4, p.y + R - 9, 7, 5); mg.fillStyle = "#101828"; mg.fillRect(p.x - R + 6, p.y + R - 15, 3, 5); mg.fillRect(p.x - R + 6, p.y + R - 7, 3, 3); }
         mg.fillStyle = (p.n === level ? "#ff4fa3" : "#ffd23f"); mg.fillRect(p.x + R - 8, p.y - R - 2, 12, 12); mg.fillStyle = "#101828"; mg.font = "900 10px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, p.x + R - 2, p.y - R + 5);
         mg.fillStyle = open ? "#fff" : "#8f9ac9"; mg.font = "700 8px monospace"; mg.fillText(p.theme.name, p.x, p.y + R + 8);
+        if (progress.secretsFound && progress.secretsFound[p.n]) { var cxq = p.x - R + 6, cyq = p.y - R + 5; mg.fillStyle = "#ffd23f"; mg.fillRect(cxq - 4, cyq, 9, 5); mg.fillRect(cxq - 4, cyq - 3, 2, 3); mg.fillRect(cxq, cyq - 4, 2, 4); mg.fillRect(cxq + 3, cyq - 3, 2, 3); mg.fillStyle = "#ff4fa3"; mg.fillRect(cxq, cyq + 1, 2, 2); }
       });
       x = savedX;
     }
@@ -1334,6 +1443,20 @@
         if (ch.cost) btn.appendChild(el("div", "adv8-charCost", locked ? ("◆ " + ch.cost) : ch.note));
         btn.addEventListener("click", function () {
           if (locked) { aBad(); haptic(20); var gi = $("#adv-gemInfo"); if (gi) { gi.classList.add("flash"); setTimeout(function () { gi.classList.remove("flash"); }, 700); } return; }
+          HEROTYPE = ch.id; progress.hero = ch.id; save(); buildCharRow(); redrawPmapHero();
+        });
+        row.appendChild(btn);
+      });
+      // exclusive secret-only heroes (unlocked by finding a world's hidden path)
+      Object.keys(SECRET_CHARS).forEach(function (wk) {
+        var ch = SECRET_CHARS[wk]; var found = !!(progress.secretsFound && progress.secretsFound[wk]);
+        var btn = document.createElement("button"); btn.className = "adv8-charBtn" + (ch.id === HEROTYPE ? " on" : "") + (found ? "" : " locked");
+        var c = document.createElement("canvas"); c.width = 42; c.height = 36; var g = c.getContext("2d"); g.imageSmoothingEnabled = false;
+        hbx.clearRect(0, 0, 14, 12); spr(hbx, 0, 0, HERO_MAP[ch.id].rows, HERO_MAP[ch.id].map); if (!found) g.globalAlpha = 0.28; g.drawImage(heroBuf, 0, 0, 14, 12, 0, 0, 42, 36); g.globalAlpha = 1;
+        btn.appendChild(c); btn.appendChild(el("div", "adv8-charName", found ? ch.name : "???"));
+        btn.appendChild(el("div", "adv8-charCost", found ? ch.note : ("🔒 " + ch.from + " SECRET")));
+        btn.addEventListener("click", function () {
+          if (!found) { aBad(); haptic(20); var gi = $("#adv-gemInfo"); if (gi) { gi.textContent = "🔒 Find the hidden path in " + ch.from + " to unlock " + ch.name + "!"; gi.classList.add("flash"); setTimeout(function () { gi.classList.remove("flash"); buildCharRow(); }, 1400); } return; }
           HEROTYPE = ch.id; progress.hero = ch.id; save(); buildCharRow(); redrawPmapHero();
         });
         row.appendChild(btn);
@@ -1392,6 +1515,10 @@
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
       get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
       get chunks() { return G ? G.gates.length : 0; },
+      get inSecret() { return G ? !!G.secretWorld : false; },
+      get warpX() { return G && G.warp && !G.warp.done ? Math.round(G.warp.x) : null; },
+      get secretsFound() { return progress.secretsFound || {}; },
+      enterSecret: function () { if (G && SECRET_CHARS[level] && !G.secretWorld) enterSecret(level); },
       warp: function (wx) { if (G) { while (G.nextGate < G.gates.length && G.gates[G.nextGate].x < wx - 60) { G.gates[G.nextGate].solved = true; G.nextGate++; } G.hero.wx = wx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.cam = wx - HEROX; } },
       unwarp: function () {}
     };
