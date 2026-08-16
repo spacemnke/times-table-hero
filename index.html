@@ -156,12 +156,24 @@
         <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
         <h2 class="topbar__title">Practice</h2><div class="topbar__spacer"></div>
       </div>
-      <p class="picker-label">Which tables? (type the answers · no timer)</p>
+      <p class="picker-label">Which tables? (no timer, unlimited tries)</p>
       <div class="number-grid number-grid--multi" id="practice-picker"></div>
       <div class="setup-actions">
         <button class="chip" data-select-all="practice">All 1–12</button>
         <button class="chip" data-clear="practice">Clear</button>
         <button class="chip chip--accent" id="practice-weak">🎯 My tricky ones</button>
+      </div>
+      <p class="picker-label">How do you want to answer?</p>
+      <div class="seg seg--wrap" id="practice-answer">
+        <button class="seg__btn is-on" data-ans="keypad">⌨️ Keypad</button>
+        <button class="seg__btn" data-ans="lane">🏁 Lanes</button>
+        <button class="seg__btn" data-ans="asteroid">☄️ Blast</button>
+        <button class="seg__btn" data-ans="whack">🔨 Whack</button>
+        <button class="seg__btn" data-ans="hoop">🏀 Hoops</button>
+        <button class="seg__btn" data-ans="beat">🥁 Beat</button>
+        <button class="seg__btn" data-ans="slash">🍉 Slash</button>
+        <button class="seg__btn" data-ans="catch">🛡️ Catch</button>
+        <button class="seg__btn" data-ans="mix">🎲 Surprise Me</button>
       </div>
       <button class="btn-primary" id="practice-start" disabled>Start Practice ➜</button>
     </section>
