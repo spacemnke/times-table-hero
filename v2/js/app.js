@@ -872,10 +872,12 @@
       // HIDDEN PATH: a golden warp portal up on a ledge — jump onto it to dive into a secret "World B".
       // Only reachable by a deliberate leap (a coin arc hints the climb); ground-runners sail right past it.
       if (SECRET_CHARS[level]) {
-        var wpx = (G.gates[2] ? G.gates[2].x : gx[Math.min(2, gx.length - 1)]) - SEG * 0.5;
-        G.platforms.push({ x: wpx - 60, hAbove: 150, w: 120, mv: false, amp: 0, period: 2, phase: 0, warp: true });
-        G.warp = { x0: wpx - 58, x1: wpx + 58, top: GROUND - 150, x: wpx, done: false };
-        for (var wc = 0; wc < 5; wc++) G.coinsA.push({ x: wpx - 150 + wc * 42, hAbove: 60 + wc * 24, got: false });
+        var wpx = gx[0] - SEG * 0.14;   // in the gentle pit-free opening before the first gate — impossible to miss
+        G.platforms.push({ x: wpx - 62, hAbove: 108, w: 124, mv: false, amp: 0, period: 2, phase: 0, warp: true });
+        G.warp = { x0: wpx - 60, x1: wpx + 60, top: GROUND - 108, x: wpx, done: false };
+        // a coin staircase pointing the way up, and a purple gem teaser at the portal mouth
+        for (var wc = 0; wc < 7; wc++) G.coinsA.push({ x: wpx - 190 + wc * 36, hAbove: 36 + wc * 14, got: false });
+        G.gemsA.push({ x: wpx, hAbove: 150, got: false });
       }
       // World 1: a Slingshot Showdown mini-boss barricade partway through the level
       if (level === 1 && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
@@ -884,6 +886,8 @@
         var b = gx[seg] - SEG; if (b <= 200) continue;
         fillSegment(b, seg, cf);
       }
+      // keep a clean pocket around the secret portal so it stands out
+      if (G.warp) { var wl = G.warp.x0 - 50, wr = G.warp.x1 + 50, clr = function (arr) { return arr.filter(function (o) { return (o.x + (o.w || 40)) < wl || o.x > wr; }); }; G.boxes = clr(G.boxes); G.bricks = clr(G.bricks); G.pipes = clr(G.pipes); }
       // signature trap per world — first two zones always trapped so every run meets one early; a 2nd appears deeper
       for (seg = 1; seg < gx.length; seg++) {
         var bt = gx[seg] - SEG; if (bt <= 200) continue;
@@ -1031,8 +1035,8 @@
           for (var pi2 = 0; pi2 < G.pipes.length; pi2++) { var pp2 = G.pipes[pi2]; var ptp2 = GROUND - pp2.h; if (h.wx >= pp2.x - 2 && h.wx <= pp2.x + pp2.w + 2 && h.vy >= 0 && h.y <= ptp2 + 4 && ny >= ptp2) { if (landTop === null || ptp2 < landTop) landTop = ptp2; } }
           if (landTop === null) { if ((groundAt(h.wx) || TEST) && h.vy >= 0 && ny >= GROUND && h.y <= GROUND + 4) landTop = GROUND; }
           if (landTop !== null) { h.y = landTop; h.vy = 0; h.ground = true; h.dbl = false; h.coyote = .1; } else { if (h.ground) h.coyote = .1; h.ground = false; h.y = ny; }
-          // hidden warp: land on the golden ledge portal and dive into the secret world
-          if (G.warp && !G.warp.done && h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1 && Math.abs(h.y - G.warp.top) < 12) { G.warp.done = true; G.enterPending = level; aStar(); haptic([12, 30, 12]); }
+          // secret warp: just jump while under the golden portal and it pulls you in (very forgiving — no precise landing)
+          if (G.warp && !G.warp.done && !h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1) { G.warp.done = true; G.enterPending = level; aStar(); haptic([12, 30, 12]); }
           var headY = h.y - HEROSIZE * 0.9;
           for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used) continue; var by = GROUND - bx.hAbove; if (h.vy < 0 && h.wx >= bx.x - 8 && h.wx <= bx.x + bx.w + 8 && headY <= by + bx.h && headY >= by - 12) { bx.used = true; bx.pop = .2; h.vy = 80; if (bx.power) { spawnPowerup(bx.x + bx.w / 2, by - 20); } else { addCoins(1); aCoin(); G.particles.push({ wx: bx.x + bx.w / 2, y: by - 14, vx: 0, vy: -220, life: .7, kind: "coin" }); } } }
           for (var bkr = 0; bkr < G.bricks.length; bkr++) { var bk = G.bricks[bkr]; if (bk.used) continue; var bky = GROUND - bk.hAbove; if (h.vy < 0 && h.wx >= bk.x - 8 && h.wx <= bk.x + bk.w + 8 && headY <= bky + bk.h && headY >= bky - 12) { if (G.bigT > 0) { bk.used = true; aStomp(); coinBurst(bk.x + bk.w / 2, bky); } else { h.vy = 80; if (!bk.tapped) { bk.tapped = true; addCoins(1); aCoin(); } } } }
@@ -1376,7 +1380,7 @@
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
-      if (G.warp && !G.warp.done) { var wpxs = FX(G.warp.x); if (wpxs > -30 && wpxs < W + 30) pxWarp(wpxs, FY(G.warp.top), G.t); }
+      if (G.warp && !G.warp.done) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
       if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
       for (var brn = 0; brn < G.bricks.length; brn++) { var bkk = G.bricks[brn]; if (bkk.used) continue; var brs = FX(bkk.x); if (brs > W + 8 || brs < -8) continue; pxBrick(brs, FY(GROUND - bkk.hAbove), SZ(bkk.w), SZ(bkk.h), th); }
       for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used && bx.usedGone) continue; var bxs = FX(bx.x), bpop = bx.pop ? SZ(bx.pop * 36) : 0; if (bxs > W + 8 || bxs < -8) continue; pxBox(bxs, FY(GROUND - bx.hAbove) - bpop, SZ(bx.w), SZ(bx.h), bx.used, bx.power); if (bx.pop) bx.pop = Math.max(0, bx.pop - .03); }
@@ -1487,19 +1491,23 @@
     function pxBrick(px, py, w, h, th) { P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
-    // golden warp portal on a ledge — the hidden entrance to World B
+    // golden warp portal on a ledge — the entrance to World B (made loud so it's easy to spot)
     function pxWarp(cx, topY, t) {
-      var w = SZ(46), h = SZ(46), lx = cx - w / 2, bob = Math.round(Math.sin(t * 3) * SZ(2));
+      var w = SZ(56), h = SZ(54), lx = cx - w / 2, bob = Math.round(Math.sin(t * 3) * SZ(2));
+      // beacon of light rising from the portal — visible from across the level
+      x.globalAlpha = 0.14 + Math.sin(t * 4) * 0.05; P(cx - SZ(7), 0, SZ(14), topY, "#ffe27a"); x.globalAlpha = 1;
       // golden pipe body
       P(lx, topY, w, h, "#e0a020"); P(lx, topY, SZ(6), h, "#ffe27a"); P(lx + w - SZ(5), topY, SZ(5), h, "#b57a00");
-      P(lx - SZ(6), topY - SZ(14), w + SZ(12), SZ(16), "#e0a020"); P(lx - SZ(6), topY - SZ(14), w + SZ(12), SZ(5), "#ffe27a"); P(lx - SZ(6), topY - SZ(14), SZ(8), SZ(16), "#ffe27a");
-      // swirling dark portal mouth
-      var mc = cx, my = topY - SZ(6);
-      for (var r = SZ(10); r > 0; r -= SZ(3)) { var on = (Math.floor(t * 6 + r) % 2) === 0; disc(mc, my, r, on ? "#3a1a6a" : "#7a4fd0"); }
+      P(lx - SZ(6), topY - SZ(16), w + SZ(12), SZ(18), "#e0a020"); P(lx - SZ(6), topY - SZ(16), w + SZ(12), SZ(6), "#ffe27a"); P(lx - SZ(6), topY - SZ(16), SZ(8), SZ(18), "#ffe27a");
+      // swirling portal mouth
+      var mc = cx, my = topY - SZ(7);
+      for (var r = SZ(13); r > 0; r -= SZ(3)) { var on = (Math.floor(t * 6 + r) % 2) === 0; disc(mc, my, r, on ? "#3a1a6a" : "#a06ff0"); }
       disc(mc, my, SZ(3), "#fff2a8");
-      // floating "?" + sparkles above
-      var qy = topY - SZ(30) + bob; P(mc - SZ(2), qy, SZ(6), SZ(3), "#fff"); P(mc + SZ(2), qy + SZ(3), SZ(3), SZ(4), "#fff"); P(mc - SZ(1), qy + SZ(8), SZ(3), SZ(3), "#fff");
-      if (Math.floor(t * 5) % 2) { P(mc - SZ(14), topY - SZ(20), SZ(3), SZ(3), "#fff2a8"); P(mc + SZ(14), topY - SZ(10), SZ(3), SZ(3), "#fff2a8"); }
+      if (Math.floor(t * 5) % 2) { P(mc - SZ(18), topY - SZ(24), SZ(3), SZ(3), "#fff2a8"); P(mc + SZ(18), topY - SZ(14), SZ(3), SZ(3), "#fff2a8"); P(mc + SZ(10), topY - SZ(28), SZ(3), SZ(3), "#fff2a8"); }
+      // "SECRET" banner floating above
+      var bw = SZ(56), bh = SZ(17), bxx = cx - bw / 2, byy = topY - SZ(52) + bob;
+      P(bxx, byy, bw, bh, "#7a2fb0"); P(bxx, byy, bw, SZ(3), "#a86fe0"); P(cx - SZ(2), byy + bh, SZ(4), SZ(4), "#7a2fb0");
+      x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("SECRET", cx, byy + bh / 2 + 1); x.textBaseline = "alphabetic"; x.textAlign = "left";
     }
     // treasure chest at the end of the secret cove
     function pxChest(cx, gY, t) {
