@@ -440,3 +440,63 @@ body {
   .question { font-size: 46px; }
   .menu { gap: 8px; } .key { font-size: 22px; padding: 13px 0; }
 }
+
+/* ==================== 32-BIT ARCADE MENU THEME (portrait) ==================== */
+:root {
+  --bg: #0d1030; --bg2: #0a0c22;
+  --card: #1b2144; --card-2: #28316a;
+  --ink: #ffffff; --ink-soft: #9fabe0;
+  --line: #3a4680;
+  --brand: #ffd23f; --brand-2: #ffb020;
+  --accent: #ff4fa3; --cyan: #37e0ff; --lime: #3ad44a;
+  --good: #3ad44a; --bad: #ff5a6a; --amber: #ffd23f;
+  --radius: 5px;
+  --shadow: 5px 5px 0 rgba(0,0,0,.9);
+  --shadow-sm: 3px 3px 0 rgba(0,0,0,.85);
+}
+body {
+  font-family: ui-monospace, "SF Mono", "Roboto Mono", "Courier New", monospace;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 2px, transparent 2px 4px),
+    radial-gradient(130% 60% at 82% -8%, rgba(124,92,255,.22), transparent 60%),
+    radial-gradient(130% 60% at -10% 0%, rgba(255,79,163,.14), transparent 55%),
+    linear-gradient(180deg, #12163a, #0a0c22);
+  background-attachment: fixed;
+}
+/* pixel borders on panels + interactive tiles */
+.daily-card, .pcard, .tile, .num-btn, .chip, .seg__btn, .btn-primary, .btn-secondary, .key, .answer,
+.answer-box, .table-row, .results__stat, .hero-stat, .badge, .rep-cell, .gate, .activity, .tricky__item,
+.goal-setter, .focus-block, .toggle-row, .mini-btn, .step, .btn-back, .player-switch, .av-btn, .name-input,
+.gate__input, .pm-row, .pm-btn, .cta, .streak-pill, .sound-toggle, .pcard--add {
+  border: 3px solid #ffffff; border-radius: var(--radius);
+}
+.num-btn, .tile, .av-btn, .mini-btn, .step, .chip, .seg__btn, .key, .answer, .btn-back { border-color: #e6ecff; }
+/* progress tracks: thin dark-bordered pixel bars */
+.goalbar, .quiz-progress, .tbar__track, .timerbar { border: 2px solid #0b0e24; border-radius: 0; }
+.goalbar__fill, .quiz-progress__bar, .tbar__fill, .timerbar__fill, .act-bar { border-radius: 0; }
+/* headings — gold arcade with hard shadow */
+.topbar__title, .results__title, .rep-h, .cta__title, .dash-rank { color: #ffd23f; text-shadow: 2px 2px 0 #000; letter-spacing: .02em; font-weight: 800; }
+.cta__title { color: #fff; }
+.profiles__title { -webkit-text-fill-color: #ffd23f; color: #ffd23f; background: none; text-shadow: 3px 3px 0 #000; }
+.picker-label { color: var(--ink-soft); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 800; }
+/* flatten gradient/pill buttons into flat pixel colours */
+.cta { background: #ff4fa3; color: #fff; border-radius: var(--radius); }
+.btn-primary { background: #ffd23f; color: #241000; }
+.num-btn.is-selected, .mini-btn.is-on { background: #3ad44a; color: #06210a; box-shadow: var(--shadow-sm); }
+.seg__btn.is-on { background: #ffd23f; color: #241000; }
+.streak-pill { background: #ff4fa3; border-radius: var(--radius); }
+.badge-pop { background: #ffd23f; color: #241000; border: 3px solid #fff; border-radius: var(--radius); }
+.act-bar { background: #ffd23f; } .act-bar.met { background: #3ad44a; } .act-bar.zero { background: var(--line); }
+.player-switch, .sound-toggle { border-radius: var(--radius); }
+.chip { color: #ffd23f; } .chip--accent { color: #ff9ec7; } .chip--sm { background: var(--card-2); }
+.num-btn, .tile, .answer { color: #fff; } .num-btn.is-selected { color: #06210a; }
+.seg__btn { color: var(--ink-soft); }
+/* both keypads share the light-key arcade look */
+.keypad .key { background: #e8ecff; color: #141a2e; }
+.key--enter { background: #3ad44a; color: #06210a; } .key--del { background: #ff8ea0; color: #3a1020; }
+/* pixel "press" feel — sink into the shadow */
+.tile:active, .num-btn:active, .chip:active, .seg__btn:active, .btn-primary:active:not(:disabled),
+.key:active, .answer:active, .btn-back:active, .mini-btn:active, .step:active, .av-btn:active,
+.pcard:active, .cta:active, .streak-pill:active, .pm-btn:active, .sound-toggle:active, .btn-secondary:active {
+  transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.85);
+}
