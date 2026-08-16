@@ -179,6 +179,8 @@ body {
   border-radius: 999px; cursor: pointer; box-shadow: var(--shadow-sm); min-width: 46px; }
 .seg__btn.is-on { background: var(--brand); color: #fff; }
 .seg__btn:active { transform: scale(.94); }
+.seg--wrap { gap: 7px; margin: 8px 0 4px; }
+.seg--wrap .seg__btn { padding: 8px 12px; font-size: 14px; min-width: 0; }
 
 /* ---------------- buttons ---------------- */
 .btn-primary, .btn-secondary { display: block; width: 100%; border: none; border-radius: 16px; padding: 17px;

@@ -28,7 +28,7 @@
   /* ---------------- state ---------------- */
   var state = {
     quizTables: [], practiceTables: [],
-    quizMode: "type", quizLen: 15,
+    quizMode: "type", quizLen: 15, practiceAnswer: "keypad",
     play: null, deck: [], deckIndex: 0,
     lastStart: null, parentUnlocked: false, gateAnswer: 0,
   };
@@ -891,7 +891,7 @@
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
         grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
-        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null
+        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
     }
@@ -1176,6 +1176,7 @@
       if (leveled) uw.appendChild(el("div", "badge-pop", "LEVEL " + levelFromXp(progress.xp) + "!"));
       newly.forEach(function (bd) { uw.appendChild(el("div", "badge-pop", bd.icon + " " + bd.name)); });
       $("#adv-nextBtn").style.display = (level < MAXLEVELS) ? "" : "none";
+      $("#adv-mapBtn").textContent = "MAP";
       openOv("adv-winOv"); advBurst();
     }
     function advBurst() {
@@ -1460,7 +1461,7 @@
       var L = G.lane, chosen = L.vals[L.lane], ok = chosen === L.correct;
       if (recordAnswer(L.q.a, L.q.b, ok, Date.now() - L.t0)) G.goalMet = true; L.flash = 0.5;
       if (ok) { L.phase = "pass"; L.resT = 0.55; aGood(); haptic(12); G.correct++; G.combo++; addCoins(5); progress.xp += 10; G.xpEarned += 10; G.meter += 0.25; if (G.meter >= 1) { G.meter = 0; applyPowerup("star"); } save(); L.msg = "CORRECT!"; L.msgT = 0.7; }
-      else { G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; save(); aBad(); haptic([10, 40, 10]); L.msg = "NOT " + chosen + "!"; L.msgT = 1.1; if (G.hearts <= 0) { G.lane = null; G.state = "fail"; musicStop(); openOv("adv-failOv"); return; } L.phase = "retry"; L.resT = 1.0; L.showCor = true; }
+      else { G.wrong++; G.combo = 0; G.meter = 0; if (!G.arena) G.hearts--; save(); aBad(); haptic([10, 40, 10]); L.msg = "NOT " + chosen + "!"; L.msgT = 1.1; if (G.hearts <= 0) { G.lane = null; G.state = "fail"; musicStop(); openOv("adv-failOv"); return; } L.phase = "retry"; L.resT = 1.0; L.showCor = true; }
     }
     function laneStep(dt) {
       var L = G.lane; if (!L) return;
@@ -1471,6 +1472,7 @@
       else if (L.phase === "retry") { L.resT -= dt; if (L.resT <= 0) { L.wallX = PIXW + SZ(30); L.phase = "run"; L.showCor = false; L.t0 = Date.now(); } }
     }
     function laneExit() {
+      if (G.arena) { arenaAfter(); return; }
       var ga = G.gates[G.nextGate]; if (ga) ga.solved = true;
       G.nextGate++; var nx = (ga ? ga.x : G.hero.wx) + 40;
       G.hero.wx = nx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.hero.inv = 1.0; G.cam = nx - HEROX;
@@ -1521,7 +1523,7 @@
       if (recordAnswer(A.q.a, A.q.b, ok, Date.now() - A.t0)) G.goalMet = true;
       astBurst(rk.x, rk.y, ok ? "#3ad46a" : "#ff5c6c"); aBoom(); G.shakeT = Math.max(G.shakeT, .18);
       if (ok) { rk.dead = true; A.phase = "pass"; A.resT = 0.7; haptic(14); G.correct++; G.combo++; addCoins(5); progress.xp += 10; G.xpEarned += 10; G.meter += 0.25; if (G.meter >= 1) { G.meter = 0; applyPowerup("star"); } save(); A.msg = "DIRECT HIT!"; A.msgT = 0.8; }
-      else { rk.dead = true; G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; save(); haptic([10, 40, 10]); A.msg = "MISS! NOT " + rk.v; A.msgT = 1.0;
+      else { rk.dead = true; G.wrong++; G.combo = 0; G.meter = 0; if (!G.arena) G.hearts--; save(); haptic([10, 40, 10]); A.msg = "MISS! NOT " + rk.v; A.msgT = 1.0;
         if (G.hearts <= 0) { G.ast = null; G.state = "fail"; musicStop(); openOv("adv-failOv"); return; }
         A.phase = "aim"; }
     }
@@ -1536,6 +1538,7 @@
       if (A.phase === "pass") { A.resT -= dt; if (A.resT <= 0) astExit(); }
     }
     function astExit() {
+      if (G.arena) { arenaAfter(); return; }
       var ga = G.gates[G.nextGate]; if (ga) ga.solved = true; G.nextGate++;
       var nx = (ga ? ga.x : G.hero.wx) + 40; G.hero.wx = nx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.hero.inv = 1.0; G.cam = nx - HEROX;
       G.state = "run"; G.dash = .6; G.ast = null; hudShow(true);
@@ -1570,9 +1573,9 @@
     /* ================= MINI-GATE SHARED HELPERS (whack / hoop / beat / slash / catch) ================= */
     function miniRecord(A, ok) { if (recordAnswer(A.q.a, A.q.b, ok, Date.now() - A.t0)) G.goalMet = true; }
     function miniReward() { G.correct++; G.combo++; addCoins(5); progress.xp += 10; G.xpEarned += 10; G.meter += 0.25; if (G.meter >= 1) { G.meter = 0; applyPowerup("star"); } save(); }
-    function miniPenalty() { G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; save(); }
+    function miniPenalty() { G.wrong++; G.combo = 0; G.meter = 0; if (!G.arena) G.hearts--; save(); }
     function miniFail() { G.mini = null; G.state = "fail"; musicStop(); openOv("adv-failOv"); }
-    function miniExit(msgOk) { var ga = G.gates[G.nextGate]; if (ga) ga.solved = true; G.nextGate++; var nx = (ga ? ga.x : G.hero.wx) + 40; G.hero.wx = nx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.hero.inv = 1.0; G.cam = nx - HEROX; G.state = "run"; G.dash = .6; G.mini = null; hudShow(true); hint(G.nextGate >= G.gates.length ? "DASH TO THE CASTLE!" : msgOk); }
+    function miniExit(msgOk) { if (G.arena) { arenaAfter(); return; } var ga = G.gates[G.nextGate]; if (ga) ga.solved = true; G.nextGate++; var nx = (ga ? ga.x : G.hero.wx) + 40; G.hero.wx = nx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.hero.inv = 1.0; G.cam = nx - HEROX; G.state = "run"; G.dash = .6; G.mini = null; hudShow(true); hint(G.nextGate >= G.gates.length ? "DASH TO THE CASTLE!" : msgOk); }
     function miniResolve(A, ok, wrongVal, okMsg) {
       miniRecord(A, ok);
       if (ok) { miniReward(); aGood(); A.good = true; A.msg = okMsg; A.msgT = 0.8; A.phase = "pass"; A.resT = 0.7; haptic(14); }
@@ -2106,6 +2109,39 @@
     function openMap() { unlocked = Math.max(1, progress.worldsUnlocked || 1); hideAllOv(); if (G) G.state = "map"; buildMap(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); }
     function exitHome() { leave(); musicStop(); renderHome(); show("home"); }
 
+    /* ---- PRACTICE ARENA: drill the mini-games back-to-back on chosen tables (no world, no fail) ---- */
+    function startArena(opts) {
+      HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1);
+      enter(); hideAllOv(); reset(1);
+      var tables = (opts.tables && opts.tables.length) ? opts.tables : focusTables();
+      var total = Math.max(4, Math.min(24, opts.len || 12));
+      G.deck = buildQuestions(tables, total * 3); G.deckI = 0;   // deep deck so retries never run dry
+      G.correct = 0; G.wrong = 0; G.xpEarned = 0;
+      G.arena = { opts: opts, mode: opts.mode || "mix", total: total, i: 0, startTs: Date.now() };
+      $("#adv-mapBtn").textContent = "AGAIN";
+      musicWorld(1); arenaLaunch();
+    }
+    function arenaLaunch() {
+      var A = G.arena; G.state = "run"; G.lane = null; G.ast = null; G.mini = null;
+      var mode = A.mode === "mix" ? SPECIAL_MODES[A.i % SPECIAL_MODES.length] : A.mode;
+      if (mode === "lane") enterLanes(); else if (mode === "asteroid") enterAst(); else if (MINI_ENTER[mode]) MINI_ENTER[mode](); else enterLanes();
+      $("#adv-quit").classList.remove("hidden");   // let kids bail out mid-practice
+    }
+    function arenaAfter() {
+      var A = G.arena; A.i++;
+      if (A.i >= A.total) { arenaFinish(); return; }
+      hudShow(false); arenaLaunch();
+    }
+    function arenaFinish() {
+      var A = G.arena, slips = G.wrong, stars = slips === 0 ? 3 : slips <= 2 ? 2 : 1;
+      G.state = "win"; G.mini = null; G.lane = null; G.ast = null; musicStop(); aWin(); haptic([15, 60, 15]); save();
+      drawStarRow($("#adv-winStars"), stars);
+      $("#adv-winTitle").textContent = slips === 0 ? "PERFECT PRACTICE!" : "PRACTICE DONE!";
+      $("#adv-winMsg").textContent = A.total + " ANSWERED · " + (slips ? slips + " SLIP" + (slips > 1 ? "S" : "") : "NO SLIPS!") + " · +" + G.xpEarned + " XP";
+      $("#adv-winUnlocks").innerHTML = ""; $("#adv-nextBtn").style.display = "none";
+      openOv("adv-winOv"); advBurst();
+    }
+
     function advInit() {
       cv = $("#adv-c"); x = cv.getContext("2d");
       var ci = $("#adv-coin-icon"); ci.width = 8; ci.height = 8; var cig = ci.getContext("2d"); cig.imageSmoothingEnabled = false; coinPix(cig);
@@ -2123,11 +2159,11 @@
         else if (e.key === " " || e.key === "ArrowUp") { e.preventDefault(); jump(); }
       });
       document.addEventListener("keyup", function (e) { if (isActive() && (e.key === " " || e.key === "ArrowUp")) jumpRelease(); });
-      $("#adv-quit").addEventListener("click", function (e) { e.stopPropagation(); sTap(); openMap(); });
+      $("#adv-quit").addEventListener("click", function (e) { e.stopPropagation(); sTap(); if (G && G.arena) { exitHome(); return; } openMap(); });
       $("#adv-map-close").addEventListener("click", function () { sTap(); exitHome(); });
       $("#adv-nextBtn").addEventListener("click", function () { sTap(); startLevel(Math.min(level + 1, MAXLEVELS)); });
       $("#adv-retryBtn").addEventListener("click", function () { sTap(); startLevel(level); });
-      $("#adv-mapBtn").addEventListener("click", function () { sTap(); openMap(); });
+      $("#adv-mapBtn").addEventListener("click", function () { sTap(); if (G && G.arena) { startArena(G.arena.opts); return; } openMap(); });
       $("#adv-mapBtn2").addEventListener("click", function () { sTap(); openMap(); });
       $("#adv-homeBtn").addEventListener("click", function () { sTap(); exitHome(); });
       $("#adv-homeBtn2").addEventListener("click", function () { sTap(); exitHome(); });
@@ -2168,6 +2204,8 @@
       enterMini: function (mode) { if (G && G.state === "run" && MINI_ENTER[mode]) MINI_ENTER[mode](); },
       miniChoose: function (v) { if (G && G.mini && G.mini.pick) G.mini.pick(v); },
       get specialModes() { return SPECIAL_MODES.slice(); },
+      startArena: function (o) { startArena(o || { mode: "mix", len: 12 }); },
+      get arena() { return G && G.arena ? { mode: G.arena.mode, total: G.arena.total, i: G.arena.i } : null; },
       resumeMusic: function () { if (G && ["run", "gate", "trapped", "showdown", "warping", "lanes", "asteroid", "whack", "hoop", "beat", "slash", "catch"].indexOf(G.state) >= 0) { if (G.secretWorld) musicSecret(); else musicWorld(level); } },
       enterShowdown: function () { if (G && G.state === "run") enterShowdown(); },
       sdWin: function () { if (G && G.sd) sdWinNow(); },
@@ -2179,7 +2217,7 @@
       unwarp: function () {}
     };
 
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome };
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena };
   })();
 
   /* ---------------- init / wiring ---------------- */
@@ -2306,8 +2344,20 @@
     $("#daily-challenge").addEventListener("click", function () { sTap(); ac(); Adv.startDaily(); });
 
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
-    $("#practice-start").addEventListener("click", function () { sTap(); startPractice(deckFromTables(state.practiceTables)); });
-    $("#practice-weak").addEventListener("click", function () { sTap(); startPractice(weakFacts(15)); });
+    $all("#practice-answer .seg__btn").forEach(function (b) { b.addEventListener("click", function () { sTap(); $all("#practice-answer .seg__btn").forEach(function (x) { x.classList.remove("is-on"); }); b.classList.add("is-on"); state.practiceAnswer = b.getAttribute("data-ans"); }); });
+    $("#practice-start").addEventListener("click", function () {
+      sTap();
+      var ans = state.practiceAnswer || "keypad", tables = state.practiceTables.slice();
+      if (ans === "keypad" || !tables.length) { startPractice(deckFromTables(tables)); return; }
+      ac(); Adv.startArena({ tables: tables, len: Math.max(8, Math.min(16, deckFromTables(tables).length)), mode: ans });
+    });
+    $("#practice-weak").addEventListener("click", function () {
+      sTap();
+      var ans = state.practiceAnswer || "keypad";
+      if (ans === "keypad") { startPractice(weakFacts(15)); return; }
+      var wk = weakFacts(15), tbls = []; wk.forEach(function (q) { if (tbls.indexOf(q.a) < 0) tbls.push(q.a); });
+      ac(); Adv.startArena({ tables: tbls.length ? tbls : focusTables(), len: 12, mode: ans });
+    });
 
     $("#play-quit").addEventListener("click", function () { sTap(); renderHome(); show("home"); });
     $("#results-again").addEventListener("click", function () { sTap(); if (state.lastStart) startPlay(state.lastStart); else { renderHome(); show("home"); } });
