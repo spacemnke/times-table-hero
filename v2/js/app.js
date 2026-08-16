@@ -2220,29 +2220,48 @@
     /* ---- level map (pixel canvas) ---- */
     var mapNodes = [];
     function buildMap() {
-      var mcv = $("#adv-mapCanvas"), mg = mcv.getContext("2d"); var W = 260, H = 150; mcv.width = W; mcv.height = H; mg.imageSmoothingEnabled = false; mg.clearRect(0, 0, W, H);
-      var pad = 30, cols = 4, rows = Math.ceil(MAXLEVELS / cols); mapNodes = [];
-      for (var i = 0; i < MAXLEVELS; i++) { var row = Math.floor(i / cols), col = i % cols; if (row % 2) col = cols - 1 - col; var xx = pad + col * ((W - 2 * pad) / (cols - 1)); var yy = pad + row * ((H - 2 * pad) / (rows - 1 || 1)); mapNodes.push({ x: Math.round(xx), y: Math.round(yy), n: i + 1, theme: THEMES[i % THEMES.length] }); }
-      mg.fillStyle = "rgba(255,255,255,.35)"; for (var pp = 0; pp < mapNodes.length - 1; pp++) { var A = mapNodes[pp], Bn = mapNodes[pp + 1]; for (var tt = 0; tt < 1; tt += 0.06) { mg.fillRect(Math.round(A.x + (Bn.x - A.x) * tt), Math.round(A.y + (Bn.y - A.y) * tt), 2, 2); } }
+      var mcv = $("#adv-mapCanvas"), mg = mcv.getContext("2d"); var W = 320, H = 208; mcv.width = W; mcv.height = H; mg.imageSmoothingEnabled = false;
+      mapNodes = [];
+      for (var i = 0; i < MAXLEVELS; i++) { var nx = Math.round(30 + i * ((W - 60) / (MAXLEVELS - 1))), ny = Math.round(112 + Math.sin(i * 0.82 + 0.5) * 52); mapNodes.push({ x: nx, y: ny, n: i + 1, theme: THEMES[i % THEMES.length] }); }
+      function rrect(x0, y0, w, h, r) { mg.beginPath(); mg.moveTo(x0 + r, y0); mg.arcTo(x0 + w, y0, x0 + w, y0 + h, r); mg.arcTo(x0 + w, y0 + h, x0, y0 + h, r); mg.arcTo(x0, y0 + h, x0, y0, r); mg.arcTo(x0, y0, x0 + w, y0, r); mg.closePath(); }
+      // water
+      var wg = mg.createLinearGradient(0, 0, 0, H); wg.addColorStop(0, "#3a8fd8"); wg.addColorStop(1, "#1f5fa8"); mg.fillStyle = wg; mg.fillRect(0, 0, W, H);
+      mg.fillStyle = "rgba(255,255,255,.13)"; for (var s = 0; s < 80; s++) mg.fillRect((s * 61) % W, (s * 43) % H, (s % 4 ? 2 : 3), 1);
+      // clouds (behind the land)
+      mg.fillStyle = "rgba(255,255,255,.9)";[[44, 24], [268, 18], [150, 30]].forEach(function (c) {[[0, 0, 9], [8, 2, 7], [-8, 2, 6]].forEach(function (o) { mg.beginPath(); mg.arc(c[0] + o[0], c[1] + o[1], o[2], 0, 7); mg.fill(); }); });
+      // landmass — sand + grass blobs following the winding path
+      var pts = []; mapNodes.forEach(function (p, i) { pts.push([p.x, p.y]); if (i < mapNodes.length - 1) pts.push([(p.x + mapNodes[i + 1].x) / 2, (p.y + mapNodes[i + 1].y) / 2]); });
+      function blobs(r, col, dy) { mg.fillStyle = col; pts.forEach(function (pt) { mg.beginPath(); mg.arc(pt[0], pt[1] + (dy || 0), r, 0, 7); mg.fill(); }); }
+      blobs(32, "#e2c184"); blobs(30, "#c9a865", 2); blobs(27, "#2f8f3a", 3); blobs(26, "#49ba52"); blobs(19, "#5fce62", -3);
+      // winding road
+      function road(w, col, dash) { mg.strokeStyle = col; mg.lineWidth = w; mg.lineCap = "round"; mg.lineJoin = "round"; mg.setLineDash(dash || []); mg.beginPath(); mapNodes.forEach(function (p, i) { i ? mg.lineTo(p.x, p.y) : mg.moveTo(p.x, p.y); }); mg.stroke(); }
+      road(10, "#7a4e26"); road(6, "#d2a45f"); road(1.6, "rgba(255,255,255,.75)", [2, 5]); mg.setLineDash([]);
       var savedX = x; x = mg;
+      // little trees dotted on the grass beside a few tiles (kept clear of badges/labels)
+      [[0, -16, -13], [2, 16, -12], [5, -16, 13], [6, 15, 13]].forEach(function (d) { var nd = mapNodes[d[0]]; pxProp("tree", nd.x + d[1], nd.y + d[2] + 6, 18, THEMES[0]); });
+      // level tiles
       mapNodes.forEach(function (p) {
-        var open = p.n <= unlocked, R = 16;
-        mg.save(); mg.beginPath(); mg.rect(p.x - R, p.y - R, R * 2, R * 2); mg.clip();
+        var open = p.n <= unlocked, done = p.n < unlocked, here = p.n === Math.min(unlocked, MAXLEVELS), R = 12;
+        mg.save(); rrect(p.x - R, p.y - R, R * 2, R * 2, 4); mg.clip();
         mg.fillStyle = p.theme.sky; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2);
         mg.fillStyle = p.theme.sky2 || p.theme.sky; mg.fillRect(p.x - R, p.y, R * 2, R);
-        mg.fillStyle = p.theme.grass; mg.fillRect(p.x - R, p.y + R - 6, R * 2, 6);
-        pxProp(p.theme.prop, p.x, p.y + R - 6, 20, p.theme);
-        if (!open) { mg.fillStyle = "rgba(20,24,40,.62)"; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2); }
+        mg.fillStyle = p.theme.grass; mg.fillRect(p.x - R, p.y + R - 7, R * 2, 7);
+        pxProp(p.theme.prop, p.x, p.y + R - 7, 17, p.theme);
+        if (!open) { mg.fillStyle = "rgba(14,18,34,.66)"; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2); }
         mg.restore();
-        mg.fillStyle = open ? "#fff" : "#5a5f7a"; mg.fillRect(p.x - R, p.y - R, R * 2, 2); mg.fillRect(p.x - R, p.y + R - 2, R * 2, 2); mg.fillRect(p.x - R, p.y - R, 2, R * 2); mg.fillRect(p.x + R - 2, p.y - R, 2, R * 2);
-        if (!open) { mg.fillStyle = "#101828"; mg.fillRect(p.x - R + 2, p.y + R - 11, 11, 9); mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - R + 4, p.y + R - 9, 7, 5); mg.fillStyle = "#101828"; mg.fillRect(p.x - R + 6, p.y + R - 15, 3, 5); mg.fillRect(p.x - R + 6, p.y + R - 7, 3, 3); }
-        mg.fillStyle = (p.n === level ? "#ff4fa3" : "#ffd23f"); mg.fillRect(p.x + R - 8, p.y - R - 2, 12, 12); mg.fillStyle = "#101828"; mg.font = "900 10px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, p.x + R - 2, p.y - R + 5);
-        mg.fillStyle = open ? "#fff" : "#8f9ac9"; mg.font = "700 8px monospace"; mg.fillText(p.theme.name, p.x, p.y + R + 8);
-        if (progress.secretsFound && progress.secretsFound[p.n]) { var cxq = p.x - R + 6, cyq = p.y - R + 5; mg.fillStyle = "#ffd23f"; mg.fillRect(cxq - 4, cyq, 9, 5); mg.fillRect(cxq - 4, cyq - 3, 2, 3); mg.fillRect(cxq, cyq - 4, 2, 4); mg.fillRect(cxq + 3, cyq - 3, 2, 3); mg.fillStyle = "#ff4fa3"; mg.fillRect(cxq, cyq + 1, 2, 2); }
+        rrect(p.x - R, p.y - R, R * 2, R * 2, 4); mg.lineWidth = here ? 3 : 2; mg.strokeStyle = here ? "#ff4fa3" : open ? "#ffffff" : "#59648c"; mg.stroke();
+        // number badge (pink=here, green=done, gold=open, grey=locked)
+        mg.beginPath(); mg.arc(p.x + R - 1, p.y - R + 1, 7, 0, 7); mg.fillStyle = here ? "#ff4fa3" : done ? "#3ad44a" : open ? "#ffd23f" : "#39447a"; mg.fill(); mg.lineWidth = 1.4; mg.strokeStyle = "#101828"; mg.stroke();
+        mg.fillStyle = open ? "#101828" : "#cfd6ff"; mg.font = "900 9px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, p.x + R - 1, p.y - R + 2);
+        if (!open) { mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - 4, p.y - 1, 8, 6); mg.strokeStyle = "#ffd23f"; mg.lineWidth = 1.4; mg.beginPath(); mg.arc(p.x, p.y - 1, 3, Math.PI, 0); mg.stroke(); mg.fillStyle = "#101828"; mg.fillRect(p.x - 1, p.y + 1, 2, 3); }
+        mg.fillStyle = open ? "#ffffff" : "#8f9ac9"; mg.font = "700 8px monospace"; mg.textBaseline = "alphabetic"; mg.fillText(p.theme.name, p.x, p.y + R + 10);
+        if (progress.secretsFound && progress.secretsFound[p.n]) { var cq = p.x - R + 3, cy = p.y - R + 3; mg.fillStyle = "#ffd23f"; for (var a = 0; a < 5; a++) { var an = a / 5 * 6.28 - 1.57; mg.fillRect(Math.round(cq + Math.cos(an) * 3) - 1, Math.round(cy + Math.sin(an) * 3) - 1, 2, 2); } }
       });
       x = savedX;
+      // "you are here" hero standee above the current node
+      var cp = mapNodes[Math.min(unlocked, MAXLEVELS) - 1]; if (cp) heroDraw(mg, HEROTYPE, cp.x - 13, cp.y - 40, 26, 24, 0, true);
     }
-    function mapClick(ev) { var mcv = $("#adv-mapCanvas"), rect = mcv.getBoundingClientRect(), scale = 260 / rect.width; var mxp = (ev.clientX - rect.left) * scale, myp = (ev.clientY - rect.top) * scale; for (var i = 0; i < mapNodes.length; i++) { var p = mapNodes[i]; if (p.n <= unlocked && Math.abs(mxp - p.x) < 20 && Math.abs(myp - p.y) < 20) { ac(); startLevel(p.n); return; } } }
+    function mapClick(ev) { var mcv = $("#adv-mapCanvas"), rect = mcv.getBoundingClientRect(), scale = mcv.width / rect.width; var mxp = (ev.clientX - rect.left) * scale, myp = (ev.clientY - rect.top) * scale; for (var i = 0; i < mapNodes.length; i++) { var p = mapNodes[i]; if (p.n <= unlocked && Math.abs(mxp - p.x) < 16 && Math.abs(myp - p.y) < 16) { ac(); startLevel(p.n); return; } } }
     function buildCharRow() {
       var row = $("#adv-charRow"); row.innerHTML = ""; var gems = progress.gems || 0;
       CHARS.forEach(function (ch) {
