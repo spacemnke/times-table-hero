@@ -1286,7 +1286,7 @@
     function sdReload(sd) { sd.ball = { x: sd.sling.x, y: sd.sling.y, r: sd.cs * 0.26, vx: 0, vy: 0, flying: false, trail: [] }; }
     function enterShowdown() {
       if (!G || G.state !== "run") return;
-      var gy = FY(GROUND), q = nextQ();
+      var gy = Math.round(PIXH * 0.82), q = nextQ();   // ground low on the screen: lots of sky to loft into, little dead space
       var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)], dim = sdDims(shp);
       // size the arena to the ACTUAL viewport; keep a WIDE left zone so there's room to pull the slingshot back
       var rightM = Math.round(PIXW * 0.03), slingZone = Math.round(PIXW * 0.42), availW = PIXW - slingZone - rightM;
@@ -1328,7 +1328,7 @@
         else if (cyc < 1.35) { b.x = pxx; b.y = pyy; }
         else { b.x = sd.sling.x; b.y = sd.sling.y; if (!sd.demo && cyc < 1.42) { sd.demo = { x: sd.sling.x, y: sd.sling.y, vx: (sd.sling.x - pxx) * P2, vy: (sd.sling.y - pyy) * P2, r: sd.ball.r, life: 1.3, trail: [] }; aJump(); } }
         if (sd.demo) { sd.demo.vy += GR * f; sd.demo.x += sd.demo.vx * f; sd.demo.y += sd.demo.vy * f; sd.demo.life -= dt; sd.demo.trail.push({ x: sd.demo.x, y: sd.demo.y }); if (sd.demo.trail.length > 7) sd.demo.trail.shift(); if (sd.demo.y > sd.gy || sd.demo.life <= 0) sd.demo = null; }
-        sd.it += dt; if (sd.it > 3.4) { sd.phase = "aim"; sdReload(sd); }
+        sd.it += dt; if (sd.it > 3.4) { sd.phase = "aim"; sdReload(sd); sd.demo = null; }
         return;
       }
       if (sd.phase === "won") { sd.wonT -= dt; if (sd.wonT <= 0) sdExit(); return; }
@@ -1403,9 +1403,9 @@
       if (sd.demo) { for (var t3 = 0; t3 < sd.demo.trail.length; t3++) { var dp = sd.demo.trail[t3]; x.globalAlpha = (t3 / sd.demo.trail.length) * 0.4; x.fillStyle = "#ffd23f"; x.beginPath(); x.arc(dp.x, dp.y, sd.demo.r * 0.5, 0, 6.29); x.fill(); } x.globalAlpha = 1; sdBall2(sd.demo, sd.demo.r, true); }
       // intro labels
       if (sd.phase === "intro") { var cy2 = sd.it % 1.7; var lab = cy2 < 0.9 ? "① DRAG THE HERO BACK" : cy2 < 1.35 ? "② AIM WITH THE ARC" : "③ LET GO TO FIRE!"; var lf = Math.max(9, Math.round(Math.min(H * 0.042, W * 0.052))); x.textAlign = "center"; x.font = "800 " + lf + "px monospace"; var lmw = x.measureText(lab).width; if (lmw > W * 0.92) { lf = Math.max(8, Math.floor(lf * (W * 0.92) / lmw)); x.font = "800 " + lf + "px monospace"; lmw = x.measureText(lab).width; } var lw = Math.min(W - SZ(6), lmw + SZ(18)), lh = Math.round(lf * 1.9), ly = Math.round(H * 0.19); x.fillStyle = "rgba(10,8,26,.9)"; x.fillRect(W/2 - lw/2, ly, lw, lh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W/2 - lw/2, ly, lw, lh); x.textBaseline = "middle"; x.fillStyle = "#ffd23f"; x.fillText(lab, W/2, ly + lh/2 + 1); x.textBaseline = "alphabetic"; var subL = sd.it > 1.7 ? "TAP TO SKIP" : "WATCH…"; x.fillStyle = "#9aa0c8"; x.font = "800 " + Math.max(8, Math.round(H * 0.024)) + "px monospace"; x.fillText(subL, W/2, ly + lh + SZ(14)); if (sd.ball && cy2 < 1.35) { x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 3; x.beginPath(); x.arc(sd.ball.x, sd.ball.y, sd.ball.r + SZ(6) + Math.sin(sd.it*10)*2, 0, 6.29); x.stroke(); var fnx = sd.ball.x + SZ(10), fny = sd.ball.y + SZ(10); x.fillStyle = "#ffe27a"; x.fillRect(fnx, fny, SZ(4), SZ(10)); x.fillRect(fnx - SZ(3), fny + SZ(2), SZ(4), SZ(6)); } }
-      // message
-      if (sd.msgT > 0 && sd.msg) { x.textAlign = "center"; x.font = "800 " + Math.round(H*0.04) + "px monospace"; var mw = x.measureText(sd.msg).width + SZ(24); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W/2 - mw/2, gY - SZ(64), mw, SZ(36)); x.fillStyle = /CLEARED|BONUS/.test(sd.msg) ? "#3ad46a" : /BOOM|KABOOM/.test(sd.msg) ? "#ff5c6c" : "#ffd23f"; x.fillText(sd.msg, W/2, gY - SZ(40)); }
-      if (sd.phase === "won") { x.textAlign = "center"; x.fillStyle = "#3ad46a"; x.font = "800 " + Math.round(H*0.03) + "px monospace"; x.fillText("▶ HERO BREAKS THROUGH", W/2, gY + SZ(28)); }
+      // message (shrink-to-fit so long text never clips the screen edges)
+      if (sd.msgT > 0 && sd.msg) { var mf = Math.round(H * 0.042); x.textAlign = "center"; x.font = "800 " + mf + "px monospace"; var mtw = x.measureText(sd.msg).width; if (mtw > W * 0.92) { mf = Math.max(9, Math.floor(mf * (W * 0.92) / mtw)); x.font = "800 " + mf + "px monospace"; mtw = x.measureText(sd.msg).width; } var mw = Math.min(W - SZ(6), mtw + SZ(20)), mh = Math.round(mf * 1.7), my = gY - SZ(70); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W/2 - mw/2, my, mw, mh); x.textBaseline = "middle"; x.fillStyle = /CLEARED|BONUS/.test(sd.msg) ? "#3ad46a" : /BOOM|KABOOM/.test(sd.msg) ? "#ff5c6c" : "#ffd23f"; x.fillText(sd.msg, W/2, my + mh/2 + 1); x.textBaseline = "alphabetic"; }
+      if (sd.phase === "won") { var wf = Math.round(H * 0.032); var wt = "▶ HERO BREAKS THROUGH"; x.textAlign = "center"; x.font = "800 " + wf + "px monospace"; var wtw = x.measureText(wt).width; if (wtw > W * 0.92) { wf = Math.max(8, Math.floor(wf * (W * 0.92) / wtw)); x.font = "800 " + wf + "px monospace"; } x.fillStyle = "#3ad46a"; x.fillText(wt, W/2, Math.min(H - SZ(8), gY + SZ(30))); }
       x.restore();
     }
 
