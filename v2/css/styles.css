@@ -240,6 +240,9 @@ body {
 /* ---------------- adventure — 8-bit Quest Land ---------------- */
 .screen--adv { animation: none; }
 .screen--adv.is-active { position: fixed; inset: 0; z-index: 60; }
+.screen--splash { animation: none; }
+.screen--splash.is-active { position: fixed; inset: 0; z-index: 90; display: block; background: #0a0820; }
+#splash-c { display: block; width: 100vw; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: manipulation; cursor: pointer; }
 #adv-game { position: fixed; inset: 0; width: 100vw; height: 100%;
   background: #0b0d18; overflow: hidden;
   font-family: ui-monospace, "Courier New", monospace; }
