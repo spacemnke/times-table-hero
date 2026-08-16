@@ -440,34 +440,3 @@ body {
   .question { font-size: 46px; }
   .menu { gap: 8px; } .key { font-size: 22px; padding: 13px 0; }
 }
-
-/* ============ LANDSCAPE LOCK + ROTATE GATE (32-bit) ============ */
-#rotate-gate { display: none; }
-@media (orientation: portrait) and (pointer: coarse) {
-  #rotate-gate {
-    position: fixed; inset: 0; z-index: 200;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-    background: #0a0820; color: #fff; text-align: center; padding: 24px;
-    font-family: ui-monospace, "SF Mono", "Roboto Mono", monospace;
-  }
-}
-.rg-phone {
-  width: 46px; height: 80px; border: 4px solid #ffd23f; border-radius: 9px; background: #1b1440;
-  position: relative; box-shadow: 3px 3px 0 #000; animation: rgspin 2.4s ease-in-out infinite;
-}
-.rg-phone::before { content: ""; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: 12px; height: 3px; background: #ffd23f; border-radius: 2px; }
-@keyframes rgspin { 0%, 22% { transform: rotate(0); } 52%, 100% { transform: rotate(90deg); } }
-.rg-title { font-weight: 800; font-size: 20px; letter-spacing: .05em; color: #ffd23f; text-shadow: 2px 2px 0 #000; }
-.rg-sub { font-weight: 700; font-size: 12px; letter-spacing: .1em; color: #b9b0e0; }
-@media (prefers-reduced-motion: reduce) { .rg-phone { animation: none; transform: rotate(90deg); } }
-
-/* Landscape gameplay: dock the answer keypad to the right so it fits the short height */
-@media (orientation: landscape) {
-  html, body { height: auto; min-height: 100%; }   /* let menus scroll if taller than the short viewport */
-  #adv-math { align-items: center; justify-content: flex-end; }
-  #adv-sheet { width: min(46vw, 400px); max-width: 46vw; margin: 0 14px 0 0; max-height: 96vh; overflow: auto; }
-  #adv-sheet #adv-mq { font-size: clamp(26px, 6vh, 40px); margin: 4px 0; }
-  #adv-sheet #adv-mabox { margin: 6px auto; }
-  .adv8-kpad { max-width: min(42vw, 300px); gap: 6px; }
-  .adv8-kpad .key { padding: 9px 0; }
-}
