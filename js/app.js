@@ -1482,7 +1482,7 @@
     }
     function laneDraw() {
       var L = G.lane, th = G.theme, W = PIXW, H = PIXH;
-      P(-2, -2, W + 4, H * 0.6 + 2, th.sky); P(-2, H * 0.55, W + 4, H, th.sky2);
+      x.fillStyle = lg(-2, H, th.sky, th.sky2); x.fillRect(-2, -2, W + 4, H + 4);
       if (th.night) for (var st = 0; st < 30; st++) P((st * 61) % W, (st * 37) % (H - 40), 1, 1, "#fff");
       for (var i = 0; i < 3; i++) { var ly = L.laneY[i]; if (i === L.lane) { x.globalAlpha = 0.18; P(-2, ly - SZ(24), W + 4, SZ(48), "#ffffff"); x.globalAlpha = 1; } P(-2, ly + SZ(16), W + 4, SZ(4), th.grass || "#7cd04a"); for (var d = -18; d < W; d += 20) P(d + ((L.run * 34) % 20), ly + SZ(20), SZ(10), SZ(2), th.dirtL || "#a8632f"); }
       for (var j = 0; j < 3; j++) { var wy = L.laneY[j], hit = (L.flash > 0 && j === L.lane), pc = hit ? (L.vals[L.lane] === L.correct ? "#3ad46a" : "#ff5c6c") : (L.showCor && j === L.corIdx ? "#3ad46a" : "#4a3f7a");
@@ -1613,7 +1613,7 @@
       miniParts(A, dt); if (A.phase === "pass") { A.resT -= dt; if (A.resT <= 0) miniExit(A.exitMsg); }
     }
     function whackDraw() {
-      var A = G.mini, W = PIXW, H = PIXH; P(-2, -2, W + 4, H * 0.52, "#8fd0ff"); P(-2, H * 0.48, W + 4, H, "#6fbf4a");
+      var A = G.mini, W = PIXW, H = PIXH; x.fillStyle = lg(-2, H * 0.52, "#7fc8ff", "#c2e8ff"); x.fillRect(-2, -2, W + 4, H * 0.52); x.fillStyle = lg(H * 0.48, H, "#6fbf4a", "#4f9a38"); x.fillRect(-2, H * 0.48, W + 4, H);
       for (var c2 = 0; c2 < W; c2 += 26) { P(c2 + ((Date.now() / 40 | 0) % 26), H * 0.16, 10, 4, "#bfeaff"); }
       for (var i = 0; i < A.holes.length; i++) { var h = A.holes[i];
         x.fillStyle = "#3a2416"; x.beginPath(); x.ellipse(h.x, h.y, SZ(30), SZ(12), 0, 0, 6.29); x.fill(); x.fillStyle = "#20130a"; x.beginPath(); x.ellipse(h.x, h.y, SZ(24), SZ(8), 0, 0, 6.29); x.fill();
