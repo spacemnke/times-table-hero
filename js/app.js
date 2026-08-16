@@ -889,14 +889,14 @@
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
         grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
-        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null
+        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null
       };
       build(cf); buildPmap();
     }
     var SEG = 1500;
     function build(cf) {
       var START = 760, i, seg, gx = []; for (i = 0; i < cf.gates; i++) gx.push(START + i * SEG);
-      G.gates = gx.map(function (v) { return { x: v, solved: false }; }); G.castleX = gx[gx.length - 1] + SEG;
+      G.gates = gx.map(function (v, i) { return { x: v, solved: false, mode: (i > 1 && i % 3 === 2) ? "lane" : "keypad" }; }); G.castleX = gx[gx.length - 1] + SEG;
       // pits (skip before the first gate so the opening is gentle)
       var pits = []; for (seg = 0; seg < gx.length; seg++) { var base = gx[seg] - SEG; if (base < 200) continue; var pc = base + SEG * 0.55; pits.push([pc, pc + cf.pit]); }
       var lastMid = gx[gx.length - 1] + SEG * 0.5; pits.push([lastMid, lastMid + cf.pit]); pits.sort(function (a, b) { return a[0] - b[0]; });
@@ -1127,10 +1127,11 @@
           if (G.chest && !G.chest.taken && Math.abs(G.chest.x - h.wx) < 46) { G.chest.taken = true; aWin(); haptic([12, 30, 12]); for (var cg = 0; cg < 10; cg++) G.particles.push({ wx: G.chest.x, y: GROUND - 40, vx: (cg - 5) * 60, vy: -260 - cg * 12, life: 1, kind: "star" }); }
           if (h.y > GROUND + 420) respawn();
           if (G.showdown && !G.showdown.done && h.wx >= G.showdown.x) { if (TEST) G.showdown.done = true; else { enterShowdown(); } }
-          if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; arrive(); } } else if (h.wx >= G.castleX - 80) { if (G.secretWorld) winSecret(); else win(); }
+          if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; if (ga.mode === "lane" && !TEST) enterLanes(); else arrive(); } } else if (h.wx >= G.castleX - 80) { if (G.secretWorld) winSecret(); else win(); }
           if (h.power > 0 && Math.random() < .5) sparkle(h.wx, h.y - HEROSIZE * 0.4);
         }
         if (G.state === "showdown") sdStep(dt);
+        if (G.state === "lanes") laneStep(dt);
         if (G.state === "warping") warpStep(dt);
         for (var f2 = 0; f2 < G.flags.length; f2++) { var fg = G.flags[f2]; if (fg.hit && fg.raise < 1) fg.raise = Math.min(1, fg.raise + dt * 3); }
         for (var p2 = G.particles.length - 1; p2 >= 0; p2--) { var pt = G.particles[p2]; pt.wx += pt.vx * dt; pt.vy += 1600 * dt; pt.y += pt.vy * dt; pt.life -= dt * 1.1; if (pt.life <= 0) G.particles.splice(p2, 1); }
@@ -1438,6 +1439,60 @@
       x.restore();
     }
 
+    /* ================= LANE RUNNER (answer without stopping the run) ================= */
+    function laneShuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    function enterLanes() {
+      var q = nextQ(), cor = q.a * q.b, dec = sdDistractors(q.a, q.b, 2);
+      var vals = laneShuffle([cor, dec[0], dec[1]]);
+      var hx = Math.round(PIXW * 0.2), wx0 = PIXW + SZ(30);
+      var L = { q: q, correct: cor, vals: vals, corIdx: vals.indexOf(cor), lane: 1, heroX: hx,
+        laneY: [Math.round(PIXH * 0.42), Math.round(PIXH * 0.61), Math.round(PIXH * 0.80)],
+        wallX: wx0, spd: (wx0 - hx) / 2.6, phase: "run", t0: Date.now(), msg: "", msgT: 0, flash: 0, resT: 0, showCor: false, hy: 0, run: 0 };
+      L.hy = L.laneY[L.lane];
+      G.lane = L; G.state = "lanes"; hudShow(false); mathHide(); hint("");
+    }
+    function laneTap() { var L = G.lane; if (!L || L.phase !== "run") return; L.lane = (L.lane + 1) % 3; aJump(); haptic(8); }
+    function laneResolve() {
+      var L = G.lane, chosen = L.vals[L.lane], ok = chosen === L.correct;
+      if (recordAnswer(L.q.a, L.q.b, ok, Date.now() - L.t0)) G.goalMet = true; L.flash = 0.5;
+      if (ok) { L.phase = "pass"; L.resT = 0.55; aGood(); haptic(12); G.correct++; G.combo++; addCoins(5); progress.xp += 10; G.xpEarned += 10; G.meter += 0.25; if (G.meter >= 1) { G.meter = 0; applyPowerup("star"); } save(); L.msg = "CORRECT!"; L.msgT = 0.7; }
+      else { G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; save(); aBad(); haptic([10, 40, 10]); L.msg = "NOT " + chosen + "!"; L.msgT = 1.1; if (G.hearts <= 0) { G.lane = null; G.state = "fail"; musicStop(); openOv("adv-failOv"); return; } L.phase = "retry"; L.resT = 1.0; L.showCor = true; }
+    }
+    function laneStep(dt) {
+      var L = G.lane; if (!L) return;
+      if (L.msgT > 0) L.msgT -= dt; if (L.flash > 0) L.flash -= dt;
+      L.hy += (L.laneY[L.lane] - L.hy) * Math.min(1, dt * 15); L.run += dt * 8;
+      if (L.phase === "run") { L.wallX -= L.spd * dt; if (L.wallX <= L.heroX + SZ(4)) { L.wallX = L.heroX + SZ(4); laneResolve(); } }
+      else if (L.phase === "pass") { L.resT -= dt; L.wallX -= L.spd * 1.4 * dt; if (L.resT <= 0) laneExit(); }
+      else if (L.phase === "retry") { L.resT -= dt; if (L.resT <= 0) { L.wallX = PIXW + SZ(30); L.phase = "run"; L.showCor = false; L.t0 = Date.now(); } }
+    }
+    function laneExit() {
+      var ga = G.gates[G.nextGate]; if (ga) ga.solved = true;
+      G.nextGate++; var nx = (ga ? ga.x : G.hero.wx) + 40;
+      G.hero.wx = nx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.hero.inv = 1.0; G.cam = nx - HEROX;
+      G.state = "run"; G.dash = .6; G.lane = null; hudShow(true);
+      hint(G.nextGate >= G.gates.length ? "DASH TO THE CASTLE!" : "NICE! KEEP GOING");
+    }
+    function laneDraw() {
+      var L = G.lane, th = G.theme, W = PIXW, H = PIXH;
+      P(-2, -2, W + 4, H * 0.6 + 2, th.sky); P(-2, H * 0.55, W + 4, H, th.sky2);
+      if (th.night) for (var st = 0; st < 30; st++) P((st * 61) % W, (st * 37) % (H - 40), 1, 1, "#fff");
+      for (var i = 0; i < 3; i++) { var ly = L.laneY[i]; if (i === L.lane) { x.globalAlpha = 0.18; P(-2, ly - SZ(24), W + 4, SZ(48), "#ffffff"); x.globalAlpha = 1; } P(-2, ly + SZ(16), W + 4, SZ(4), th.grass || "#7cd04a"); for (var d = -18; d < W; d += 20) P(d + ((L.run * 34) % 20), ly + SZ(20), SZ(10), SZ(2), th.dirtL || "#a8632f"); }
+      for (var j = 0; j < 3; j++) { var wy = L.laneY[j], hit = (L.flash > 0 && j === L.lane), pc = hit ? (L.vals[L.lane] === L.correct ? "#3ad46a" : "#ff5c6c") : (L.showCor && j === L.corIdx ? "#3ad46a" : "#4a3f7a");
+        P(L.wallX - SZ(22), wy - SZ(24), SZ(44), SZ(48), pc); P(L.wallX - SZ(22), wy - SZ(24), SZ(44), SZ(5), "rgba(255,255,255,.25)"); P(L.wallX - SZ(22), wy - SZ(24), SZ(4), SZ(48), "rgba(255,255,255,.2)");
+        x.fillStyle = "#fff"; x.font = "800 " + SZ(20) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(L.vals[j], L.wallX, wy);
+      }
+      var B = Math.max(1.6, PIXW * 0.13 / 14);
+      drawHeroPix(x, L.heroX - 7 * B, L.hy - 12 * B + Math.round(Math.sin(L.run) * 2), B, HEROTYPE);
+      x.textAlign = "center"; x.textBaseline = "middle"; var qs = L.q.a + "  ×  " + L.q.b + "  =  ?", pf = Math.max(9, Math.round(Math.min(H * 0.06, W * 0.09)));
+      x.font = "800 " + pf + "px monospace"; var qw = x.measureText(qs).width; if (qw > W * 0.9) { pf = Math.max(8, Math.floor(pf * W * 0.9 / qw)); x.font = "800 " + pf + "px monospace"; }
+      var bw = Math.min(W - SZ(6), x.measureText(qs).width + SZ(20)), bh = Math.round(pf * 1.7);
+      x.fillStyle = "rgba(10,8,26,.82)"; x.fillRect(W / 2 - bw / 2, SZ(6), bw, bh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W / 2 - bw / 2, SZ(6), bw, bh); x.fillStyle = "#fff"; x.fillText(qs, W / 2, SZ(6) + bh / 2 + 1);
+      for (var hh = 0; hh < G.maxHearts; hh++) { var hxp = SZ(10) + hh * SZ(15), hyp = SZ(8) + bh; x.fillStyle = hh < G.hearts ? "#ff4d6d" : "#3a3a68"; x.fillRect(hxp, hyp + SZ(1), SZ(4), SZ(4)); x.fillRect(hxp + SZ(5), hyp + SZ(1), SZ(4), SZ(4)); x.fillRect(hxp + SZ(1), hyp + SZ(4), SZ(7), SZ(4)); }
+      x.textAlign = "center"; x.fillStyle = "#c7ccf0"; x.font = "800 " + Math.max(8, Math.round(H * 0.03)) + "px monospace"; x.fillText("▲ TAP TO SWITCH LANE ▲", W / 2, H - SZ(14));
+      if (L.msgT > 0 && L.msg) { x.font = "800 " + Math.round(H * 0.05) + "px monospace"; var mw = x.measureText(L.msg).width + SZ(20); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W / 2 - mw / 2, Math.round(H * 0.28) - SZ(16), mw, SZ(32)); x.textBaseline = "middle"; x.fillStyle = /CORRECT/.test(L.msg) ? "#3ad46a" : "#ffd23f"; x.fillText(L.msg, W / 2, Math.round(H * 0.28)); }
+    }
+
     /* ================= PIXEL ART ================= */
     function P(bx, by, bw, bh, c) { x.fillStyle = c; x.fillRect(bx | 0, by | 0, Math.max(1, bw | 0), Math.max(1, bh | 0)); }
     function FX(wx) { return Math.round((wx - G.cam) * sx); }
@@ -1466,6 +1521,7 @@
 
     function draw() {
       if (G.state === "showdown" && G.sd) { sdDraw(); return; }
+      if (G.state === "lanes" && G.lane) { laneDraw(); return; }
       var th = G.theme, W = PIXW, H = PIXH, gY = FY(GROUND);
       var shX = G.shakeT > 0 ? (Math.random() * 2 - 1) * 2 : 0, shY = G.shakeT > 0 ? (Math.random() * 2 - 1) * 2 : 0;
       x.save(); x.translate(shX, shY);
@@ -1817,14 +1873,15 @@
       var ci = $("#adv-coin-icon"); ci.width = 8; ci.height = 8; var cig = ci.getContext("2d"); cig.imageSmoothingEnabled = false; coinPix(cig);
       window.addEventListener("resize", function () { if (running) resize(); });
       window.addEventListener("orientationchange", function () { if (running) { resize(); setTimeout(function () { if (running) resize(); }, 300); } });
-      cv.addEventListener("pointerdown", function (e) { ac(); if (G && G.state === "showdown") sdDown(e); else jump(); });
+      cv.addEventListener("pointerdown", function (e) { ac(); if (G && G.state === "showdown") sdDown(e); else if (G && G.state === "lanes") laneTap(); else jump(); });
       cv.addEventListener("pointermove", function (e) { if (G && G.state === "showdown") sdMove(e); });
-      cv.addEventListener("pointerup", function (e) { if (G && G.state === "showdown") sdUp(e); else jumpRelease(); });
+      cv.addEventListener("pointerup", function (e) { if (G && G.state === "showdown") sdUp(e); else if (G && G.state === "lanes") { /* tap handled on down */ } else jumpRelease(); });
       $("#adv-kpad").addEventListener("click", function (e) { var b = e.target.closest(".key"); if (b) { ac(); key(b.getAttribute("data-k")); } });
       $("#adv-mapCanvas").addEventListener("click", mapClick);
       document.addEventListener("keydown", function (e) {
         if (!isActive() || !G) return;
         if (G.state === "gate" || G.state === "trapped") { if (e.key >= "0" && e.key <= "9") key(e.key); else if (e.key === "Backspace") key("del"); else if (e.key === "Enter") key("enter"); }
+        else if (G.state === "lanes") { if (e.key === " " || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter") { e.preventDefault(); laneTap(); } }
         else if (e.key === " " || e.key === "ArrowUp") { e.preventDefault(); jump(); }
       });
       document.addEventListener("keyup", function (e) { if (isActive() && (e.key === " " || e.key === "ArrowUp")) jumpRelease(); });
@@ -1855,7 +1912,14 @@
       get chunks() { return G ? G.gates.length : 0; },
       get inSecret() { return G ? !!G.secretWorld : false; },
       get inShowdown() { return G ? G.state === "showdown" : false; },
-      resumeMusic: function () { if (G && ["run", "gate", "trapped", "showdown", "warping"].indexOf(G.state) >= 0) { if (G.secretWorld) musicSecret(); else musicWorld(level); } },
+      get inLanes() { return G ? G.state === "lanes" : false; },
+      enterLanes: function () { if (G && G.state === "run") enterLanes(); },
+      laneTap: function () { if (G && G.state === "lanes") laneTap(); },
+      get laneAnswers() { return G && G.lane ? G.lane.vals.slice() : null; },
+      get laneCorrect() { return G && G.lane ? G.lane.correct : null; },
+      get laneCur() { return G && G.lane ? G.lane.lane : null; },
+      laneSetCur: function (i) { if (G && G.lane) G.lane.lane = ((i % 3) + 3) % 3; },
+      resumeMusic: function () { if (G && ["run", "gate", "trapped", "showdown", "warping", "lanes"].indexOf(G.state) >= 0) { if (G.secretWorld) musicSecret(); else musicWorld(level); } },
       enterShowdown: function () { if (G && G.state === "run") enterShowdown(); },
       sdWin: function () { if (G && G.sd) sdWinNow(); },
       get showdownX() { return G && G.showdown && !G.showdown.done ? Math.round(G.showdown.x) : null; },
