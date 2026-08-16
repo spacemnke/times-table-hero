@@ -827,7 +827,9 @@
     ];
     // exclusive heroes found ONLY by discovering a world's hidden path (never purchasable)
     var SECRET_CHARS = {
-      2: { id: "shelly", name: "SHELLY", power: "magnet", note: "TREASURE MAGNET", from: "BEACH" }
+      2: { id: "shelly", name: "SHELLY", power: "magnet", note: "TREASURE MAGNET", from: "BEACH" },
+      4: { id: "finn", name: "FINN", power: "star", note: "STARTS SUPER", from: "OCEAN" },
+      6: { id: "mango", name: "MANGO", power: "jump", note: "SUPER JUMP", from: "JUNGLE" }
     };
     // hidden "World B" palette — a sunset pirate cove, distinct from the bright-blue Beach
     var SECRET_THEME = { name: "MYSTIC COVE", prop: "crystal", sky: "#2a1152", sky2: "#5a2f9e", cloud: "#c9a8f0", mtn: "#6a3aa8", mtnS: "#c9a8f0", h1: "#8f4fd8", h2: "#6a3aa8", grass: "#a86fe6", dirt: "#4a2088", dirtL: "#6a3aae", water: "#a24fe0", night: true };
@@ -886,8 +888,8 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [],
-        floaty: th.name === "OCEAN", bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
+        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null
       };
       build(cf); buildPmap();
     }
@@ -906,6 +908,12 @@
       if (G.theme.name === "CANDY") { for (var sg3 = 1; sg3 < gx.length; sg3++) { var sbb = gx[sg3] - SEG; if (sbb <= 200) continue; var spx = sbb + SEG * 0.46; G.springs.push({ x: spx, t: 0 }); for (var sc3 = 0; sc3 < 6; sc3++) G.coinsA.push({ x: spx + 6 + sc3 * 30, hAbove: 210 + sc3 * 44, got: false }); } }
       // Snow (W5): icicles hang overhead and drop when you pass beneath — keep moving to dodge
       if (G.theme.name === "SNOW") { for (var sg5 = 1; sg5 < gx.length; sg5++) { var ib = gx[sg5] - SEG; if (ib <= 200) continue; for (var ic5 = 0; ic5 < 2; ic5++) G.icicles.push({ x: ib + SEG * (0.42 + ic5 * 0.34), y: GROUND - 300, vy: 0, falling: false, done: false }); } }
+      // Jungle (W6): swing vines over the gaps — grab one mid-jump for a big forward fling
+      if (G.theme.name === "JUNGLE") { pits.forEach(function (p) { G.vines.push({ x: p[0] - 30, used: false }); }); for (var vg = 1; vg < gx.length; vg++) { var vb = gx[vg] - SEG; if (vb <= 200) continue; G.vines.push({ x: vb + SEG * 0.5, used: false }); } }
+      // Volcano (W7): rotating fire-bars — time your run past the flames (pits are lava)
+      if (G.theme.name === "VOLCANO") { for (var fg = 1; fg < gx.length; fg++) { var fb = gx[fg] - SEG; if (fb <= 200) continue; G.firebars.push({ x: fb + SEG * 0.5, cy: GROUND - 96, len: 96, spd: 1.6 + (fg % 3) * 0.4, phase: fg * 1.3 }); } }
+      // Space (W8): low-gravity moon jumps + falling meteors (reuses the icicle drop, drawn as fireballs)
+      if (G.theme.name === "SPACE") { for (var mg8 = 1; mg8 < gx.length; mg8++) { var mb = gx[mg8] - SEG; if (mb <= 200) continue; for (var me8 = 0; me8 < 2; me8++) G.icicles.push({ x: mb + SEG * (0.4 + me8 * 0.36), y: GROUND - 340, vy: 0, falling: false, done: false, meteor: true }); } }
       // HIDDEN PATH: a golden warp portal up on a ledge — jump onto it to dive into a secret "World B".
       // Only reachable by a deliberate leap (a coin arc hints the climb); ground-runners sail right past it.
       if (SECRET_CHARS[level]) {
@@ -980,6 +988,7 @@
     function aBlast() {[880, 1175, 1568].forEach(function (f, i) { tone(f, .09, "square", i * .04, .09); }); tone(2093, .12, "sine", .12, .07); } // answer-blast (planned)
     function aFrost() {[1568, 1319, 1047, 1319, 1568].forEach(function (f, i) { tone(f, .07, "triangle", i * .05, .08); }); }              // frost/ice (planned)
     function aBoing() { tone(196, .06, "square", 0, .1); tone(392, .08, "square", .04, .1); tone(784, .1, "square", .1, .09); }             // springboard bounce
+    function aSwing() { for (var i = 0; i < 5; i++) tone(300 + i * 130, .06, "triangle", i * .035, .09); }                                  // vine swing whoosh
     // warp dive: a rising shimmer that whooshes up as the hero spirals into the portal
     function aWarp() { for (var i = 0; i < 8; i++) tone(440 + i * 90, .07, "triangle", i * .045, .09); tone(1400, .18, "sine", .38, .08); }
     // secret arrival: a soft magical bell chord (distinct, dreamy — different from the world SFX)
@@ -989,6 +998,7 @@
     function jump() {
       if (!G || G.state !== "run") return; var h = G.hero, v1 = G.jumpBoost ? -1180 : -1020, v2 = G.jumpBoost ? -1060 : -900;
       if (G.floaty) { v1 = Math.round(v1 * 0.8); v2 = Math.round(v2 * 0.82); }   // gentler push underwater (low gravity keeps you afloat)
+      else if (G.moon) { v1 = Math.round(v1 * 0.72); v2 = Math.round(v2 * 0.78); }   // moon: low gravity → long floaty jumps
       if (h.ground || h.coyote > 0) { h.vy = v1; h.ground = false; h.coyote = 0; h.dbl = false; h.hold = true; aJump(); }
       else if (!h.dbl) { h.vy = v2; h.dbl = true; h.hold = true; aDbl(); puff(h.wx, h.y - 40); }
     }
@@ -1079,8 +1089,8 @@
         G.cloud += dt * 14; G.t += dt; var h = G.hero;
         if (G.state === "run") {
           var sp = G.speed * (1 + G.dash); G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
-          if (G.flyT > 0) { h.vy += (h.hold ? -1500 : 950) * dt; if (h.vy < -320) h.vy = -320; if (h.vy > 440) h.vy = 440; } else { var g = (h.hold && h.vy < 0) ? 1500 : 2700; if (G.floaty) g *= 0.5; h.vy += g * dt; if (G.floaty && h.vy > 250) h.vy = 250; }
-          if (h.coyote > 0) h.coyote -= dt; if (h.inv > 0) h.inv -= dt; if (h.power > 0) h.power = Math.max(0, h.power - dt); if (G.bigT > 0) G.bigT -= dt; if (G.flyT > 0) G.flyT -= dt; if (G.popT > 0) G.popT -= dt;
+          if (G.flyT > 0) { h.vy += (h.hold ? -1500 : 950) * dt; if (h.vy < -320) h.vy = -320; if (h.vy > 440) h.vy = 440; } else { var g = (h.hold && h.vy < 0) ? 1500 : 2700; if (G.floaty) g *= 0.5; else if (G.moon) g *= 0.34; h.vy += g * dt; var vcap = G.floaty ? 250 : G.moon ? 300 : 1e9; if (h.vy > vcap) h.vy = vcap; }
+          if (h.coyote > 0) h.coyote -= dt; if (h.inv > 0) h.inv -= dt; if (h.power > 0) h.power = Math.max(0, h.power - dt); if (G.bigT > 0) G.bigT -= dt; if (G.flyT > 0) G.flyT -= dt; if (G.popT > 0) G.popT -= dt; if (G.frostT > 0) G.frostT -= dt;
           var ny = h.y + h.vy * dt, landTop = null;
           for (var i = 0; i < G.platforms.length; i++) { var p = G.platforms[i]; var top = platTop(p); if (h.wx >= p.x && h.wx <= p.x + p.w && h.vy >= 0 && h.y <= top + 4 && ny >= top) { if (landTop === null || top < landTop) landTop = top; } }
           for (var bi2 = 0; bi2 < G.bricks.length; bi2++) { var brk2 = G.bricks[bi2]; if (brk2.used) continue; var bt2 = GROUND - brk2.hAbove; if (h.wx >= brk2.x && h.wx <= brk2.x + brk2.w && h.vy >= 0 && h.y <= bt2 + 4 && ny >= bt2) { if (landTop === null || bt2 < landTop) landTop = bt2; } }
@@ -1090,9 +1100,13 @@
           // Candy springboards: landing on one launches you high
           for (var spi = 0; spi < G.springs.length; spi++) { var spr = G.springs[spi]; if (spr.t > 0) spr.t -= dt; if (h.ground && Math.abs(spr.x - h.wx) < 30 && h.y >= GROUND - 6) { h.vy = -1580; h.ground = false; h.dbl = false; h.coyote = 0; spr.t = 0.34; aBoing(); haptic(14); } }
           // Snow icicles: drop ahead of you and stick as a spike — jump over the fallen one
-          for (var ici = 0; ici < G.icicles.length; ici++) { var icc = G.icicles[ici]; if (icc.done) continue; if (!icc.falling && h.wx > icc.x - 230 && h.wx < icc.x) icc.falling = true; if (icc.falling && !icc.landed) { icc.vy += 1500 * dt; icc.y += icc.vy * dt; if (icc.y >= GROUND - 22) { icc.y = GROUND - 22; icc.landed = true; aStomp(); G.shakeT = Math.max(G.shakeT, .12); } } if (icc.landed && !TEST && h.inv <= 0 && Math.abs(icc.x - h.wx) < 22 && h.y > GROUND - 42) { hurt(); icc.done = true; } }
+          for (var ici = 0; ici < G.icicles.length; ici++) { var icc = G.icicles[ici]; if (icc.done) continue; if (!icc.falling && h.wx > icc.x - 230 && h.wx < icc.x) icc.falling = true; if (icc.falling && !icc.landed && G.frostT <= 0) { icc.vy += 1500 * dt; icc.y += icc.vy * dt; if (icc.y >= GROUND - 22) { icc.y = GROUND - 22; icc.landed = true; aStomp(); G.shakeT = Math.max(G.shakeT, .12); } } if (icc.landed && !TEST && h.inv <= 0 && G.frostT <= 0 && Math.abs(icc.x - h.wx) < 22 && h.y > GROUND - 42) { hurt(); icc.done = true; } }
           // Ocean bubbles rising past you
           if (G.floaty) { if (Math.random() < 0.5) G.bubbles.push({ wx: h.wx + (Math.random() * 2 - 0.6) * (PIXW / sx), y: GROUND + 30, vy: -(45 + Math.random() * 70), r: 1.5 + Math.random() * 4 }); for (var bu = G.bubbles.length - 1; bu >= 0; bu--) { var bb = G.bubbles[bu]; bb.y += bb.vy * dt; bb.wx += Math.sin(G.t * 3 + bb.y * 0.08) * 0.4; if (bb.y < 30 || G.bubbles.length > 60) G.bubbles.splice(bu, 1); } }
+          // Jungle vines: grab one mid-jump for a big forward fling across the gap
+          for (var vni = 0; vni < G.vines.length; vni++) { var vn = G.vines[vni]; if (vn.used) continue; if (!h.ground && h.wx > vn.x - 40 && h.wx < vn.x + 26 && h.vy > -140) { vn.used = true; h.vy = -780; G.dash = Math.max(G.dash, 1.0); aSwing(); haptic(12); } }
+          // Volcano fire-bars: rotating flames that hurt on contact (frozen by Frost Snap)
+          for (var fbi = 0; fbi < G.firebars.length; fbi++) { var fbr = G.firebars[fbi]; if (Math.abs(fbr.x - h.wx) > fbr.len + 34) continue; var fang = G.t * fbr.spd + fbr.phase; for (var fseg = 0.32; fseg <= 1.001; fseg += 0.22) { var fxp = fbr.x + Math.cos(fang) * fbr.len * fseg, fyp = fbr.cy + Math.sin(fang) * fbr.len * fseg; if (!TEST && h.inv <= 0 && G.frostT <= 0 && Math.abs(fxp - h.wx) < 26 && Math.abs(fyp - (h.y - 30)) < 30) { hurt(); break; } } }
           // secret warp: just jump while under the golden portal and it pulls you in (very forgiving — no precise landing)
           if (G.warp && !G.warp.done && !h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1) { G.warp.done = true; startWarp(level); }
           var headY = h.y - HEROSIZE * 0.9;
@@ -1103,12 +1117,12 @@
           if (G.star && !G.star.taken) { var syv = GROUND - G.star.hAbove; if (Math.abs(G.star.x - h.wx) < 50 && Math.abs(syv - (h.y - 40)) < 66) { G.star.taken = true; h.power = 6.5; aStar(); haptic([12, 30, 12]); } }
           var mag = h.power > 0 || G.magnet;
           for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cy = GROUND - co.hAbove; var dx = co.x - h.wx, dy = cy - (h.y - 40); if (mag && Math.abs(dx) < 300 && Math.abs(dy) < 300) { co.x -= dx * Math.min(1, dt * 9); co.hAbove += dy * Math.min(1, dt * 9); } if (Math.abs(co.x - h.wx) < 38 && Math.abs((GROUND - co.hAbove) - (h.y - 40)) < 54) { co.got = true; addCoins(1); aCoin(); } }
-          for (var e = 0; e < G.enemies.length; e++) { var en = G.enemies[e]; if (!en.alive) continue; en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } var eTop = GROUND - 52; if (Math.abs(en.x - h.wx) < 40) { if (h.power > 0 || G.bigT > 0) { en.alive = false; addCoins(3); aStomp(); coinBurst(en.x, eTop); } else if (h.vy > 0 && h.y <= eTop + 22 && h.y >= eTop - 40) { en.alive = false; h.vy = -620; addCoins(3); aStomp(); haptic(15); coinBurst(en.x, eTop); } else if (!TEST && h.inv <= 0 && h.y > eTop - 28) { hurt(); } } }
+          for (var e = 0; e < G.enemies.length; e++) { var en = G.enemies[e]; if (!en.alive) continue; if (G.frostT <= 0) { en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } } var eTop = GROUND - 52; if (Math.abs(en.x - h.wx) < 40) { if (h.power > 0 || G.bigT > 0) { en.alive = false; addCoins(3); aStomp(); coinBurst(en.x, eTop); } else if (h.vy > 0 && h.y <= eTop + 22 && h.y >= eTop - 40) { en.alive = false; h.vy = -620; addCoins(3); aStomp(); haptic(15); coinBurst(en.x, eTop); } else if (!TEST && h.inv <= 0 && G.frostT <= 0 && h.y > eTop - 28) { hurt(); } } }
           // shiny purple coins (magnetised while super)
           for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (mag && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
           // traps: run into one on the ground and you're caught (jump over to dodge; smash through while super)
           for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0 || G.bigT > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST && h.inv <= 0) { springTrap(tp); break; } } }
-          for (var fsh = 0; fsh < G.fish.length; fsh++) { var fz = G.fish[fsh]; var fph = Math.sin((G.t / fz.period + fz.phase) * Math.PI * 2); if (fph > 0) { var ffy = GROUND - fph * fz.amp; if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && Math.abs(fz.x - h.wx) < 42 && Math.abs(ffy - (h.y - 40)) < 52) hurt(); } }
+          for (var fsh = 0; fsh < G.fish.length; fsh++) { var fz = G.fish[fsh]; var fph = Math.sin((G.t / fz.period + fz.phase) * Math.PI * 2); if (fph > 0) { var ffy = GROUND - fph * fz.amp; if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && G.frostT <= 0 && Math.abs(fz.x - h.wx) < 42 && Math.abs(ffy - (h.y - 40)) < 52) hurt(); } }
           for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; if (!fl.hit && h.wx >= fl.x) { fl.hit = true; G.lastCP = fl.x; aFlag(); } }
           if (G.chest && !G.chest.taken && Math.abs(G.chest.x - h.wx) < 46) { G.chest.taken = true; aWin(); haptic([12, 30, 12]); for (var cg = 0; cg < 10; cg++) G.particles.push({ wx: G.chest.x, y: GROUND - 40, vx: (cg - 5) * 60, vy: -260 - cg * 12, life: 1, kind: "star" }); }
           if (h.y > GROUND + 420) respawn();
@@ -1127,12 +1141,14 @@
     function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aShrink(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } }
     // ---- power-ups (from ? boxes and the math-streak meter) ----
     function showPow(t) { G.popTxt = t; G.popT = 1.7; hint(t); }
-    function spawnPowerup(px, py) { var r = Math.random(); applyPowerup(r < 0.4 ? "berry" : r < 0.65 ? "wings" : r < 0.85 ? "heart" : "star"); G.particles.push({ wx: px, y: py, vx: 0, vy: -170, life: .9, kind: "star" }); }
+    function spawnPowerup(px, py) { var r = Math.random(); var kind = r < 0.26 ? "berry" : r < 0.44 ? "wings" : r < 0.58 ? "heart" : r < 0.72 ? "star" : r < 0.87 ? "blaster" : "frost"; applyPowerup(kind); G.particles.push({ wx: px, y: py, vx: 0, vy: -170, life: .9, kind: "star" }); }
     function applyPowerup(kind) {
-      var h = G.hero;
+      var h = G.hero, vis = PIXW / sx;
       if (kind === "berry") { G.bigT = 8; showPow("POWER BERRY — BIG!"); aGrow(); }
       else if (kind === "wings") { G.flyT = 5; showPow("SKY WINGS — FLY!"); aWings(); }
       else if (kind === "heart") { G.hearts = Math.min(G.maxHearts, G.hearts + 1); showPow("EXTRA HEART!"); aHeart(); }
+      else if (kind === "blaster") { var cl = 0; for (var ei = 0; ei < G.enemies.length; ei++) { var en2 = G.enemies[ei]; if (en2.alive && Math.abs(en2.x - h.wx) < vis) { en2.alive = false; cl++; coinBurst(en2.x, GROUND - 50); } } for (var ti = 0; ti < G.traps.length; ti++) { var tr2 = G.traps[ti]; if (!tr2.done && Math.abs(tr2.x - h.wx) < vis) { tr2.done = true; cl++; coinBurst(tr2.x, GROUND - 40); } } addCoins(cl * 2); showPow("ANSWER BLASTER — ZAP!"); aBlast(); G.shakeT = .3; }
+      else if (kind === "frost") { G.frostT = 5; showPow("FROST SNAP — FREEZE!"); aFrost(); }
       else { h.power = 6.5; showPow("STREAK STAR — GO!"); aStar(); }
       haptic([10, 25, 10]);
     }
@@ -1177,8 +1193,8 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), 3), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [],
-        bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
+        floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
       };
       buildSecretMap();
       buildPmap();
@@ -1439,7 +1455,11 @@
       draco: { rows: ["........g.g..", "........ggg..", "..t....gGGGh.", ".ttg..GGGGoG.", "gtGGGGGGGGGGm", "gGGwwGGGGGGG.", "gGGwwwGGGGG..", "gGGGGGGGGG...", ".g..g..g.g...", ".g..g..g.g...", "..............", ".............."], map: { G: "#3aa64a", g: "#2f8f42", o: "#111", m: "#ff5c6c", w: "#8be06a", t: "#57bf3a", h: "#ffd23f" } },
       orbit: { rows: ["..............", "..............", ".....DDDD.....", "...DDddddDD...", "..DddddddddD..", ".SSSSSSSSSSSS", "SSSSSSSSSSSSSS", ".LzLzLzLzLzL.", "..............", "...b......b...", "..............", ".............."], map: { D: "#c8d0e0", d: "#37e0ff", S: "#9aa6b8", L: "#ffd23f", z: "#ff5c6c", b: "#7ce0ff" } },
       // ---- secret-only hero: SHELLY the treasure crab ----
-      shelly: { rows: ["...r......r..", "...W......W..", "...e......e..", ".ccRRRRRRcc..", "cccRRRRRRccc.", ".ccRRRRRRcc..", "..RRRhRRRR...", "..RRRRRRRR...", ".R.R.RR.R.R..", "R..R.RR.R..R.", ".............", "............."], map: { R: "#ff5a44", r: "#d63626", c: "#ff8360", W: "#ffffff", e: "#2a1010", h: "#ffd23f" } }
+      shelly: { rows: ["...r......r..", "...W......W..", "...e......e..", ".ccRRRRRRcc..", "cccRRRRRRccc.", ".ccRRRRRRcc..", "..RRRhRRRR...", "..RRRRRRRR...", ".R.R.RR.R.R..", "R..R.RR.R..R.", ".............", "............."], map: { R: "#ff5a44", r: "#d63626", c: "#ff8360", W: "#ffffff", e: "#2a1010", h: "#ffd23f" } },
+      // ---- secret-only hero: FINN the fish ----
+      finn: { rows: ["............", ".......ff...", "......ffff..", "..CCCCCCf...", ".CCCCCCCCC..", "CCCeCCCCCCf.", ".CCCCCCCCC..", "..CCCCCCC...", "...W..W.....", "............", "............", "............"], map: { C: "#37c0ff", c: "#1a8fd0", e: "#0a2038", f: "#8fe0ff", W: "#cdeeff" } },
+      // ---- secret-only hero: MANGO the monkey ----
+      mango: { rows: ["..m....m....", ".mmm..mmm...", ".mBBBBBBBm..", ".mBWBBWBm...", ".mBBBBBBBm..", ".mBBffBBBm..", ".mBBBBBBBm..", "..mmmmmmm...", "..m.....m...", "..m.....m...", "............", "............"], map: { m: "#6a3f1e", B: "#c99a5a", W: "#ffffff", f: "#8a5a2a" } }
     };
     var heroBuf = document.createElement("canvas"); heroBuf.width = 14; heroBuf.height = 12; var hbx = heroBuf.getContext("2d");
     function drawHeroPix(g, bx, by, B, type) { var H = HERO_MAP[type] || HERO_MAP.unicorn; hbx.clearRect(0, 0, 14, 12); spr(hbx, 0, 0, H.rows, H.map); g.imageSmoothingEnabled = false; g.drawImage(heroBuf, 0, 0, 14, 12, bx, by, 14 * B, 12 * B); }
@@ -1489,7 +1509,9 @@
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
-      for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed); }
+      for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor); }
+      for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
+      for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
       if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
       var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
@@ -1502,6 +1524,7 @@
         else drawHeroPix(x, hbxp, hby, B, HEROTYPE);
       }
       for (var q = 0; q < G.particles.length; q++) { var ptc = G.particles[q]; if (ptc.life <= 0) continue; var ppx = FX(ptc.wx), ppy = FY(ptc.y); if (ptc.kind === "coin") pxCoin(ppx, ppy, ptc.wx); else P(ppx, ppy, 2, 2, ptc.kind === "star" ? "#ffe14a" : "#ffffff"); }
+      if (G.frostT > 0) { x.globalAlpha = 0.18 + (G.frostT < 1 ? 0 : 0.04 * Math.sin(G.t * 8)); P(-2, -2, W + 4, H + 4, "#8fd0ff"); x.globalAlpha = 1; for (var sf = 0; sf < 24; sf++) { var sfx = (sf * 83 + Math.round(G.t * 30)) % W, sfy = (sf * 57 + Math.round(G.t * 60)) % H; P(sfx, sfy, SZ(2), SZ(2), "#ffffff"); } }
       x.restore();
       // streak meter (bottom-centre) — fills with fast correct answers, full = Streak Star
       var mw = Math.round(W * 0.4), mx0 = Math.round(W / 2 - mw / 2), myy = Math.round(H * 0.9);
@@ -1632,12 +1655,33 @@
       P(cx - SZ(4), padY - SZ(3), SZ(8), SZ(3), "#fff");   // little up-arrow hint
       P(cx - SZ(1), padY - SZ(6), SZ(2), SZ(6), "#fff");
     }
-    // Snow icicle — an ice spike (hanging while falling, embedded when landed)
-    function pxIcicle(cx, cyTop, landed) {
+    // Snow icicle — an ice spike (hanging while falling, embedded when landed). Space = fiery meteor.
+    function pxIcicle(cx, cyTop, landed, meteor) {
+      if (meteor) {
+        var mr = SZ(13); disc(cx, cyTop + mr, mr, "#6a4a4a"); disc(cx - SZ(2), cyTop + mr - SZ(2), Math.round(mr * 0.6), "#4a3438");
+        if (!landed) { for (var tr4 = 1; tr4 < 5; tr4++) { x.globalAlpha = 0.5 - tr4 * 0.09; disc(cx, cyTop + mr - tr4 * SZ(7), Math.round(mr * (1 - tr4 * 0.15)), tr4 % 2 ? "#ff8a2a" : "#ffd23f"); } x.globalAlpha = 1; }
+        else { P(cx - mr, cyTop + mr * 1.6, mr * 2, SZ(3), "#ff6a2a"); }
+        return;
+      }
       var h = SZ(40), w = SZ(16);
       for (var r = 0; r < h; r += 2) { var ww = Math.max(1, Math.round(w * (landed ? (r / h) : (1 - r / h)))); P(cx - ww / 2, cyTop + r, ww, 2, "#bfe4ff"); }
       P(cx - SZ(2), cyTop + (landed ? 0 : 2), SZ(3), h - SZ(4), "#eaf6ff");
       P(cx - w / 2, cyTop, w, SZ(3), landed ? "#9fd0f0" : "#eaf6ff");
+    }
+    // Jungle vine — a hanging, swaying rope of leaves you swing from
+    function pxVine(cx, gY, t) {
+      var top = FY(GROUND - 260), sway = Math.round(Math.sin(t * 1.6) * SZ(6));
+      for (var vy = top; vy < gY - SZ(70); vy += SZ(6)) { var sx2 = cx + Math.round(Math.sin(t * 1.6 + vy * 0.02) * SZ(6)); P(sx2, vy, SZ(3), SZ(5), "#3a7a2a"); if ((vy / SZ(6)) % 2 === 0) P(sx2 + SZ(3), vy, SZ(4), SZ(3), "#57bf3a"); else P(sx2 - SZ(4), vy, SZ(4), SZ(3), "#57bf3a"); }
+      P(cx + sway - SZ(4), gY - SZ(74), SZ(10), SZ(8), "#2f8f42");
+    }
+    // Volcano fire-bar — a rotating arm of flame around a pivot
+    function pxFireBar(cx, cyP, len, ang, frozen) {
+      P(cx - SZ(4), cyP - SZ(4), SZ(8), SZ(8), "#6b4235");   // pivot
+      for (var s2 = 0.2; s2 <= 1.001; s2 += 0.12) {
+        var fx2 = cx + Math.round(Math.cos(ang) * len * s2), fy2 = cyP + Math.round(Math.sin(ang) * len * s2);
+        var col = frozen ? (s2 > 0.7 ? "#bfe4ff" : "#8fd0ff") : (Math.floor(ang * 3 + s2 * 6) % 2 ? "#ff5a1a" : "#ffd23f");
+        disc(fx2, fy2, SZ(s2 > 0.8 ? 6 : 5), col);
+      }
     }
     function pxStar(cx, cy, r) { P(cx - 1, cy - r, 2, r * 2, C.star); P(cx - r, cy - 1, r * 2, 2, C.star); P(cx - Math.round(r * .6), cy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), C.star); P(cx - 2, cy - 2, 4, 4, "#fff2a8"); }
     function pxGate(gxs, gY) { var hh = SZ(150); P(gxs - SZ(46), gY - hh, SZ(20), hh, C.stone); P(gxs + SZ(26), gY - hh, SZ(20), hh, C.stone); P(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(18), C.stoneD); var ly = gY - SZ(90); P(gxs - SZ(10), ly, SZ(20), SZ(18), C.lock); P(gxs - SZ(6), ly - SZ(8), SZ(12), SZ(8), C.stoneD); P(gxs - SZ(3), ly + SZ(6), SZ(6), SZ(6), "#8a5a00"); }
