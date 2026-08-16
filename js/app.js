@@ -236,6 +236,7 @@
     mel(0.17, "triangle",0.06, "E4 A4 C5 B4 E5 D5 B4 A4 G4 B4 E5 D5 C5:2 A4:2")         // 8 Space — mysterious
   ];
   var SECRET_MUSIC = mel(0.19, "triangle", 0.075, "A4 D5 Fs5 A5 G5 E5 Cs5 A4 B4 D5 Fs5 E5 D5:2 A4:2"); // magical
+  var DANGER_MUSIC = mel(0.13, "sawtooth", 0.055, "A3 - A3 C4 A3 - G3 - A3 - A3 C4 D4 - C4 -");       // low & tense — plays while trapped
   var mus = { on: false, timer: null, mel: null };
   function musicStop() { mus.on = false; if (mus.timer) { clearTimeout(mus.timer); mus.timer = null; } }
   function musicLoop() {
@@ -248,6 +249,7 @@
   function musicPlay(m) { musicStop(); if (!m || !soundOn) { mus.mel = m; mus.on = !!m && soundOn; if (mus.on) musicLoop(); return; } mus.mel = m; mus.on = true; musicLoop(); }
   function musicWorld(level) { musicPlay(WORLD_MUSIC[((level || 1) - 1) % WORLD_MUSIC.length]); }
   function musicSecret() { musicPlay(SECRET_MUSIC); }
+  function musicDanger() { musicPlay(DANGER_MUSIC); }
 
   /* ---------------- navigation ---------------- */
   function show(name) {
@@ -910,8 +912,8 @@
         for (var wc = 0; wc < 7; wc++) G.coinsA.push({ x: wpx - 190 + wc * 36, hAbove: 36 + wc * 14, got: false });
         G.gemsA.push({ x: wpx, hAbove: 150, got: false });
       }
-      // World 1: a Slingshot Showdown mini-boss barricade partway through the level
-      if (level === 1 && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
+      // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
+      if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
@@ -964,6 +966,13 @@
     function aStar() {[523, 659, 784, 1046].forEach(function (f, i) { tone(f, .1, "square", i * .05, .08); }); }
     function aFlag() { tone(659, .08, "square", 0); tone(988, .1, "square", .07); }
     function aWin() {[523, 659, 784, 1046, 1319].forEach(function (f, i) { tone(f, .13, "square", i * .1); }); }
+    // ---- power-up sounds (each instance gets its own voice) ----
+    function aGrow() { for (var i = 0; i < 7; i++) tone(196 + i * 70, .08, "square", i * .05, .1); tone(147, .22, "square", .36, .12); }   // magnifying "grow" sweep
+    function aShrink() {[659, 523, 415, 330, 247].forEach(function (f, i) { tone(f, .08, "square", i * .05, .1); }); }                     // shrink (reverse)
+    function aWings() {[523, 659, 587, 784, 698, 988].forEach(function (f, i) { tone(f, .07, "triangle", i * .045, .09); }); }             // airy flutter up
+    function aHeart() { tone(659, .12, "sine", 0, .1); tone(988, .18, "sine", .1, .09); tone(784, .12, "sine", .22, .07); }                // warm chime
+    function aBlast() {[880, 1175, 1568].forEach(function (f, i) { tone(f, .09, "square", i * .04, .09); }); tone(2093, .12, "sine", .12, .07); } // answer-blast (planned)
+    function aFrost() {[1568, 1319, 1047, 1319, 1568].forEach(function (f, i) { tone(f, .07, "triangle", i * .05, .08); }); }              // frost/ice (planned)
     // warp dive: a rising shimmer that whooshes up as the hero spirals into the portal
     function aWarp() { for (var i = 0; i < 8; i++) tone(440 + i * 90, .07, "triangle", i * .045, .09); tone(1400, .18, "sine", .38, .08); }
     // secret arrival: a soft magical bell chord (distinct, dreamy — different from the world SFX)
@@ -1014,7 +1023,7 @@
       var tr = G.traps[i]; if (!tr) return; tr.sprung = true; G.trapIndex = i;
       G.hero.wx = tr.x; G.hero.vy = 0; G.hero.y = GROUND; G.hero.ground = true;
       G.state = "trapped"; G.question = bonusQ(); G.input = ""; G.qStart = Date.now();
-      aHurt(); haptic([20, 40, 20]); G.shakeT = .4;
+      aHurt(); haptic([20, 40, 20]); G.shakeT = .4; musicDanger();
       $("#adv-sheet").classList.add("escape"); setSheetTag("◆ " + (TRAP_LABEL[tr.type] || "TRAPPED!") + " — SOLVE TO ESCAPE ◆");
       $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mdisp(); mathShow(); hint("");
     }
@@ -1024,7 +1033,7 @@
       var q = G.question, ans = q.a * q.b, ms = Date.now() - G.qStart, correct = v === ans, box = $("#adv-mabox");
       recordAnswer(q.a, q.b, correct, ms);
       if (correct) {
-        box.className = "good"; aGood(); haptic(12);
+        box.className = "good"; aGood(); haptic(12); musicWorld(level);
         var tr = G.traps[G.trapIndex]; if (tr) tr.done = true;
         addCoins(3); coinBurst(G.hero.wx, G.hero.y - 50);
         setTimeout(function () { if (!running || !G) return; box.className = ""; endEscape(); G.state = "run"; G.hero.inv = 1.6; G.hero.wx += 46; G.dash = .4; G.input = ""; hint("PHEW! KEEP GOING"); }, 360);
@@ -1032,7 +1041,7 @@
         G.wrong++; G.hearts--; box.className = "bad"; aBad(); haptic([12, 50, 12]); G.shakeT = .4; G.input = ""; mdisp(); save();
         setTimeout(function () {
           if (!G) return; box.className = ""; endEscape();
-          if (G.hearts <= 0) { G.state = "fail"; openOv("adv-failOv"); } else restartLevel();
+          if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } else restartLevel();
         }, 620);
       }
     }
@@ -1101,15 +1110,15 @@
       }
       requestAnimationFrame(frame);
     }
-    function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aHurt(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } }
+    function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aShrink(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } }
     // ---- power-ups (from ? boxes and the math-streak meter) ----
     function showPow(t) { G.popTxt = t; G.popT = 1.7; hint(t); }
     function spawnPowerup(px, py) { var r = Math.random(); applyPowerup(r < 0.4 ? "berry" : r < 0.65 ? "wings" : r < 0.85 ? "heart" : "star"); G.particles.push({ wx: px, y: py, vx: 0, vy: -170, life: .9, kind: "star" }); }
     function applyPowerup(kind) {
       var h = G.hero;
-      if (kind === "berry") { G.bigT = 8; showPow("POWER BERRY — BIG!"); aStar(); }
-      else if (kind === "wings") { G.flyT = 5; showPow("SKY WINGS — FLY!"); aStar(); }
-      else if (kind === "heart") { G.hearts = Math.min(G.maxHearts, G.hearts + 1); showPow("EXTRA HEART!"); aCoin(); }
+      if (kind === "berry") { G.bigT = 8; showPow("POWER BERRY — BIG!"); aGrow(); }
+      else if (kind === "wings") { G.flyT = 5; showPow("SKY WINGS — FLY!"); aWings(); }
+      else if (kind === "heart") { G.hearts = Math.min(G.maxHearts, G.hearts + 1); showPow("EXTRA HEART!"); aHeart(); }
       else { h.power = 6.5; showPow("STREAK STAR — GO!"); aStar(); }
       haptic([10, 25, 10]);
     }
@@ -1238,7 +1247,8 @@
       x.restore();
     }
 
-    /* ================= SLINGSHOT SHOWDOWN (World 1 mini-boss) ================= */
+    /* ================= SLINGSHOT SHOWDOWN (mini-boss, several worlds) ================= */
+    var SHOWDOWN_WORLDS = { 1: 1, 3: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade
     // roles: A=answer(number), B=blocker(no number), M=monster, T=tnt. INVARIANT: nothing sits directly above an A.
     var SD_SHAPES = [
       [[0,0,'B'],[1,0,'B'],[2,0,'B'],[3,0,'B'],[0,1,'A'],[1,1,'A'],[2,1,'A'],[3,1,'A'],[4,0,'M']],
@@ -1278,12 +1288,12 @@
       if (!G || G.state !== "run") return;
       var gy = FY(GROUND), q = nextQ();
       var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)], dim = sdDims(shp);
-      // size the arena to the ACTUAL viewport (portrait phones are narrow) so nothing overflows
-      var rightM = Math.round(PIXW * 0.03), slingZone = Math.round(PIXW * 0.32), availW = PIXW - slingZone - rightM;
+      // size the arena to the ACTUAL viewport; keep a WIDE left zone so there's room to pull the slingshot back
+      var rightM = Math.round(PIXW * 0.03), slingZone = Math.round(PIXW * 0.42), availW = PIXW - slingZone - rightM;
       var topReserve = Math.round(PIXH * 0.22), availH = gy - topReserve;
-      var cs = Math.max(16, Math.floor(Math.min(PIXH * 0.15, availW / dim.cols, availH / Math.max(dim.rows, 2))));
+      var cs = Math.max(14, Math.floor(Math.min(PIXH * 0.12, availW / dim.cols, availH / Math.max(dim.rows, 2))));  // smaller boxes
       var ox = PIXW - rightM - dim.cols * cs;
-      var slingX = Math.max(Math.round(cs * 0.85), Math.min(Math.round(PIXW * 0.15), ox - Math.round(cs * 1.6)));
+      var slingX = Math.min(ox - Math.round(cs * 1.4), Math.max(Math.round(cs * 1.7) + SZ(6), Math.round(PIXW * 0.24)));
       var sd = { q: q, correct: q.a * q.b, shp: shp, cs: cs, gy: gy, ox: ox, shots: 5, clean: true, phase: "intro", it: 0,
         sling: { x: slingX, y: gy - Math.round(cs * 1.5) }, ents: [], ball: null, demo: null, parts: [], shake: 0,
         dragging: false, msg: "", msgT: 0, wonT: 0, t0: Date.now(), pull: { x: -cs * 1.15, y: cs * 0.78 } };
@@ -1312,12 +1322,13 @@
       if (sd.msgT > 0) sd.msgT -= dt; if (sd.shake > 0) sd.shake -= dt * 30;
       for (var pp = sd.parts.length - 1; pp >= 0; pp--) { var pt = sd.parts[pp]; pt.vy += 620 * dt; pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.life -= dt; if (pt.life <= 0) sd.parts.splice(pp, 1); }
       if (sd.phase === "intro") {
-        var pxx = sd.sling.x + sd.pull.x, pyy = sd.sling.y + sd.pull.y, b = sd.ball;
-        if (sd.it < 1.0) { var k = sd.it / 1.0; k = k * k * (3 - 2 * k); b.x = sd.sling.x + (pxx - sd.sling.x) * k; b.y = sd.sling.y + (pyy - sd.sling.y) * k; }
-        else if (sd.it < 1.85) { b.x = pxx; b.y = pyy; }
-        else { b.x = sd.sling.x; b.y = sd.sling.y; if (!sd.demo) sd.demo = { x: sd.sling.x, y: sd.sling.y, vx: (sd.sling.x - pxx) * P2, vy: (sd.sling.y - pyy) * P2, r: sd.ball.r, life: 1.6, trail: [] }; }
+        // demonstrate the shot TWICE (loop) so a first-timer can't miss it; can't be skipped in the first cycle
+        var pxx = sd.sling.x + sd.pull.x, pyy = sd.sling.y + sd.pull.y, b = sd.ball, cyc = sd.it % 1.7;
+        if (cyc < 0.9) { var k = cyc / 0.9; k = k * k * (3 - 2 * k); b.x = sd.sling.x + (pxx - sd.sling.x) * k; b.y = sd.sling.y + (pyy - sd.sling.y) * k; }
+        else if (cyc < 1.35) { b.x = pxx; b.y = pyy; }
+        else { b.x = sd.sling.x; b.y = sd.sling.y; if (!sd.demo && cyc < 1.42) { sd.demo = { x: sd.sling.x, y: sd.sling.y, vx: (sd.sling.x - pxx) * P2, vy: (sd.sling.y - pyy) * P2, r: sd.ball.r, life: 1.3, trail: [] }; aJump(); } }
         if (sd.demo) { sd.demo.vy += GR * f; sd.demo.x += sd.demo.vx * f; sd.demo.y += sd.demo.vy * f; sd.demo.life -= dt; sd.demo.trail.push({ x: sd.demo.x, y: sd.demo.y }); if (sd.demo.trail.length > 7) sd.demo.trail.shift(); if (sd.demo.y > sd.gy || sd.demo.life <= 0) sd.demo = null; }
-        sd.it += dt; if (sd.it > 2.9) { sd.phase = "aim"; sdReload(sd); }
+        sd.it += dt; if (sd.it > 3.4) { sd.phase = "aim"; sdReload(sd); }
         return;
       }
       if (sd.phase === "won") { sd.wonT -= dt; if (sd.wonT <= 0) sdExit(); return; }
@@ -1335,8 +1346,8 @@
       hit.dead = true; sd.clean = false; sdBurst(sd, hit.x + hit.w / 2, hit.y + hit.h / 2, "star", 6); sdFlash(sd, "NOT " + hit.val + "!", 1300); sdSettle(sd); aBad(); sdEndShot(sd); return;
     }
     function sdPos(e) { var r = cv.getBoundingClientRect(); var p = (e.touches && e.touches[0]) || e; return { x: (p.clientX - r.left) * (PIXW / r.width), y: (p.clientY - r.top) * (PIXH / r.height) }; }
-    function sdDown(e) { var sd = G.sd; if (!sd) return; if (sd.phase === "intro") { sd.phase = "aim"; sdReload(sd); return; } if (sd.phase !== "aim") return; var p = sdPos(e); if (Math.hypot(p.x - sd.ball.x, p.y - sd.ball.y) < sd.cs) sd.dragging = true; }
-    function sdMove(e) { var sd = G.sd; if (!sd || !sd.dragging) return; var p = sdPos(e), dx = p.x - sd.sling.x, dy = p.y - sd.sling.y, d = Math.hypot(dx, dy), mx = sd.cs * 1.7; if (d > mx) { dx = dx / d * mx; dy = dy / d * mx; } sd.ball.x = sd.sling.x + dx; sd.ball.y = sd.sling.y + dy; }
+    function sdDown(e) { var sd = G.sd; if (!sd) return; if (sd.phase === "intro") { if (sd.it > 1.7) { sd.phase = "aim"; sdReload(sd); } return; } if (sd.phase !== "aim") return; var p = sdPos(e); if (Math.hypot(p.x - sd.ball.x, p.y - sd.ball.y) < sd.cs * 1.4) sd.dragging = true; }
+    function sdMove(e) { var sd = G.sd; if (!sd || !sd.dragging) return; var p = sdPos(e), dx = p.x - sd.sling.x, dy = p.y - sd.sling.y, d = Math.hypot(dx, dy), mx = sd.cs * 1.6; if (d > mx) { dx = dx / d * mx; dy = dy / d * mx; } sd.ball.x = Math.max(SZ(4), sd.sling.x + dx); sd.ball.y = sd.sling.y + dy; }
     function sdUp() { var sd = G.sd; if (!sd || !sd.dragging) return; sd.dragging = false; var dx = sd.sling.x - sd.ball.x, dy = sd.sling.y - sd.ball.y; if (Math.hypot(dx, dy) < sd.cs * 0.18) { sdReload(sd); return; } sd.ball.vx = dx * 0.19; sd.ball.vy = dy * 0.19; sd.ball.flying = true; sd.phase = "fly"; aJump(); }
     function sdBall2(b, r, glow) {
       if (glow) { var gl = x.createRadialGradient(b.x, b.y, r * 0.4, b.x, b.y, r * 2.2); gl.addColorStop(0, "rgba(255,210,63,.5)"); gl.addColorStop(1, "rgba(255,210,63,0)"); x.fillStyle = gl; x.beginPath(); x.arc(b.x, b.y, r * 2.2, 0, 6.29); x.fill(); }
@@ -1387,11 +1398,11 @@
       for (var pi = 0; pi < sd.parts.length; pi++) { var pt = sd.parts[pi]; x.globalAlpha = Math.max(0, pt.life); P(pt.x - 2, pt.y - 2, SZ(5), SZ(5), pt.c); } x.globalAlpha = 1;
       // aim arc + ball
       if (sd.dragging) sdArc(sd, sd.ball.x, sd.ball.y);
-      if (sd.phase === "intro" && sd.it > 0.45 && sd.it < 1.9) sdArc(sd, sd.ball.x, sd.ball.y);
+      if (sd.phase === "intro" && (sd.it % 1.7) > 0.45 && (sd.it % 1.7) < 1.35) sdArc(sd, sd.ball.x, sd.ball.y);
       if (sd.ball && sd.phase !== "won") { if (sd.ball.trail) { for (var t2 = 0; t2 < sd.ball.trail.length; t2++) { var tp = sd.ball.trail[t2]; x.globalAlpha = (t2 / sd.ball.trail.length) * 0.4; x.fillStyle = "#ffd23f"; x.beginPath(); x.arc(tp.x, tp.y, sd.ball.r * 0.5, 0, 6.29); x.fill(); } x.globalAlpha = 1; } sdBall2(sd.ball, sd.ball.r, true); }
       if (sd.demo) { for (var t3 = 0; t3 < sd.demo.trail.length; t3++) { var dp = sd.demo.trail[t3]; x.globalAlpha = (t3 / sd.demo.trail.length) * 0.4; x.fillStyle = "#ffd23f"; x.beginPath(); x.arc(dp.x, dp.y, sd.demo.r * 0.5, 0, 6.29); x.fill(); } x.globalAlpha = 1; sdBall2(sd.demo, sd.demo.r, true); }
       // intro labels
-      if (sd.phase === "intro") { var lab = sd.it < 1.0 ? "① DRAG THE HERO BACK" : sd.it < 1.9 ? "② AIM WITH THE ARC" : "③ LET GO TO FIRE!"; var lf = Math.max(9, Math.round(Math.min(H * 0.042, W * 0.052))); x.textAlign = "center"; x.font = "800 " + lf + "px monospace"; var lmw = x.measureText(lab).width; if (lmw > W * 0.92) { lf = Math.max(8, Math.floor(lf * (W * 0.92) / lmw)); x.font = "800 " + lf + "px monospace"; lmw = x.measureText(lab).width; } var lw = Math.min(W - SZ(6), lmw + SZ(18)), lh = Math.round(lf * 1.9), ly = Math.round(H * 0.2); x.fillStyle = "rgba(10,8,26,.9)"; x.fillRect(W/2 - lw/2, ly, lw, lh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W/2 - lw/2, ly, lw, lh); x.textBaseline = "middle"; x.fillStyle = "#ffd23f"; x.fillText(lab, W/2, ly + lh/2 + 1); x.textBaseline = "alphabetic"; if (sd.it < 1.9 && sd.ball) { x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 3; x.beginPath(); x.arc(sd.ball.x, sd.ball.y, sd.ball.r + SZ(6) + Math.sin(sd.it*10)*2, 0, 6.29); x.stroke(); } }
+      if (sd.phase === "intro") { var cy2 = sd.it % 1.7; var lab = cy2 < 0.9 ? "① DRAG THE HERO BACK" : cy2 < 1.35 ? "② AIM WITH THE ARC" : "③ LET GO TO FIRE!"; var lf = Math.max(9, Math.round(Math.min(H * 0.042, W * 0.052))); x.textAlign = "center"; x.font = "800 " + lf + "px monospace"; var lmw = x.measureText(lab).width; if (lmw > W * 0.92) { lf = Math.max(8, Math.floor(lf * (W * 0.92) / lmw)); x.font = "800 " + lf + "px monospace"; lmw = x.measureText(lab).width; } var lw = Math.min(W - SZ(6), lmw + SZ(18)), lh = Math.round(lf * 1.9), ly = Math.round(H * 0.19); x.fillStyle = "rgba(10,8,26,.9)"; x.fillRect(W/2 - lw/2, ly, lw, lh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W/2 - lw/2, ly, lw, lh); x.textBaseline = "middle"; x.fillStyle = "#ffd23f"; x.fillText(lab, W/2, ly + lh/2 + 1); x.textBaseline = "alphabetic"; var subL = sd.it > 1.7 ? "TAP TO SKIP" : "WATCH…"; x.fillStyle = "#9aa0c8"; x.font = "800 " + Math.max(8, Math.round(H * 0.024)) + "px monospace"; x.fillText(subL, W/2, ly + lh + SZ(14)); if (sd.ball && cy2 < 1.35) { x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 3; x.beginPath(); x.arc(sd.ball.x, sd.ball.y, sd.ball.r + SZ(6) + Math.sin(sd.it*10)*2, 0, 6.29); x.stroke(); var fnx = sd.ball.x + SZ(10), fny = sd.ball.y + SZ(10); x.fillStyle = "#ffe27a"; x.fillRect(fnx, fny, SZ(4), SZ(10)); x.fillRect(fnx - SZ(3), fny + SZ(2), SZ(4), SZ(6)); } }
       // message
       if (sd.msgT > 0 && sd.msg) { x.textAlign = "center"; x.font = "800 " + Math.round(H*0.04) + "px monospace"; var mw = x.measureText(sd.msg).width + SZ(24); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W/2 - mw/2, gY - SZ(64), mw, SZ(36)); x.fillStyle = /CLEARED|BONUS/.test(sd.msg) ? "#3ad46a" : /BOOM|KABOOM/.test(sd.msg) ? "#ff5c6c" : "#ffd23f"; x.fillText(sd.msg, W/2, gY - SZ(40)); }
       if (sd.phase === "won") { x.textAlign = "center"; x.fillStyle = "#3ad46a"; x.font = "800 " + Math.round(H*0.03) + "px monospace"; x.fillText("▶ HERO BREAKS THROUGH", W/2, gY + SZ(28)); }
