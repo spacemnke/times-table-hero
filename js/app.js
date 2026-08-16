@@ -219,6 +219,36 @@
   function sLevel() { [659, 880, 1319].forEach(function (f, i) { tone(f, 0.18, "triangle", i * 0.1, 0.14); }); }
   function haptic(p) { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
 
+  /* ---------------- world music (looping 8-bit melodies, one per world) ---------------- */
+  var NF = { "C3":130.81,"D3":146.83,"E3":164.81,"F3":174.61,"G3":196,"A3":220,"B3":246.94,"Bb3":233.08,"Fs3":185,
+    "C4":261.63,"D4":293.66,"E4":329.63,"F4":349.23,"G4":392,"A4":440,"B4":493.88,"Cs4":277.18,"Fs4":369.99,"Gs4":415.30,"Bb4":466.16,"Eb4":311.13,
+    "C5":523.25,"D5":587.33,"E5":659.25,"F5":698.46,"G5":783.99,"A5":880,"B5":987.77,"Cs5":554.37,"Ds5":622.25,"Fs5":739.99,"Gs5":830.61,"Bb5":932.33,"Eb5":622.25,
+    "C6":1046.5,"D6":1174.66,"E6":1318.51,"-":0 };
+  function mel(beat, wave, vol, seq) { var notes = seq.split(" ").map(function (s) { var p = s.split(":"); return [NF[p[0]] || 0, p[1] ? +p[1] : 1]; }); return { beat: beat, wave: wave, vol: vol, bar: 4, bvol: 0.05, notes: notes }; }
+  var WORLD_MUSIC = [
+    mel(0.15, "square",  0.06, "C5 E5 G5 E5 F5 A5 G5 E5 D5 F5 A5 G5 E5:2 C5:2"),        // 1 Meadow — bright & bouncy
+    mel(0.16, "square",  0.06, "G4 B4 D5 B4 E5 D5 B4 G4 A4 C5 E5 D5 B4:2 G4:2"),        // 2 Beach — breezy
+    mel(0.14, "square",  0.06, "E5 G5 E5 C5 D5 F5 D5 B4 C5 E5 G5 C6 B5 G5 E5:2"),       // 3 Candy — playful & high
+    mel(0.17, "triangle",0.07, "A4 C5 E5 D5 C5 A4 G4 A4 F4 A4 C5 B4 A4:2 E4:2"),        // 4 Ocean — flowing
+    mel(0.18, "triangle",0.06, "C5 E5 G5 B5 A5 G5 E5 C5 D5 F5 A5 G5 E5:2 C5:2"),        // 5 Snow — twinkly
+    mel(0.13, "square",  0.06, "D4 D4 F4 A4 G4 F4 D4 A3 D4 F4 A4 D5 C5 A4 D4:2"),       // 6 Jungle — driving & low
+    mel(0.12, "sawtooth",0.05, "A4 C5 A4 F4 E4 F4 A4 E5 D5 C5 A4 E4 F4:2 E4:2"),        // 7 Volcano — intense minor
+    mel(0.17, "triangle",0.06, "E4 A4 C5 B4 E5 D5 B4 A4 G4 B4 E5 D5 C5:2 A4:2")         // 8 Space — mysterious
+  ];
+  var SECRET_MUSIC = mel(0.19, "triangle", 0.075, "A4 D5 Fs5 A5 G5 E5 Cs5 A4 B4 D5 Fs5 E5 D5:2 A4:2"); // magical
+  var mus = { on: false, timer: null, mel: null };
+  function musicStop() { mus.on = false; if (mus.timer) { clearTimeout(mus.timer); mus.timer = null; } }
+  function musicLoop() {
+    if (!mus.on || !mus.mel) return; var ctx = ac(); if (!ctx) return;
+    var m = mus.mel, t = 0, tonic = m.notes[0][0];
+    for (var i = 0; i < m.notes.length; i++) { var nn = m.notes[i], d = nn[1] * m.beat; if (nn[0] && soundOn) tone(nn[0], d * 0.9, m.wave, t, m.vol); t += d; }
+    var barB = m.bar * m.beat; for (var bt = 0; bt < t - 0.001; bt += barB) { if (soundOn && tonic) tone(tonic / 2, barB * 0.92, "triangle", bt, m.bvol); }
+    mus.timer = setTimeout(musicLoop, Math.max(250, Math.round(t * 1000)));
+  }
+  function musicPlay(m) { musicStop(); if (!m || !soundOn) { mus.mel = m; mus.on = !!m && soundOn; if (mus.on) musicLoop(); return; } mus.mel = m; mus.on = true; musicLoop(); }
+  function musicWorld(level) { musicPlay(WORLD_MUSIC[((level || 1) - 1) % WORLD_MUSIC.length]); }
+  function musicSecret() { musicPlay(SECRET_MUSIC); }
+
   /* ---------------- navigation ---------------- */
   function show(name) {
     $all(".screen").forEach(function (s) { s.classList.toggle("is-active", s.getAttribute("data-screen") === name); });
@@ -798,7 +828,7 @@
       2: { id: "shelly", name: "SHELLY", power: "magnet", note: "TREASURE MAGNET", from: "BEACH" }
     };
     // hidden "World B" palette — a sunset pirate cove, distinct from the bright-blue Beach
-    var SECRET_THEME = { name: "PIRATE COVE", prop: "palm", sky: "#ff9e5c", sky2: "#ffd39a", cloud: "#fff0dc", mtn: "#d99a6a", mtnS: "#ffe0b0", h1: "#f2c860", h2: "#d6a448", grass: "#f0d98e", dirt: "#d8a45c", dirtL: "#bd8a44", water: "#2f9fb0" };
+    var SECRET_THEME = { name: "MYSTIC COVE", prop: "crystal", sky: "#2a1152", sky2: "#5a2f9e", cloud: "#c9a8f0", mtn: "#6a3aa8", mtnS: "#c9a8f0", h1: "#8f4fd8", h2: "#6a3aa8", grass: "#a86fe6", dirt: "#4a2088", dirtL: "#6a3aae", water: "#a24fe0", night: true };
     function charPower(id) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === id) return CHARS[i].power || null; for (var wk in SECRET_CHARS) if (SECRET_CHARS[wk].id === id) return SECRET_CHARS[wk].power || null; return null; }
     // each world rolls among a themed pool of traps; caught => solve a bonus question to escape
     var TRAP_POOL = [
@@ -841,6 +871,7 @@
     }
 
     function reset(n, keepHearts) {
+      warpFX = null;
       level = n; var cf = config(n); var th = THEMES[(n - 1) % THEMES.length];
       cf.gates = clamp(progress.settings.dailyGoal, 6, 12);   // a world run = (most of) the day's quest
       var power = charPower(HEROTYPE);
@@ -933,6 +964,10 @@
     function aStar() {[523, 659, 784, 1046].forEach(function (f, i) { tone(f, .1, "square", i * .05, .08); }); }
     function aFlag() { tone(659, .08, "square", 0); tone(988, .1, "square", .07); }
     function aWin() {[523, 659, 784, 1046, 1319].forEach(function (f, i) { tone(f, .13, "square", i * .1); }); }
+    // warp dive: a rising shimmer that whooshes up as the hero spirals into the portal
+    function aWarp() { for (var i = 0; i < 8; i++) tone(440 + i * 90, .07, "triangle", i * .045, .09); tone(1400, .18, "sine", .38, .08); }
+    // secret arrival: a soft magical bell chord (distinct, dreamy — different from the world SFX)
+    function aSecret() {[659, 988, 1319, 1568].forEach(function (f, i) { tone(f, .5, "triangle", i * .09, .09); }); tone(494, .7, "sine", 0, .05); }
 
     /* ---- input ---- */
     function jump() {
@@ -984,7 +1019,7 @@
       $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mdisp(); mathShow(); hint("");
     }
     function endEscape() { $("#adv-sheet").classList.remove("escape"); setSheetTag("◆ GATE — SOLVE TO PASS ◆"); mathHide(); }
-    function restartLevel() { var hh = G.hearts; reset(level, hh); hudShow(true); hint("RESTART! TRY AGAIN"); }
+    function restartLevel() { var hh = G.hearts; reset(level, hh); hudShow(true); hint("RESTART! TRY AGAIN"); musicWorld(level); }
     function escapeSubmit(v) {
       var q = G.question, ans = q.a * q.b, ms = Date.now() - G.qStart, correct = v === ans, box = $("#adv-mabox");
       recordAnswer(q.a, q.b, correct, ms);
@@ -1015,7 +1050,7 @@
     function mathShow() { $("#adv-math").classList.remove("hidden"); }
     function mathHide() { $("#adv-math").classList.add("hidden"); }
     function hint(t) { var e = $("#adv-tapHint"); e.textContent = t; e.classList.toggle("hidden", !t); }
-    function startLevel(n) { hideAllOv(); reset(n); hudShow(true); hint("TAP = JUMP · HOLD = HIGHER · TAP AGAIN = DOUBLE"); }
+    function startLevel(n) { hideAllOv(); reset(n); hudShow(true); hint("TAP = JUMP · HOLD = HIGHER · TAP AGAIN = DOUBLE"); musicWorld(n); }
 
     /* ---- loop (physics) ---- */
     var last = 0;
@@ -1036,7 +1071,7 @@
           if (landTop === null) { if ((groundAt(h.wx) || TEST) && h.vy >= 0 && ny >= GROUND && h.y <= GROUND + 4) landTop = GROUND; }
           if (landTop !== null) { h.y = landTop; h.vy = 0; h.ground = true; h.dbl = false; h.coyote = .1; } else { if (h.ground) h.coyote = .1; h.ground = false; h.y = ny; }
           // secret warp: just jump while under the golden portal and it pulls you in (very forgiving — no precise landing)
-          if (G.warp && !G.warp.done && !h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1) { G.warp.done = true; G.enterPending = level; aStar(); haptic([12, 30, 12]); }
+          if (G.warp && !G.warp.done && !h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1) { G.warp.done = true; startWarp(level); }
           var headY = h.y - HEROSIZE * 0.9;
           for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used) continue; var by = GROUND - bx.hAbove; if (h.vy < 0 && h.wx >= bx.x - 8 && h.wx <= bx.x + bx.w + 8 && headY <= by + bx.h && headY >= by - 12) { bx.used = true; bx.pop = .2; h.vy = 80; if (bx.power) { spawnPowerup(bx.x + bx.w / 2, by - 20); } else { addCoins(1); aCoin(); G.particles.push({ wx: bx.x + bx.w / 2, y: by - 14, vx: 0, vy: -220, life: .7, kind: "coin" }); } } }
           for (var bkr = 0; bkr < G.bricks.length; bkr++) { var bk = G.bricks[bkr]; if (bk.used) continue; var bky = GROUND - bk.hAbove; if (h.vy < 0 && h.wx >= bk.x - 8 && h.wx <= bk.x + bk.w + 8 && headY <= bky + bk.h && headY >= bky - 12) { if (G.bigT > 0) { bk.used = true; aStomp(); coinBurst(bk.x + bk.w / 2, bky); } else { h.vy = 80; if (!bk.tapped) { bk.tapped = true; addCoins(1); aCoin(); } } } }
@@ -1059,13 +1094,14 @@
           if (h.power > 0 && Math.random() < .5) sparkle(h.wx, h.y - HEROSIZE * 0.4);
         }
         if (G.state === "showdown") sdStep(dt);
+        if (G.state === "warping") warpStep(dt);
         for (var f2 = 0; f2 < G.flags.length; f2++) { var fg = G.flags[f2]; if (fg.hit && fg.raise < 1) fg.raise = Math.min(1, fg.raise + dt * 3); }
         for (var p2 = G.particles.length - 1; p2 >= 0; p2--) { var pt = G.particles[p2]; pt.wx += pt.vx * dt; pt.vy += 1600 * dt; pt.y += pt.vy * dt; pt.life -= dt * 1.1; if (pt.life <= 0) G.particles.splice(p2, 1); }
-        if (G.shakeT > 0) G.shakeT -= dt; G.cam = h.wx - HEROX; draw(); hudUpdate();
+        if (G.shakeT > 0) G.shakeT -= dt; if (G.state !== "warping" || warpFX && warpFX.phase === "hop") G.cam = G.hero.wx - HEROX; draw(); drawWarpFX(); hudUpdate();
       }
       requestAnimationFrame(frame);
     }
-    function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aHurt(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; openOv("adv-failOv"); } }
+    function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aHurt(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } }
     // ---- power-ups (from ? boxes and the math-streak meter) ----
     function showPow(t) { G.popTxt = t; G.popT = 1.7; hint(t); }
     function spawnPowerup(px, py) { var r = Math.random(); applyPowerup(r < 0.4 ? "berry" : r < 0.65 ? "wings" : r < 0.85 ? "heart" : "star"); G.particles.push({ wx: px, y: py, vx: 0, vy: -170, life: .9, kind: "star" }); }
@@ -1080,7 +1116,7 @@
     function respawn() { var h = G.hero; h.wx = G.lastCP; h.y = GROUND; h.vy = 0; h.inv = 1; h.ground = true; }
     function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); mdisp(); $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mathShow(); hint(""); }
     function win() {
-      G.state = "win"; aWin(); haptic([15, 60, 15, 60, 15]);
+      G.state = "win"; musicStop(); aWin(); haptic([15, 60, 15, 60, 15]);
       var lost = G.maxHearts - G.hearts, stars = lost === 0 ? 3 : lost <= 1 ? 2 : 1, perfect = G.wrong === 0;
       if (perfect) { progress.xp += 20; G.xpEarned += 20; }
       if (level < MAXLEVELS && level >= (progress.worldsUnlocked || 1)) progress.worldsUnlocked = Math.min(MAXLEVELS, level + 1);
@@ -1123,8 +1159,8 @@
       };
       buildSecretMap();
       buildPmap();
-      showPow("SECRET COVE!");
-      aStar();
+      showPow("MYSTIC COVE!");
+      aSecret(); musicSecret();
     }
     function buildSecretMap() {
       var START = 700, gap = 1150, gx = [], i;
@@ -1165,6 +1201,41 @@
       for (var cg = 0; cg < 14; cg++) G.particles.push({ wx: dropX, y: GROUND - 40, vx: (cg - 7) * 55, vy: -240 - cg * 10, life: 1.1, kind: cg % 2 ? "star" : "coin" });
       showPow(newHero ? ("NEW HERO: " + sc.name + "!") : ("TREASURE! +" + chestGems + " ◆"));
       if (newHero) buildCharRow();
+      musicWorld(level);
+    }
+
+    /* ---- warp transition: hero visibly hops onto the portal, spins in, purple iris wipe, cove opens ---- */
+    var warpFX = null;
+    function startWarp(lvl) {
+      musicStop(); hudShow(false);
+      var h = G.hero; h.inv = 0; h.vy = 0; h.ground = true;
+      warpFX = { phase: "hop", t: 0, level: lvl, scale: 1, spin: 0, hx: h.wx, hy: h.y, tx: G.warp.x, ty: G.warp.top };
+      G.state = "warping"; aWarp(); haptic([10, 30, 10, 30, 20]);
+    }
+    function warpStep(dt) {
+      if (!warpFX) return; var f = warpFX; f.t += dt; var h = G.hero;
+      if (f.phase === "hop") {
+        var k = Math.min(1, f.t / 0.42), e = k * k * (3 - 2 * k);
+        h.wx = f.hx + (f.tx - f.hx) * e; h.y = f.hy + (f.ty - f.hy) * e - Math.sin(e * Math.PI) * 74;
+        if (f.t >= 0.42) { f.phase = "dive"; f.t = 0; h.wx = f.tx; h.y = f.ty; }
+      } else if (f.phase === "dive") {
+        var k2 = Math.min(1, f.t / 0.55); f.spin += dt * 20; f.scale = 1 - k2; h.y = f.ty + k2 * 22;
+        if (Math.random() < 0.7) G.particles.push({ wx: f.tx + (Math.random() * 34 - 17), y: f.ty - 10, vx: (Math.random() * 90 - 45), vy: -70 - Math.random() * 90, life: .6, kind: Math.random() < .5 ? "star" : "coin" });
+        if (f.t >= 0.55) { f.phase = "close"; f.t = 0; }
+      } else if (f.phase === "close") {
+        if (f.t >= 0.34) { enterSecret(f.level); G.state = "warping"; hudShow(false); f.phase = "open"; f.t = 0; f.scale = 1; f.spin = 0; }
+      } else if (f.phase === "open") {
+        if (f.t >= 0.44) { G.state = "run"; hudShow(true); warpFX = null; }
+      }
+    }
+    function drawWarpFX() {
+      if (!warpFX || (warpFX.phase !== "close" && warpFX.phase !== "open")) return;
+      var f = warpFX, W = PIXW, H = PIXH, diag = Math.sqrt(W * W + H * H) + SZ(8), cx = FX(G.hero.wx), cy = FY(G.hero.y) - SZ(24), r;
+      if (f.phase === "close") r = diag * (1 - Math.min(1, f.t / 0.34)); else r = diag * Math.min(1, f.t / 0.44);
+      r = Math.max(0, r);
+      x.save(); x.beginPath(); x.rect(-2, -2, W + 4, H + 4); x.arc(cx, cy, r, 0, 6.29, true); x.fillStyle = "#2a1152"; x.fill("evenodd");
+      if (r > 1) { x.beginPath(); x.arc(cx, cy, r, 0, 6.29); x.strokeStyle = "#c9a8f0"; x.lineWidth = 3; x.stroke(); }
+      x.restore();
     }
 
     /* ================= SLINGSHOT SHOWDOWN (World 1 mini-boss) ================= */
@@ -1380,7 +1451,7 @@
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
-      if (G.warp && !G.warp.done) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
+      if (G.warp && (!G.warp.done || G.state === "warping")) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.state !== "warping" && G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
       if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
       for (var brn = 0; brn < G.bricks.length; brn++) { var bkk = G.bricks[brn]; if (bkk.used) continue; var brs = FX(bkk.x); if (brs > W + 8 || brs < -8) continue; pxBrick(brs, FY(GROUND - bkk.hAbove), SZ(bkk.w), SZ(bkk.h), th); }
       for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used && bx.usedGone) continue; var bxs = FX(bx.x), bpop = bx.pop ? SZ(bx.pop * 36) : 0; if (bxs > W + 8 || bxs < -8) continue; pxBox(bxs, FY(GROUND - bx.hAbove) - bpop, SZ(bx.w), SZ(bx.h), bx.used, bx.power); if (bx.pop) bx.pop = Math.max(0, bx.pop - .03); }
@@ -1394,12 +1465,14 @@
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
       if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
-      var h = G.hero; if (G.state !== "trapped" && !(h.inv > 0 && Math.floor(G.t * 16) % 2)) {
+      var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
+      if (G.state !== "trapped" && (warping || !(h.inv > 0 && Math.floor(G.t * 16) % 2)) && wsc > 0.04) {
         var B = Math.max(1.8, PIXW * 0.16 / 14); if (G.bigT > 0) B *= 1.5;
         var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2);
         if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); }
         if (G.flyT > 0) { var wf = Math.sin(G.t * 22) > 0 ? SZ(4) : 0; P(hbxp - SZ(7), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); P(hbxp + 14 * B - SZ(2), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); }
-        drawHeroPix(x, hbxp, hby, B, HEROTYPE);
+        if (warping && (wsc < 1 || warpFX.spin)) { var hcx = FX(h.wx), hcy = FY(h.y) - 6 * B; disc(hcx, hcy, 10 * B, "rgba(200,168,240,.3)"); x.save(); x.translate(hcx, hcy); x.rotate(warpFX.spin); x.scale(wsc, wsc); x.translate(-hcx, -hcy); drawHeroPix(x, hbxp, hby, B, HEROTYPE); x.restore(); }
+        else drawHeroPix(x, hbxp, hby, B, HEROTYPE);
       }
       for (var q = 0; q < G.particles.length; q++) { var ptc = G.particles[q]; if (ptc.life <= 0) continue; var ppx = FX(ptc.wx), ppy = FY(ptc.y); if (ptc.kind === "coin") pxCoin(ppx, ppy, ptc.wx); else P(ppx, ppy, 2, 2, ptc.kind === "star" ? "#ffe14a" : "#ffffff"); }
       x.restore();
@@ -1640,13 +1713,13 @@
 
     /* ---- lifecycle ---- */
     function enter() { show("adventure"); resize(); running = true; if (!looping) { looping = true; last = 0; requestAnimationFrame(frame); } }
-    function leave() { running = false; }
+    function leave() { running = false; warpFX = null; musicStop(); }
     function startDaily() {
       HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1);
       enter(); hideAllOv(); reset(1); G.state = "map"; buildCharRow(); buildMap(); redrawPmapHero(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden");
     }
     function openMap() { unlocked = Math.max(1, progress.worldsUnlocked || 1); hideAllOv(); if (G) G.state = "map"; buildMap(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); }
-    function exitHome() { leave(); renderHome(); show("home"); }
+    function exitHome() { leave(); musicStop(); renderHome(); show("home"); }
 
     function advInit() {
       cv = $("#adv-c"); x = cv.getContext("2d");
@@ -1691,6 +1764,7 @@
       get chunks() { return G ? G.gates.length : 0; },
       get inSecret() { return G ? !!G.secretWorld : false; },
       get inShowdown() { return G ? G.state === "showdown" : false; },
+      resumeMusic: function () { if (G && ["run", "gate", "trapped", "showdown", "warping"].indexOf(G.state) >= 0) { if (G.secretWorld) musicSecret(); else musicWorld(level); } },
       enterShowdown: function () { if (G && G.state === "run") enterShowdown(); },
       sdWin: function () { if (G && G.sd) sdWinNow(); },
       get showdownX() { return G && G.showdown && !G.showdown.done ? Math.round(G.showdown.x) : null; },
@@ -1792,7 +1866,7 @@
 
     // sound
     var st = $("#sound-toggle"); st.textContent = soundOn ? "🔊" : "🔈";
-    st.addEventListener("click", function () { soundOn = !soundOn; saveSound(); st.textContent = soundOn ? "🔊" : "🔈"; if (soundOn) { ac(); sTap(); } });
+    st.addEventListener("click", function () { soundOn = !soundOn; saveSound(); st.textContent = soundOn ? "🔊" : "🔈"; if (soundOn) { ac(); sTap(); if (window.__adv && window.__adv.resumeMusic) window.__adv.resumeMusic(); } else { musicStop(); } });
     document.addEventListener("touchstart", function once() { ac(); document.removeEventListener("touchstart", once); }, { passive: true });
 
     boot();
