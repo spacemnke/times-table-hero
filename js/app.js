@@ -806,7 +806,7 @@
 
     // pixel palettes per theme
     var THEMES = [
-      { name: "MEADOW", prop: "tree", sky: "#5c94fc", sky2: "#7fb0ff", cloud: "#ffffff", mtn: "#b8c8f0", mtnS: "#eef4ff", h1: "#57bf3a", h2: "#3a9e2a", grass: "#7cd04a", dirt: "#c9803f", dirtL: "#a8632f" },
+      { name: "MEADOW", prop: "tree", hifi: true, sky: "#5c94fc", sky2: "#7fb0ff", cloud: "#ffffff", mtn: "#b8c8f0", mtnS: "#eef4ff", h1: "#57bf3a", h2: "#3a9e2a", grass: "#7cd04a", dirt: "#c9803f", dirtL: "#a8632f" },
       { name: "BEACH", prop: "palm", sky: "#67c8ff", sky2: "#a8e4ff", cloud: "#ffffff", mtn: "#cfe0f5", mtnS: "#ffffff", h1: "#ffe08a", h2: "#f0c860", grass: "#f2df9e", dirt: "#e0b060", dirtL: "#c99640", water: "#3fb0e0" },
       { name: "CANDY", prop: "candy", sky: "#ff9ed6", sky2: "#ffc2e6", cloud: "#fff0f8", mtn: "#ffc2e2", mtnS: "#ffffff", h1: "#ff8ec8", h2: "#ef6aa8", grass: "#ffb0d8", dirt: "#e070a8", dirtL: "#c85890" },
       { name: "OCEAN", prop: "coral", sky: "#39a8d8", sky2: "#7fd0ee", cloud: "#cfeeff", mtn: "#86dccf", mtnS: "#e0fffb", h1: "#3fbfb0", h2: "#2a9a8c", grass: "#57c8ba", dirt: "#2a8a7c", dirtL: "#1f6e62", water: "#2fb6d6" },
@@ -1876,14 +1876,16 @@
       if (G.state === "lanes" && G.lane) { laneDraw(); return; }
       if (G.state === "asteroid" && G.ast) { astDraw(); return; }
       if (G.mini && G.state === G.mini.key) { G.mini.draw(); return; }
-      var th = G.theme, W = PIXW, H = PIXH, gY = FY(GROUND);
+      var th = G.theme, W = PIXW, H = PIXH, gY = FY(GROUND); HIFI = !!th.hifi;
       var shX = G.shakeT > 0 ? (Math.random() * 2 - 1) * 2 : 0, shY = G.shakeT > 0 ? (Math.random() * 2 - 1) * 2 : 0;
       x.save(); x.translate(shX, shY);
-      P(-2, -2, W + 4, H * 0.6 + 2, th.sky); P(-2, H * 0.55, W + 4, H, th.sky2);
+      if (HIFI) { x.fillStyle = lg(-2, gY + SZ(30), "#3f7fe0", "#cfe8ff"); x.fillRect(-2, -2, W + 4, H + 4); }
+      else { P(-2, -2, W + 4, H * 0.6 + 2, th.sky); P(-2, H * 0.55, W + 4, H, th.sky2); }
       if (G.floaty) { x.globalAlpha = 0.2; P(-2, -2, W + 4, H + 4, "#1a86c0"); x.globalAlpha = 1; for (var bbn = 0; bbn < G.bubbles.length; bbn++) { var bbb = G.bubbles[bbn]; var bxs2 = FX(bbb.wx), bys2 = FY(bbb.y); if (bxs2 < -6 || bxs2 > W + 6) continue; x.globalAlpha = .5; x.strokeStyle = "#cdf3ff"; x.lineWidth = 1; x.beginPath(); x.arc(bxs2, bys2, Math.max(1, SZ(bbb.r)), 0, 6.29); x.stroke(); x.globalAlpha = 1; } }
       if (th.night) { for (var st = 0; st < 40; st++) { P((st * 61) % W, (st * 37) % (gY - 20), 1, 1, "#fff"); } }
       var sunx = Math.round(W * 0.8), suny = Math.round(H * 0.16);
-      if (!th.night) { for (var rr = 0; rr < 8; rr++) { var a = rr * Math.PI / 4; P(sunx + Math.round(Math.cos(a) * 14) - 1, suny + Math.round(Math.sin(a) * 14) - 1, 3, 3, "#ffe06a"); } disc(sunx, suny, 9, "#ffe06a"); disc(sunx, suny, 6, "#fff2a8"); }
+      if (HIFI && !th.night) { var glow = x.createRadialGradient(sunx, suny, SZ(2), sunx, suny, SZ(30)); glow.addColorStop(0, "rgba(255,246,200,.9)"); glow.addColorStop(1, "rgba(255,224,106,0)"); x.fillStyle = glow; x.beginPath(); x.arc(sunx, suny, SZ(30), 0, 7); x.fill(); oE(sunx, suny, SZ(11), SZ(11), "#ffe884", null); oE(sunx, suny, SZ(7.5), SZ(7.5), "#fff6c8", null); }
+      else if (!th.night) { for (var rr = 0; rr < 8; rr++) { var a = rr * Math.PI / 4; P(sunx + Math.round(Math.cos(a) * 14) - 1, suny + Math.round(Math.sin(a) * 14) - 1, 3, 3, "#ffe06a"); } disc(sunx, suny, 9, "#ffe06a"); disc(sunx, suny, 6, "#fff2a8"); }
       else { disc(sunx, suny, 8, "#f2eeff"); }
       for (var i = 0; i < 9; i++) { var sp2 = i % 2 ? 0.10 : 0.04, cyp = Math.round(H * (0.06 + ((i * 0.37) % 1) * 0.42)), cxp = ((i * 58 - (G.cam * sp2 + G.cloud * .4)) % (W + 50)); if (cxp < -40) cxp += W + 50; pxCloud(cxp, cyp, th.cloud); }
       pxMountains(th, gY);
@@ -1897,6 +1899,8 @@
           for (var ps = Math.floor(sp[0] / 150) * 150; ps < sp[1]; ps += 150) { var pxp = FX(ps); if (pxp > gx1 + SZ(4) && pxp < gx2 - SZ(4)) { P(pxp, gY + dkH, SZ(5), H, "#7a4a24"); P(pxp + SZ(5), gY + dkH, SZ(1), H, "#5c3418"); } }
           P(gx1, gY, gx2 - gx1, dkH, "#c78a48"); P(gx1, gY, gx2 - gx1, SZ(4), "#e2ac66"); P(gx1, gY + dkH - SZ(2), gx2 - gx1, SZ(2), "#8a5a2a");
           for (var pk = Math.floor(sp[0] / 44) * 44; pk < sp[1]; pk += 44) { var pl2 = FX(pk); if (pl2 > gx1 && pl2 < gx2) P(pl2, gY, 1, dkH, "#9a6636"); }
+        } else if (HIFI) {
+          hfGround(sp, gx1, gx2, gY);
         } else {
           P(gx1, gY, gx2 - gx1, H - gY + 4, th.dirt); P(gx1, gY, gx2 - gx1, SZ(8), th.grass);
           for (var d = Math.floor(sp[0] / 60) * 60; d < sp[1]; d += 60) { var dl = FX(d); if (dl > gx1 && dl < gx2) P(dl, gY + SZ(8), 1, H, th.dirtL); }
@@ -2004,10 +2008,70 @@
       }
     }
     function disc(cx, cy, r, c) { x.fillStyle = c; for (var yy = -r; yy <= r; yy++) { var ww = Math.floor(Math.sqrt(r * r - yy * yy)); x.fillRect(cx - ww, cy + yy, ww * 2 + 1, 1); } }
-    function pxCloud(cx, cy, c) { P(cx, cy, 20, 5, c); P(cx + 4, cy - 4, 12, 5, c); P(cx - 3, cy + 2, 26, 4, c); }
-    function pxMountains(th, gY) { for (var i = -1; i < 6; i++) { var cx = Math.round(i * 90 - ((G.cam * .15) % 90)); var mh = SZ(150); for (var yy = 0; yy < mh; yy += 2) { var half = Math.round((yy / mh) * mh * 0.95); P(cx - half, gY - mh + yy, half * 2, 2, th.mtn); } for (var yy2 = 0; yy2 < mh * 0.3; yy2 += 2) { var half2 = Math.round((yy2 / (mh * 0.3)) * mh * 0.28); P(cx - half2, gY - mh + yy2, half2 * 2, 2, th.mtnS); } } }
-    function pxHills(off, baseY, c) { for (var px = 0; px < PIXW; px += 3) { var y = baseY - Math.round(Math.sin((px + off * sx) * .03) * SZ(18) + Math.cos((px + off * sx) * .06) * SZ(8)); P(px, y, 3, PIXH, c); } }
+    /* ============== 32-BIT "HI-FI" WORLD RENDERING (Meadow proof) ============== */
+    var HIFI = false;
+    function OW() { return Math.max(1, Math.round(sx)); }
+    function oE(cx, cy, rx, ry, f, o, ow) { x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, 7); if (f) { x.fillStyle = f; x.fill(); } if (o) { x.strokeStyle = o; x.lineWidth = ow || OW(); x.lineJoin = "round"; x.stroke(); } }
+    function oR(px, py, w, h, r, f, o, ow) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); if (f) { x.fillStyle = f; x.fill(); } if (o) { x.strokeStyle = o; x.lineWidth = ow || OW(); x.lineJoin = "round"; x.stroke(); } }
+    function oP(cmds, f, o, ow) { x.beginPath(); cmds(); x.closePath(); if (f) { x.fillStyle = f; x.fill(); } if (o) { x.strokeStyle = o; x.lineWidth = ow || OW(); x.lineJoin = "round"; x.stroke(); } }
+    function lg(y0, y1, a, b) { var q = x.createLinearGradient(0, y0, 0, y1); q.addColorStop(0, a); q.addColorStop(1, b); return q; }
+    function hfCloud(cx, cy) { [[0, 0, 11], [9, 2, 8], [-9, 2, 7], [3, -5, 7]].forEach(function (o) { oE(cx + SZ(o[0]), cy + SZ(o[1]), SZ(o[2]), SZ(o[2] * .72), "#ffffff", null); }); oE(cx, cy + SZ(4), SZ(13), SZ(3.4), "rgba(198,216,240,.7)", null); }
+    function hfMountains(th, gY) { var mh = SZ(150); for (var i = -1; i < 6; i++) { var cx = Math.round(i * 90 - ((G.cam * .15) % 90)), half = Math.round(mh * 0.95); oP(function () { x.moveTo(cx - half, gY); x.lineTo(cx, gY - mh); x.lineTo(cx + half, gY); }, lg(gY - mh, gY, "#c6d4f2", "#9fb0d8"), null); var ch = Math.round(mh * 0.3), chalf = Math.round(half * 0.3); oP(function () { x.moveTo(cx - chalf, gY - mh + ch); x.lineTo(cx, gY - mh); x.lineTo(cx + chalf, gY - mh + ch); }, "#eef4ff", null); } }
+    function hfHills(off, baseY, c, hi) { function crest(px) { return baseY - Math.round(Math.sin((px + off * sx) * .03) * SZ(18) + Math.cos((px + off * sx) * .06) * SZ(8)); } x.beginPath(); x.moveTo(-4, PIXH); for (var px = -4; px <= PIXW + 4; px += 2) x.lineTo(px, crest(px)); x.lineTo(PIXW + 4, PIXH); x.closePath(); x.fillStyle = c; x.fill(); x.strokeStyle = hi; x.lineWidth = Math.max(1, Math.round(sx * 1.4)); x.beginPath(); for (var p2 = -4; p2 <= PIXW + 4; p2 += 2) { var y = crest(p2) - SZ(1); if (p2 < 0) x.moveTo(p2, y); else x.lineTo(p2, y); } x.stroke(); }
+    function hfGround(sp, gx1, gx2, gY) {
+      x.fillStyle = lg(gY, PIXH, "#b06a34", "#7a4620"); x.fillRect(gx1, gY + SZ(5), gx2 - gx1, PIXH - gY);
+      x.fillStyle = lg(gY, gY + SZ(13), "#7fd24c", "#54a636"); x.fillRect(gx1, gY, gx2 - gx1, SZ(12));
+      x.fillStyle = "#3f7a2a"; x.fillRect(gx1, gY + SZ(11), gx2 - gx1, SZ(2));
+      for (var bx = Math.floor(sp[0] / 13) * 13; bx < sp[1]; bx += 13) { var blx = FX(bx); if (blx > gx1 - 2 && blx < gx2 + 2) { var bh = SZ(4 + (bx % 3)); oP((function (bl, h) { return function () { x.moveTo(bl - SZ(2.4), gY + SZ(1)); x.lineTo(bl + ((bx % 2) ? 1 : -1) * SZ(1.6), gY - h); x.lineTo(bl + SZ(2.4), gY + SZ(1)); }; })(blx, bh), "#8fe05a", null); } }
+      x.fillStyle = "rgba(80,48,22,.55)"; for (var d = Math.floor(sp[0] / 38) * 38; d < sp[1]; d += 38) { var dl = FX(d); if (dl > gx1 && dl < gx2) { x.fillRect(dl, gY + SZ(22), SZ(3), SZ(3)); x.fillRect(dl + SZ(15), gY + SZ(36), SZ(2), SZ(2)); x.fillRect(dl - SZ(9), gY + SZ(30), SZ(2), SZ(2)); } }
+    }
+    function hfTree(cx, gY, s) {
+      var trunkH = Math.round(s * 0.5), fr = Math.round(s * 0.34);
+      oR(cx - SZ(3), gY - trunkH, SZ(6), trunkH + SZ(2), SZ(2), "#8a5a2e", "#4a2f16");
+      oE(cx, gY - Math.round(s * 0.68), fr, fr * 0.98, "#3aa64a", "#236b2e");
+      oE(cx - fr * 0.3, gY - Math.round(s * 0.8), fr * 0.5, fr * 0.44, "#5fce62", null);
+      oE(cx + fr * 0.38, gY - Math.round(s * 0.58), fr * 0.4, fr * 0.36, "#2f8f42", null);
+    }
+    function hfCoin(cx, cy, spin) {
+      var w = Math.max(SZ(2), Math.round(Math.abs(Math.cos(spin)) * SZ(13))), r = SZ(14);
+      oE(cx, cy, w, r, "#ffcf33", "#b57e10");
+      if (w > SZ(5)) { oE(cx, cy, w * 0.62, r * 0.66, "#ffe98a", "#e0b020", Math.max(1, Math.round(sx * 0.8))); oE(cx - w * 0.3, cy - r * 0.4, w * 0.24, r * 0.3, "#fff6c8", null); }
+    }
+    function hfBox(px, py, w, h, used, power) {
+      var body = used ? "#b39b7a" : (power ? "#37c0ff" : "#ffb020"), lo = used ? "#8f7a4f" : (power ? "#1f8fd0" : "#c97a00"), O = used ? "#6a5a3a" : (power ? "#125f8a" : "#7a4a00");
+      oR(px, py, w, h, Math.max(2, SZ(2)), body, O); x.fillStyle = lo; x.fillRect(px + SZ(2), py + h - SZ(4), w - SZ(4), SZ(3)); x.fillStyle = "rgba(255,255,255,.4)"; x.fillRect(px + SZ(2), py + SZ(2), w - SZ(4), SZ(2));
+      if (!used) { var mcx = px + w / 2, mcy = py + h / 2; if (power) { x.fillStyle = "#fff"; x.fillRect(mcx - SZ(2), mcy - SZ(6), SZ(4), SZ(12)); x.fillRect(mcx - SZ(6), mcy - SZ(2), SZ(12), SZ(4)); } else { x.fillStyle = O; x.font = "800 " + SZ(16) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("?", mcx, mcy + SZ(1)); x.textAlign = "left"; x.textBaseline = "alphabetic"; } }
+    }
+    function hfBrick(px, py, w, h) {
+      oR(px, py, w, h, SZ(1.5), "#c65a2a", "#7a3212"); x.strokeStyle = "rgba(122,50,18,.65)"; x.lineWidth = Math.max(1, Math.round(sx * 0.8));
+      var third = Math.round(h / 3); for (var ry = py + third; ry < py + h - SZ(2); ry += third) { x.beginPath(); x.moveTo(px + SZ(1), ry); x.lineTo(px + w - SZ(1), ry); x.stroke(); }
+      x.beginPath(); x.moveTo(px + w / 2, py + SZ(1)); x.lineTo(px + w / 2, py + third); x.moveTo(px + w * 0.28, py + third); x.lineTo(px + w * 0.28, py + third * 2); x.moveTo(px + w * 0.72, py + third); x.lineTo(px + w * 0.72, py + third * 2); x.stroke();
+      x.fillStyle = "rgba(255,255,255,.22)"; x.fillRect(px + SZ(2), py + SZ(2), w - SZ(4), SZ(2));
+    }
+    function hfEnemy(cx, gY, dir) {
+      var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(44) - bnc, w = SZ(22), O = "#3a2580";
+      oE(cx - SZ(11), gY - SZ(3), SZ(8), SZ(4), "#4a2f9a", O); oE(cx + SZ(11), gY - SZ(3), SZ(8), SZ(4), "#4a2f9a", O);
+      oR(cx - w, fy, w * 2, SZ(42), w, "#8b6cf0", O); oE(cx, fy + SZ(36), w * 0.82, SZ(7), "#6a4bd0", null);
+      oE(cx - SZ(8), fy + SZ(16), SZ(6), SZ(7), "#fff", O, Math.max(1, Math.round(sx * 0.8))); oE(cx + SZ(8), fy + SZ(16), SZ(6), SZ(7), "#fff", O, Math.max(1, Math.round(sx * 0.8)));
+      oE(cx - SZ(8) + dir * SZ(2), fy + SZ(17), SZ(2.4), SZ(3), "#241a4a", null); oE(cx + SZ(8) + dir * SZ(2), fy + SZ(17), SZ(2.4), SZ(3), "#241a4a", null);
+      x.strokeStyle = O; x.lineWidth = Math.max(1, Math.round(sx * 0.8)); x.beginPath(); x.moveTo(cx - SZ(4), fy + SZ(28)); x.quadraticCurveTo(cx, fy + SZ(31), cx + SZ(4), fy + SZ(28)); x.stroke();
+    }
+    function hfFlower(cx, cy, k) {
+      var cols = [["#ff5ca8", "#ffe14a"], ["#ff9f1c", "#ffe14a"], ["#8f5bff", "#ffe14a"]][k];
+      x.strokeStyle = "#2f8f42"; x.lineWidth = Math.max(1, Math.round(sx)); x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx, cy - SZ(6)); x.stroke();
+      for (var p = 0; p < 5; p++) { var a = p / 5 * 6.283; oE(cx + Math.cos(a) * SZ(3), cy - SZ(8) + Math.sin(a) * SZ(3), SZ(2.3), SZ(2.3), cols[0], null); }
+      oE(cx, cy - SZ(8), SZ(2), SZ(2), cols[1], null);
+    }
+    function hfGate(gxs, gY) {
+      var hh = SZ(140), pw = SZ(18); oR(gxs - SZ(46), gY - hh, pw, hh, SZ(2), "#9b8bbf", "#544482"); oR(gxs + SZ(28), gY - hh, pw, hh, SZ(2), "#9b8bbf", "#544482");
+      oR(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(20), SZ(3), "#6a5b9a", "#463a70");
+      var ly = gY - SZ(84); oR(gxs - SZ(11), ly, SZ(22), SZ(20), SZ(4), "#ffd23f", "#b57e10"); x.fillStyle = "#8a5a00"; oE(gxs, ly + SZ(11), SZ(3), SZ(4), "#8a5a00", null);
+    }
+    function pxCloud(cx, cy, c) { if (HIFI) { hfCloud(cx, cy); return; } P(cx, cy, 20, 5, c); P(cx + 4, cy - 4, 12, 5, c); P(cx - 3, cy + 2, 26, 4, c); }
+    function pxMountains(th, gY) { if (HIFI) { hfMountains(th, gY); return; } for (var i = -1; i < 6; i++) { var cx = Math.round(i * 90 - ((G.cam * .15) % 90)); var mh = SZ(150); for (var yy = 0; yy < mh; yy += 2) { var half = Math.round((yy / mh) * mh * 0.95); P(cx - half, gY - mh + yy, half * 2, 2, th.mtn); } for (var yy2 = 0; yy2 < mh * 0.3; yy2 += 2) { var half2 = Math.round((yy2 / (mh * 0.3)) * mh * 0.28); P(cx - half2, gY - mh + yy2, half2 * 2, 2, th.mtnS); } } }
+    function pxHills(off, baseY, c) { if (HIFI) { hfHills(off, baseY, c, "rgba(255,255,255,.22)"); return; } for (var px = 0; px < PIXW; px += 3) { var y = baseY - Math.round(Math.sin((px + off * sx) * .03) * SZ(18) + Math.cos((px + off * sx) * .06) * SZ(8)); P(px, y, 3, PIXH, c); } }
     function pxProp(type, cx, gY, s, th) {
+      if (HIFI && type === "tree") { hfTree(cx, gY, s); return; }
       if (type === "tree") { P(cx - 1, gY - s * 0.6, 3, s * 0.6, "#7a4a24"); disc(cx, gY - Math.round(s * 0.7), Math.round(s * 0.34), "#3aa64a"); }
       else if (type === "palm") { P(cx, gY - s * 0.8, 3, s * 0.8, "#a9743f"); for (var f = 0; f < 5; f++) { var a = (-1.4) + f * 0.5; P(cx + Math.round(Math.cos(a) * s * 0.3), gY - Math.round(s * 0.8) + Math.round(Math.sin(a) * s * 0.14), Math.round(s * 0.3), 3, "#3fae5a"); } }
       else if (type === "pine") { P(cx - 1, gY - s * 0.2, 3, s * 0.2, "#6a4a2a"); for (var t = 0; t < 3; t++) { var wv = Math.round(s * (0.34 - t * 0.1)); P(cx - wv, gY - s * (0.2 + t * 0.2) - 2, wv * 2, Math.round(s * 0.2), "#2f8f52"); P(cx - Math.round(wv * 0.5), gY - s * (0.2 + t * 0.2) - 2, wv, 2, "#dff0e6"); } }
@@ -2017,11 +2081,11 @@
       else if (type === "rock") { disc(cx, gY - Math.round(s * 0.18), Math.round(s * 0.28), "#7a5648"); P(cx - 2, gY - s * 0.28, 2, s * 0.14, "#ff6b3d"); }
       else if (type === "crystal") { P(cx - 2, gY - s * 0.5, 4, s * 0.5, "#b28dff"); P(cx - s * 0.2, gY - s * 0.34, 3, s * 0.34, "#8f6bd6"); P(cx + s * 0.16, gY - s * 0.42, 3, s * 0.42, "#c9b0ff"); }
     }
-    function pxFlower(cx, cy, k) { var cols = [["#ff5ca8", "#fff2a8"], ["#ff9f1c", "#fff2a8"], ["#8f5bff", "#fff2a8"]][k]; P(cx - 1, cy - 3, 2, 4, "#3aa64a"); P(cx - 2, cy - 6, 4, 4, cols[0]); P(cx - 1, cy - 5, 2, 2, cols[1]); }
-    function pxCoin(cx, cy, spin) { var w = Math.max(1, Math.round(Math.abs(Math.cos(spin)) * SZ(15))); var r = SZ(15); P(cx - w, cy - r, w * 2, r * 2, C.coin); P(cx - w, cy - r, w * 2, SZ(3), C.coinHi); P(cx - w, cy + r - SZ(3), w * 2, SZ(3), C.coinLo); if (w > SZ(6)) P(cx - SZ(2), cy - SZ(4), SZ(4), SZ(8), C.coinLo); }
-    function pxBox(px, py, w, h, used, power) { var main = used ? "#b39b7a" : (power ? "#37c0ff" : C.box), hi = used ? "#c9b48f" : (power ? "#a8ecff" : C.boxHi), lo = used ? "#8f7a4f" : (power ? "#1f8fd0" : C.boxLo); P(px, py, w, h, main); P(px, py, w, SZ(3), hi); P(px, py + h - SZ(3), w, SZ(3), lo); P(px, py, SZ(3), h, hi); P(px + w - SZ(3), py, SZ(3), h, lo); if (!used) { var cx = px + w / 2, cy = py + h / 2; if (power) { P(cx - SZ(2), cy - SZ(7), SZ(4), SZ(14), "#fff"); P(cx - SZ(7), cy - SZ(2), SZ(14), SZ(4), "#fff"); } else { P(cx - SZ(3), cy - SZ(6), SZ(6), SZ(3), "#fff"); P(cx + SZ(1), cy - SZ(3), SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy, SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy + SZ(4), SZ(3), SZ(2), "#fff"); } } }
+    function pxFlower(cx, cy, k) { if (HIFI) { hfFlower(cx, cy, k); return; } var cols = [["#ff5ca8", "#fff2a8"], ["#ff9f1c", "#fff2a8"], ["#8f5bff", "#fff2a8"]][k]; P(cx - 1, cy - 3, 2, 4, "#3aa64a"); P(cx - 2, cy - 6, 4, 4, cols[0]); P(cx - 1, cy - 5, 2, 2, cols[1]); }
+    function pxCoin(cx, cy, spin) { if (HIFI) { hfCoin(cx, cy, spin); return; } var w = Math.max(1, Math.round(Math.abs(Math.cos(spin)) * SZ(15))); var r = SZ(15); P(cx - w, cy - r, w * 2, r * 2, C.coin); P(cx - w, cy - r, w * 2, SZ(3), C.coinHi); P(cx - w, cy + r - SZ(3), w * 2, SZ(3), C.coinLo); if (w > SZ(6)) P(cx - SZ(2), cy - SZ(4), SZ(4), SZ(8), C.coinLo); }
+    function pxBox(px, py, w, h, used, power) { if (HIFI) { hfBox(px, py, w, h, used, power); return; } var main = used ? "#b39b7a" : (power ? "#37c0ff" : C.box), hi = used ? "#c9b48f" : (power ? "#a8ecff" : C.boxHi), lo = used ? "#8f7a4f" : (power ? "#1f8fd0" : C.boxLo); P(px, py, w, h, main); P(px, py, w, SZ(3), hi); P(px, py + h - SZ(3), w, SZ(3), lo); P(px, py, SZ(3), h, hi); P(px + w - SZ(3), py, SZ(3), h, lo); if (!used) { var cx = px + w / 2, cy = py + h / 2; if (power) { P(cx - SZ(2), cy - SZ(7), SZ(4), SZ(14), "#fff"); P(cx - SZ(7), cy - SZ(2), SZ(14), SZ(4), "#fff"); } else { P(cx - SZ(3), cy - SZ(6), SZ(6), SZ(3), "#fff"); P(cx + SZ(1), cy - SZ(3), SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy, SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy + SZ(4), SZ(3), SZ(2), "#fff"); } } }
     function pxFish(cx, cy, ph, dir) { dir = dir || 1; var s = SZ(1); disc(cx, cy, SZ(16), "#ff7a4a"); P(cx + dir * SZ(10), cy - SZ(12), SZ(16), SZ(24), "#ff7a4a"); P(cx + dir * SZ(20), cy - SZ(14), SZ(10), SZ(28), "#ff9a6a"); P(cx - dir * SZ(8), cy - SZ(6), SZ(6), SZ(6), "#fff"); P(cx - dir * SZ(6), cy - SZ(4), SZ(3), SZ(3), "#111"); P(cx + SZ(2), cy - SZ(16), SZ(10), SZ(6), "#ff9a6a"); if (ph < 0.35) { for (var w = -18; w <= 18; w += 9) P(cx + SZ(w), FY(GROUND) + SZ(2), SZ(4), SZ(3), "#ffffff"); } }
-    function pxBrick(px, py, w, h, th) { P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
+    function pxBrick(px, py, w, h, th) { if (HIFI) { hfBrick(px, py, w, h); return; } P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
     // golden warp portal on a ledge — the entrance to World B (made loud so it's easy to spot)
@@ -2094,9 +2158,9 @@
       }
     }
     function pxStar(cx, cy, r) { P(cx - 1, cy - r, 2, r * 2, C.star); P(cx - r, cy - 1, r * 2, 2, C.star); P(cx - Math.round(r * .6), cy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), C.star); P(cx - 2, cy - 2, 4, 4, "#fff2a8"); }
-    function pxGate(gxs, gY) { var hh = SZ(150); P(gxs - SZ(46), gY - hh, SZ(20), hh, C.stone); P(gxs + SZ(26), gY - hh, SZ(20), hh, C.stone); P(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(18), C.stoneD); var ly = gY - SZ(90); P(gxs - SZ(10), ly, SZ(20), SZ(18), C.lock); P(gxs - SZ(6), ly - SZ(8), SZ(12), SZ(8), C.stoneD); P(gxs - SZ(3), ly + SZ(6), SZ(6), SZ(6), "#8a5a00"); }
+    function pxGate(gxs, gY) { if (HIFI) { hfGate(gxs, gY); return; } var hh = SZ(150); P(gxs - SZ(46), gY - hh, SZ(20), hh, C.stone); P(gxs + SZ(26), gY - hh, SZ(20), hh, C.stone); P(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(18), C.stoneD); var ly = gY - SZ(90); P(gxs - SZ(10), ly, SZ(20), SZ(18), C.lock); P(gxs - SZ(6), ly - SZ(8), SZ(12), SZ(8), C.stoneD); P(gxs - SZ(3), ly + SZ(6), SZ(6), SZ(6), "#8a5a00"); }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
-    function pxEnemy(cx, gY, dir) { var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(46) - bnc, w = SZ(24); P(cx - w, fy + SZ(6), w * 2, SZ(40), C.enemy); P(cx - w + SZ(3), fy, w * 2 - SZ(6), SZ(8), C.enemy); P(cx - w, fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx + w - SZ(8), fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx - SZ(12), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx + SZ(4), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx - SZ(11) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); P(cx + SZ(5) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); }
+    function pxEnemy(cx, gY, dir) { if (HIFI) { hfEnemy(cx, gY, dir); return; } var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(46) - bnc, w = SZ(24); P(cx - w, fy + SZ(6), w * 2, SZ(40), C.enemy); P(cx - w + SZ(3), fy, w * 2 - SZ(6), SZ(8), C.enemy); P(cx - w, fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx + w - SZ(8), fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx - SZ(12), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx + SZ(4), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx - SZ(11) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); P(cx + SZ(5) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); }
 
     function pxGem(cx, cy, spin) {
       var w = Math.max(1, Math.round(Math.abs(Math.cos(spin)) * SZ(13))), r = SZ(16);
