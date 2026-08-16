@@ -1488,7 +1488,7 @@
         P(L.wallX - SZ(22), wy - SZ(24), SZ(44), SZ(48), pc); P(L.wallX - SZ(22), wy - SZ(24), SZ(44), SZ(5), "rgba(255,255,255,.25)"); P(L.wallX - SZ(22), wy - SZ(24), SZ(4), SZ(48), "rgba(255,255,255,.2)");
         x.fillStyle = "#fff"; x.font = "800 " + SZ(20) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(L.vals[j], L.wallX, wy);
       }
-      var B = Math.max(1.6, PIXW * 0.13 / 14);
+      var B = Math.max(1.6, sx * 3.2);
       drawHeroPix(x, L.heroX - 7 * B, L.hy - 12 * B + Math.round(Math.sin(L.run) * 2), B, HEROTYPE);
       x.textAlign = "center"; x.textBaseline = "middle"; var qs = L.q.a + "  ×  " + L.q.b + "  =  ?", pf = Math.max(9, Math.round(Math.min(H * 0.06, W * 0.09)));
       x.font = "800 " + pf + "px monospace"; var qw = x.measureText(qs).width; if (qw > W * 0.9) { pf = Math.max(8, Math.floor(pf * W * 0.9 / qw)); x.font = "800 " + pf + "px monospace"; }
@@ -1559,7 +1559,7 @@
       // particles
       for (var p = 0; p < A.parts.length; p++) { var pt = A.parts[p]; x.globalAlpha = Math.max(0, Math.min(1, pt.life * 2)); P(pt.x - 1, pt.y - 1, SZ(3), SZ(3), pt.col); x.globalAlpha = 1; }
       // ship: hero riding a little cannon
-      var by = H - SZ(26), B = Math.max(1.6, PIXW * 0.12 / 14); x.fillStyle = "#b8c2d0"; x.fillRect(A.shipX - SZ(20), by, SZ(40), SZ(12)); x.fillStyle = "#37e0ff"; x.fillRect(A.shipX - SZ(3), by - SZ(10), SZ(6), SZ(12));
+      var by = H - SZ(26), B = Math.max(1.6, sx * 3); x.fillStyle = "#b8c2d0"; x.fillRect(A.shipX - SZ(20), by, SZ(40), SZ(12)); x.fillStyle = "#37e0ff"; x.fillRect(A.shipX - SZ(3), by - SZ(10), SZ(6), SZ(12));
       drawHeroPix(x, A.shipX - 7 * B, by - 12 * B - SZ(2), B, HEROTYPE);
       x.restore();
       // problem banner
@@ -1650,7 +1650,7 @@
         P(hx - SZ(20), hp.y - SZ(38), SZ(40), SZ(28), "#e9e4d0"); P(hx - SZ(20), hp.y - SZ(38), SZ(40), SZ(3), "#c8c2ac"); x.strokeStyle = "#ff7a3c"; x.lineWidth = Math.max(2, SZ(4)); x.beginPath(); x.ellipse(hx, hp.y, SZ(22), SZ(9), 0, 0, 6.29); x.stroke();
         x.font = "800 " + SZ(16) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#2a2140"; x.fillText(hp.v, hx, hp.y - SZ(24)); }
       if (A.ball) { x.fillStyle = "#ff7a3c"; x.beginPath(); x.arc(A.ball.x, A.ball.y, SZ(9), 0, 6.29); x.fill(); x.strokeStyle = "#8a3c14"; x.lineWidth = 1; x.beginPath(); x.moveTo(A.ball.x - SZ(9), A.ball.y); x.lineTo(A.ball.x + SZ(9), A.ball.y); x.stroke(); }
-      var by = H - SZ(26), B = Math.max(1.6, PIXW * 0.12 / 14); drawHeroPix(x, A.shipX - 7 * B, by - 12 * B, B, HEROTYPE);
+      var by = H - SZ(26), B = Math.max(1.6, sx * 3); drawHeroPix(x, A.shipX - 7 * B, by - 12 * B, B, HEROTYPE);
       miniPartsDraw(A); miniHud(A, "TAP THE HOOP WITH THE ANSWER");
     }
 
@@ -1671,7 +1671,7 @@
       var zc = ["#4a3f7a", "#4a3f7a", "#4a3f7a"]; for (var z = 0; z < 3; z++) { var zx = W * z / 3, zw = W / 3; var lit = (A.stampT > 0 && A.stampZone === z); x.fillStyle = lit ? (A.vals[z] === A.correct ? "#3ad46a" : "#ff5c6c") : zc[z]; x.fillRect(zx + SZ(3), barY, zw - SZ(6), barH); x.fillStyle = "rgba(255,255,255,.12)"; x.fillRect(zx + SZ(3), barY, zw - SZ(6), SZ(4));
         x.fillStyle = "#fff"; x.font = "800 " + Math.round(barH * 0.5) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(A.vals[z], zx + zw / 2, barY + barH / 2); }
       var mx = W * A.pos; x.fillStyle = "#ffd23f"; x.fillRect(mx - SZ(2), barY - SZ(10), SZ(4), barH + SZ(20)); x.beginPath(); x.moveTo(mx - SZ(7), barY - SZ(10)); x.lineTo(mx + SZ(7), barY - SZ(10)); x.lineTo(mx, barY - SZ(2)); x.closePath(); x.fill();
-      var by = H - SZ(30), B = Math.max(1.6, PIXW * 0.12 / 14); drawHeroPix(x, W / 2 - 7 * B, by - 12 * B + Math.round(Math.sin(A.pulse) * SZ(2)), B, HEROTYPE);
+      var by = H - SZ(30), B = Math.max(1.6, sx * 3); drawHeroPix(x, W / 2 - 7 * B, by - 12 * B + Math.round(Math.sin(A.pulse) * SZ(2)), B, HEROTYPE);
       miniPartsDraw(A); miniHud(A, "TAP WHEN THE MARKER IS ON THE ANSWER");
     }
 
@@ -1726,7 +1726,7 @@
       for (var st = 0; st < 40; st++) { P((st * 71) % W, (st * 53) % (H * 0.5), 1, 1, "#3a4a6a"); }
       for (var i = 0; i < A.drops.length; i++) { var d = A.drops[i]; x.fillStyle = d.v === A.correct ? "#ffd23f" : "#a6b0d0"; x.fillRect(d.x - SZ(14), d.y - SZ(11), SZ(28), SZ(22)); x.fillStyle = "rgba(255,255,255,.2)"; x.fillRect(d.x - SZ(14), d.y - SZ(11), SZ(28), SZ(4)); x.fillStyle = "#1a1030"; x.font = "800 " + SZ(13) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(d.v, d.x, d.y); }
       var basketY = H - SZ(40); x.fillStyle = "#37c0ff"; x.beginPath(); x.moveTo(A.basketX - SZ(30), basketY); x.lineTo(A.basketX + SZ(30), basketY); x.lineTo(A.basketX + SZ(22), basketY + SZ(18)); x.lineTo(A.basketX - SZ(22), basketY + SZ(18)); x.closePath(); x.fill(); x.fillStyle = "#eafcff"; x.fillRect(A.basketX - SZ(30), basketY - SZ(3), SZ(60), SZ(4));
-      var B = Math.max(1.4, PIXW * 0.1 / 14); drawHeroPix(x, A.basketX - 7 * B, basketY - 12 * B - SZ(2), B, HEROTYPE);
+      var B = Math.max(1.4, sx * 2.6); drawHeroPix(x, A.basketX - 7 * B, basketY - 12 * B - SZ(2), B, HEROTYPE);
       miniPartsDraw(A); miniHud(A, "MOVE TO CATCH THE ANSWER");
     }
 
@@ -1930,7 +1930,7 @@
       if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
       var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
       if (G.state !== "trapped" && (warping || !(h.inv > 0 && Math.floor(G.t * 16) % 2)) && wsc > 0.04) {
-        var B = Math.max(1.8, PIXW * 0.16 / 14); if (G.bigT > 0) B *= 1.5;
+        var B = Math.max(1.8, sx * 4); if (G.bigT > 0) B *= 1.5;
         var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2);
         if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); }
         if (G.flyT > 0) { var wf = Math.sin(G.t * 22) > 0 ? SZ(4) : 0; P(hbxp - SZ(7), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); P(hbxp + 14 * B - SZ(2), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); }
