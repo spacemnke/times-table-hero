@@ -1179,11 +1179,9 @@
       return out;
     }
     function sdCell(sd, col, row) { return { x: sd.ox + col * sd.cs, y: sd.gy - (row + 1) * sd.cs }; }
+    function sdDims(shp) { var mc = 0, mr = 0; shp.forEach(function (c) { if (c[0] > mc) mc = c[0]; if (c[1] > mr) mr = c[1]; }); return { cols: mc + 1, rows: mr + 1 }; }
     function sdBuild(sd) {
-      var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)];
-      var maxCol = 0; shp.forEach(function (c) { if (c[0] > maxCol) maxCol = c[0]; });
-      sd.ox = PIXW - SZ(30) - (maxCol + 1) * sd.cs;
-      sd.ents = [];
+      var shp = sd.shp; sd.ents = [];
       var aCells = shp.filter(function (c) { return c[2] === 'A'; });
       var decoys = sdDistractors(sd.q.a, sd.q.b, aCells.length - 1);
       var correctIdx = Math.floor(Math.random() * aCells.length), di = 0, ai = 0, mats = ["ice","wood","stone"];
@@ -1203,10 +1201,16 @@
     function sdReload(sd) { sd.ball = { x: sd.sling.x, y: sd.sling.y, r: sd.cs * 0.26, vx: 0, vy: 0, flying: false, trail: [] }; }
     function enterShowdown() {
       if (!G || G.state !== "run") return;
-      var cs = Math.round(PIXH * 0.14), gy = FY(GROUND);
-      var q = nextQ();
-      var sd = { q: q, correct: q.a * q.b, cs: cs, gy: gy, shots: 5, clean: true, phase: "intro", it: 0,
-        sling: { x: Math.round(PIXW * 0.15), y: gy - Math.round(cs * 1.5) }, ents: [], ball: null, demo: null, parts: [], shake: 0,
+      var gy = FY(GROUND), q = nextQ();
+      var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)], dim = sdDims(shp);
+      // size the arena to the ACTUAL viewport (portrait phones are narrow) so nothing overflows
+      var rightM = Math.round(PIXW * 0.03), slingZone = Math.round(PIXW * 0.32), availW = PIXW - slingZone - rightM;
+      var topReserve = Math.round(PIXH * 0.22), availH = gy - topReserve;
+      var cs = Math.max(16, Math.floor(Math.min(PIXH * 0.15, availW / dim.cols, availH / Math.max(dim.rows, 2))));
+      var ox = PIXW - rightM - dim.cols * cs;
+      var slingX = Math.max(Math.round(cs * 0.85), Math.min(Math.round(PIXW * 0.15), ox - Math.round(cs * 1.6)));
+      var sd = { q: q, correct: q.a * q.b, shp: shp, cs: cs, gy: gy, ox: ox, shots: 5, clean: true, phase: "intro", it: 0,
+        sling: { x: slingX, y: gy - Math.round(cs * 1.5) }, ents: [], ball: null, demo: null, parts: [], shake: 0,
         dragging: false, msg: "", msgT: 0, wonT: 0, t0: Date.now(), pull: { x: -cs * 1.15, y: cs * 0.78 } };
       sdBuild(sd); sdReload(sd);
       var h = G.hero; if (G.showdown) h.wx = G.showdown.x; h.y = GROUND; h.ground = true; h.vy = 0; G.cam = h.wx - HEROX;
@@ -1289,13 +1293,16 @@
       P(-4, gY, W + 8, H - gY + 8, th.dirt || "#5a4a9a"); P(-4, gY, W + 8, SZ(6), th.grass || "#6a5aa8");
       // banner
       x.textAlign = "center"; x.textBaseline = "alphabetic";
-      var qs = sd.q.a + "  ×  " + sd.q.b + "  =  ?"; x.font = "800 " + Math.round(H*0.062) + "px monospace"; var qw = x.measureText(qs).width;
-      var bw = Math.max(SZ(160), qw + SZ(34)), bh = SZ(46), bx = W/2 - bw/2, by = SZ(8);
-      x.fillStyle = "rgba(10,8,26,.82)"; x.fillRect(bx, by, bw, bh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(bx, by, bw, bh);
-      x.textBaseline = "middle"; x.fillStyle = "#fff"; x.fillText(qs, W/2, by + bh/2 + 1); x.textBaseline = "alphabetic";
-      // shots
-      x.textAlign = "left"; x.fillStyle = "#c7ccf0"; x.font = "800 " + Math.round(H*0.028) + "px monospace"; x.fillText("SHOTS", SZ(10), SZ(22));
-      for (var i = 0; i < 5; i++) { x.fillStyle = i < sd.shots ? "#ffd23f" : "#3a3a68"; x.beginPath(); x.arc(SZ(16) + i * SZ(14), SZ(38), SZ(5), 0, 6.29); x.fill(); }
+      var qs = sd.q.a + "  ×  " + sd.q.b + "  =  ?", pf = Math.max(9, Math.round(Math.min(H * 0.06, W * 0.09)));
+      x.font = "800 " + pf + "px monospace"; var qw = x.measureText(qs).width;
+      if (qw > W * 0.9) { pf = Math.max(8, Math.floor(pf * (W * 0.9) / qw)); x.font = "800 " + pf + "px monospace"; qw = x.measureText(qs).width; }
+      var bw = Math.min(W - SZ(6), Math.max(SZ(100), qw + SZ(20))), bh = Math.round(pf * 1.7), bx = W / 2 - bw / 2, by = SZ(6);
+      x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(bx, by, bw, bh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(bx, by, bw, bh);
+      x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#fff"; x.fillText(qs, W / 2, by + bh / 2 + 1); x.textBaseline = "alphabetic";
+      // shots — centered below the banner so it never collides on narrow (portrait) screens
+      var shy = by + bh + Math.round(pf * 0.9), gp = Math.max(SZ(12), Math.round(pf * 0.75));
+      x.textAlign = "center"; x.fillStyle = "#c7ccf0"; x.font = "800 " + Math.max(8, Math.round(H * 0.024)) + "px monospace"; x.fillText("SHOTS", W / 2, shy);
+      for (var i = 0; i < 5; i++) { x.fillStyle = i < sd.shots ? "#ffd23f" : "#3a3a68"; x.beginPath(); x.arc(W / 2 - 2 * gp + i * gp, shy + Math.round(pf * 0.85), Math.max(3, SZ(5)), 0, 6.29); x.fill(); }
       // slingshot
       P(sd.sling.x - SZ(4), sd.sling.y + SZ(6), SZ(8), gY - (sd.sling.y + SZ(6)), "#8a4f22");
       P(sd.sling.x - SZ(16), sd.sling.y - SZ(12), SZ(7), SZ(26), "#8a4f22"); P(sd.sling.x + SZ(9), sd.sling.y - SZ(12), SZ(7), SZ(26), "#8a4f22");
@@ -1309,7 +1316,7 @@
       if (sd.ball && sd.phase !== "won") { if (sd.ball.trail) { for (var t2 = 0; t2 < sd.ball.trail.length; t2++) { var tp = sd.ball.trail[t2]; x.globalAlpha = (t2 / sd.ball.trail.length) * 0.4; x.fillStyle = "#ffd23f"; x.beginPath(); x.arc(tp.x, tp.y, sd.ball.r * 0.5, 0, 6.29); x.fill(); } x.globalAlpha = 1; } sdBall2(sd.ball, sd.ball.r, true); }
       if (sd.demo) { for (var t3 = 0; t3 < sd.demo.trail.length; t3++) { var dp = sd.demo.trail[t3]; x.globalAlpha = (t3 / sd.demo.trail.length) * 0.4; x.fillStyle = "#ffd23f"; x.beginPath(); x.arc(dp.x, dp.y, sd.demo.r * 0.5, 0, 6.29); x.fill(); } x.globalAlpha = 1; sdBall2(sd.demo, sd.demo.r, true); }
       // intro labels
-      if (sd.phase === "intro") { var lab = sd.it < 1.0 ? "① DRAG THE HERO BACK" : sd.it < 1.9 ? "② AIM WITH THE ARC" : "③ LET GO TO FIRE!"; x.textAlign = "center"; x.font = "800 " + Math.round(H*0.044) + "px monospace"; var lw = x.measureText(lab).width + SZ(24), ly = SZ(72); x.fillStyle = "rgba(10,8,26,.88)"; x.fillRect(W/2 - lw/2, ly, lw, SZ(38)); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W/2 - lw/2, ly, lw, SZ(38)); x.fillStyle = "#ffd23f"; x.fillText(lab, W/2, ly + SZ(25)); if (sd.it < 1.9 && sd.ball) { x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 3; x.beginPath(); x.arc(sd.ball.x, sd.ball.y, sd.ball.r + SZ(6) + Math.sin(sd.it*10)*2, 0, 6.29); x.stroke(); } }
+      if (sd.phase === "intro") { var lab = sd.it < 1.0 ? "① DRAG THE HERO BACK" : sd.it < 1.9 ? "② AIM WITH THE ARC" : "③ LET GO TO FIRE!"; var lf = Math.max(9, Math.round(Math.min(H * 0.042, W * 0.052))); x.textAlign = "center"; x.font = "800 " + lf + "px monospace"; var lmw = x.measureText(lab).width; if (lmw > W * 0.92) { lf = Math.max(8, Math.floor(lf * (W * 0.92) / lmw)); x.font = "800 " + lf + "px monospace"; lmw = x.measureText(lab).width; } var lw = Math.min(W - SZ(6), lmw + SZ(18)), lh = Math.round(lf * 1.9), ly = Math.round(H * 0.2); x.fillStyle = "rgba(10,8,26,.9)"; x.fillRect(W/2 - lw/2, ly, lw, lh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W/2 - lw/2, ly, lw, lh); x.textBaseline = "middle"; x.fillStyle = "#ffd23f"; x.fillText(lab, W/2, ly + lh/2 + 1); x.textBaseline = "alphabetic"; if (sd.it < 1.9 && sd.ball) { x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 3; x.beginPath(); x.arc(sd.ball.x, sd.ball.y, sd.ball.r + SZ(6) + Math.sin(sd.it*10)*2, 0, 6.29); x.stroke(); } }
       // message
       if (sd.msgT > 0 && sd.msg) { x.textAlign = "center"; x.font = "800 " + Math.round(H*0.04) + "px monospace"; var mw = x.measureText(sd.msg).width + SZ(24); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W/2 - mw/2, gY - SZ(64), mw, SZ(36)); x.fillStyle = /CLEARED|BONUS/.test(sd.msg) ? "#3ad46a" : /BOOM|KABOOM/.test(sd.msg) ? "#ff5c6c" : "#ffd23f"; x.fillText(sd.msg, W/2, gY - SZ(40)); }
       if (sd.phase === "won") { x.textAlign = "center"; x.fillStyle = "#3ad46a"; x.font = "800 " + Math.round(H*0.03) + "px monospace"; x.fillText("▶ HERO BREAKS THROUGH", W/2, gY + SZ(28)); }
