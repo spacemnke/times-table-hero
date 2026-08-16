@@ -865,7 +865,7 @@
 
     function config(n) {
       return {
-        speed: 200 + (n - 1) * 18, pit: 145 + (n - 1) * 26, enemySpeed: 58 + (n - 1) * 16,
+        speed: Math.round((200 + (n - 1) * 18) * 0.85), pit: 145 + (n - 1) * 26, enemySpeed: 58 + (n - 1) * 16,
         moving: n >= 2, hearts: 3,
         trapPool: TRAP_POOL[(n - 1) % 8],
         trapChance: Math.min(0.95, 0.6 + (n - 1) * 0.05),   // more traps deeper
@@ -1186,7 +1186,7 @@
       var retX = (mainG.warp ? mainG.warp.x1 : mainG.hero.wx) + SEG * 0.9;   // exit drops you ahead in the main level (a shortcut)
       var keepH = mainG.hearts;
       G = {
-        cf: mainG.cf, theme: SECRET_THEME, state: "run", cam: 0, speed: 190, t: 0,
+        cf: mainG.cf, theme: SECRET_THEME, state: "run", cam: 0, speed: 162, t: 0,
         maxHearts: mainG.maxHearts, hearts: keepH, coins: 0, gemRun: 0, nextGate: 0,
         power: mainG.power, jumpBoost: mainG.jumpBoost, shield: mainG.shield, magnet: mainG.magnet,
         hero: { wx: HEROX, y: GROUND, vy: 0, ground: true, hold: false, dbl: false, coyote: 0, inv: 1, power: mainG.magnet ? 0 : 0, run: 0 },
