@@ -817,7 +817,7 @@
     function resize() {
       var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight;
       LH = 760; LW = Math.round(760 * w / h); GROUND = Math.round(LH * 0.70); HEROX = Math.round(LW * 0.20);
-      PIXH = 300; PIXW = Math.max(120, Math.round(PIXH * w / h)); sx = PIXH / LH;
+      PIXH = 440; PIXW = Math.max(160, Math.round(PIXH * w / h)); sx = PIXH / LH;   // higher backing res = less blocky
       cv.width = PIXW; cv.height = PIXH;
       x.setTransform(1, 0, 0, 1, 0, 0); x.imageSmoothingEnabled = false;
       if (G && G.hero && G.hero.ground) G.hero.y = GROUND;
@@ -1125,7 +1125,7 @@
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
       if (!th.night) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
       var h = G.hero; if (G.state !== "trapped" && !(h.inv > 0 && Math.floor(G.t * 16) % 2)) {
-        var B = Math.max(2, Math.round(PIXW * 0.15 / 14)); if (G.bigT > 0) B = Math.round(B * 1.5);
+        var B = Math.max(1.8, PIXW * 0.16 / 14); if (G.bigT > 0) B *= 1.5;
         var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2);
         if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); }
         if (G.flyT > 0) { var wf = Math.sin(G.t * 22) > 0 ? SZ(4) : 0; P(hbxp - SZ(7), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); P(hbxp + 14 * B - SZ(2), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); }
@@ -1138,7 +1138,7 @@
       P(mx0 - 1, myy - 1, mw + 2, 6, "#101828"); P(mx0, myy, Math.round(mw * Math.max(0, Math.min(1, G.meter))), 4, G.meter >= 1 ? "#ff4fa3" : "#ffd23f");
       pxStar(mx0 + mw + 9, myy + 2, 5);
       if (G.state === "trapped") drawCapture();
-      x.globalAlpha = .08; for (var y2 = 0; y2 < H; y2 += 2) P(0, y2, W, 1, "#000"); x.globalAlpha = 1;
+      x.globalAlpha = .04; for (var y2 = 0; y2 < H; y2 += 3) P(0, y2, W, 1, "#000"); x.globalAlpha = 1;
     }
     // dramatic "you're caught" tableau shown in the open area above the math sheet while you solve to escape
     function drawCapture() {
@@ -1382,6 +1382,8 @@
 
   /* ---------------- init / wiring ---------------- */
   function init() {
+    // block iOS pinch-zoom (double-tap zoom is handled by touch-action:manipulation in CSS)
+    ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
     buildLearn();
     buildMulti("#quiz-picker", state.quizTables, function () { $("#quiz-start").disabled = state.quizTables.length === 0; });
     buildMulti("#practice-picker", state.practiceTables, function () { $("#practice-start").disabled = state.practiceTables.length === 0; });
