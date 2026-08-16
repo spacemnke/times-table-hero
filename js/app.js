@@ -847,7 +847,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [],
         bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: ""
       };
       build(cf); buildPmap();
@@ -861,6 +861,8 @@
       var lastMid = gx[gx.length - 1] + SEG * 0.5; pits.push([lastMid, lastMid + cf.pit]); pits.sort(function (a, b) { return a[0] - b[0]; });
       var spans = [], cur = -400; pits.forEach(function (p) { spans.push([cur, p[0]]); cur = p[1]; }); spans.push([cur, G.castleX + 700]); G.grounds = spans;
       pits.forEach(function (p) { var mid = (p[0] + p[1]) / 2; for (var k = -2; k <= 2; k++) G.coinsA.push({ x: mid + k * 40, hAbove: 160 - Math.abs(k) * 24, got: false }); });
+      // Beach: leaping fish jump out of the water gaps (time your jump past them)
+      if (G.theme.name === "BEACH") { pits.forEach(function (p, fi) { if (fi % 1 === 0) G.fish.push({ x: (p[0] + p[1]) / 2, amp: 210, period: 1.5, phase: (fi * 1.7) % 3 }); }); }
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
@@ -1025,6 +1027,7 @@
           for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (mag && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
           // traps: run into one on the ground and you're caught (jump over to dodge; smash through while super)
           for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0 || G.bigT > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST) { springTrap(tp); break; } } }
+          for (var fsh = 0; fsh < G.fish.length; fsh++) { var fz = G.fish[fsh]; var fph = Math.sin((G.t / fz.period + fz.phase) * Math.PI * 2); if (fph > 0) { var ffy = GROUND - fph * fz.amp; if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && Math.abs(fz.x - h.wx) < 42 && Math.abs(ffy - (h.y - 40)) < 52) hurt(); } }
           for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; if (!fl.hit && h.wx >= fl.x) { fl.hit = true; G.lastCP = fl.x; aFlag(); } }
           if (h.y > GROUND + 420) respawn();
           if (G.nextGate < G.gates.length) { var ga = G.gates[G.nextGate]; if (!ga.solved && h.wx >= ga.x - 52) { h.wx = ga.x - 52; arrive(); } } else if (h.wx >= G.castleX - 80) { win(); }
@@ -1108,8 +1111,21 @@
       for (var i = 0; i < 9; i++) { var sp2 = i % 2 ? 0.10 : 0.04, cyp = Math.round(H * (0.06 + ((i * 0.37) % 1) * 0.42)), cxp = ((i * 58 - (G.cam * sp2 + G.cloud * .4)) % (W + 50)); if (cxp < -40) cxp += W + 50; pxCloud(cxp, cyp, th.cloud); }
       pxMountains(th, gY);
       pxHills(G.cam * .35, gY - SZ(70), th.h1); pxHills(G.cam * .6, gY - SZ(24), th.h2);
-      for (var s = 0; s < G.grounds.length; s++) { var sp = G.grounds[s]; var gx1 = FX(sp[0]), gx2 = FX(sp[1]); if (gx2 < -4 || gx1 > W + 4) continue; P(gx1, gY, gx2 - gx1, H - gY + 4, th.dirt); P(gx1, gY, gx2 - gx1, SZ(8), th.grass); for (var d = Math.floor(sp[0] / 60) * 60; d < sp[1]; d += 60) { var dl = FX(d); if (dl > gx1 && dl < gx2) P(dl, gY + SZ(8), 1, H, th.dirtL); } }
-      if (th.water) { for (var s2 = 0; s2 < G.grounds.length - 1; s2++) { var wa = FX(G.grounds[s2][1]), wb = FX(G.grounds[s2 + 1][0]); if (wb < -4 || wa > W + 4) continue; P(wa, gY + SZ(4), wb - wa, H, th.water); for (var wv = wa; wv < wb; wv += 6) P(wv + ((G.t * 20) % 6), gY + SZ(6), 3, 1, "#ffffff"); } }
+      var PIER = th.name === "BEACH";
+      if (PIER) { P(-2, gY + SZ(4), W + 4, H - gY, th.water); var wsh = (G.t * 22) % SZ(10); for (var wr = gY + SZ(9); wr < H; wr += SZ(11)) for (var wc = -SZ(10); wc < W; wc += SZ(10)) P(wc + wsh, wr + Math.round(Math.sin((wc + G.t * 40) * 0.05) * SZ(1)), SZ(4), 1, "#bdeeff"); }
+      for (var s = 0; s < G.grounds.length; s++) {
+        var sp = G.grounds[s]; var gx1 = FX(sp[0]), gx2 = FX(sp[1]); if (gx2 < -4 || gx1 > W + 4) continue;
+        if (PIER) {
+          var dkH = SZ(15);
+          for (var ps = Math.floor(sp[0] / 150) * 150; ps < sp[1]; ps += 150) { var pxp = FX(ps); if (pxp > gx1 + SZ(4) && pxp < gx2 - SZ(4)) { P(pxp, gY + dkH, SZ(5), H, "#7a4a24"); P(pxp + SZ(5), gY + dkH, SZ(1), H, "#5c3418"); } }
+          P(gx1, gY, gx2 - gx1, dkH, "#c78a48"); P(gx1, gY, gx2 - gx1, SZ(4), "#e2ac66"); P(gx1, gY + dkH - SZ(2), gx2 - gx1, SZ(2), "#8a5a2a");
+          for (var pk = Math.floor(sp[0] / 44) * 44; pk < sp[1]; pk += 44) { var pl2 = FX(pk); if (pl2 > gx1 && pl2 < gx2) P(pl2, gY, 1, dkH, "#9a6636"); }
+        } else {
+          P(gx1, gY, gx2 - gx1, H - gY + 4, th.dirt); P(gx1, gY, gx2 - gx1, SZ(8), th.grass);
+          for (var d = Math.floor(sp[0] / 60) * 60; d < sp[1]; d += 60) { var dl = FX(d); if (dl > gx1 && dl < gx2) P(dl, gY + SZ(8), 1, H, th.dirtL); }
+        }
+      }
+      if (th.water && !PIER) { for (var s2 = 0; s2 < G.grounds.length - 1; s2++) { var wa = FX(G.grounds[s2][1]), wb = FX(G.grounds[s2 + 1][0]); if (wb < -4 || wa > W + 4) continue; P(wa, gY + SZ(4), wb - wa, H, th.water); for (var wv = wa; wv < wb; wv += 6) P(wv + ((G.t * 20) % 6), gY + SZ(6), 3, 1, "#ffffff"); } }
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
@@ -1121,9 +1137,10 @@
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
       for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; pxEnemy(exs, gY, en.dir); }
+      for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
-      if (!th.night) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
+      if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
       var h = G.hero; if (G.state !== "trapped" && !(h.inv > 0 && Math.floor(G.t * 16) % 2)) {
         var B = Math.max(1.8, PIXW * 0.16 / 14); if (G.bigT > 0) B *= 1.5;
         var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2);
@@ -1217,6 +1234,7 @@
     function pxFlower(cx, cy, k) { var cols = [["#ff5ca8", "#fff2a8"], ["#ff9f1c", "#fff2a8"], ["#8f5bff", "#fff2a8"]][k]; P(cx - 1, cy - 3, 2, 4, "#3aa64a"); P(cx - 2, cy - 6, 4, 4, cols[0]); P(cx - 1, cy - 5, 2, 2, cols[1]); }
     function pxCoin(cx, cy, spin) { var w = Math.max(1, Math.round(Math.abs(Math.cos(spin)) * SZ(15))); var r = SZ(15); P(cx - w, cy - r, w * 2, r * 2, C.coin); P(cx - w, cy - r, w * 2, SZ(3), C.coinHi); P(cx - w, cy + r - SZ(3), w * 2, SZ(3), C.coinLo); if (w > SZ(6)) P(cx - SZ(2), cy - SZ(4), SZ(4), SZ(8), C.coinLo); }
     function pxBox(px, py, w, h, used, power) { var main = used ? "#b39b7a" : (power ? "#37c0ff" : C.box), hi = used ? "#c9b48f" : (power ? "#a8ecff" : C.boxHi), lo = used ? "#8f7a4f" : (power ? "#1f8fd0" : C.boxLo); P(px, py, w, h, main); P(px, py, w, SZ(3), hi); P(px, py + h - SZ(3), w, SZ(3), lo); P(px, py, SZ(3), h, hi); P(px + w - SZ(3), py, SZ(3), h, lo); if (!used) { var cx = px + w / 2, cy = py + h / 2; if (power) { P(cx - SZ(2), cy - SZ(7), SZ(4), SZ(14), "#fff"); P(cx - SZ(7), cy - SZ(2), SZ(14), SZ(4), "#fff"); } else { P(cx - SZ(3), cy - SZ(6), SZ(6), SZ(3), "#fff"); P(cx + SZ(1), cy - SZ(3), SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy, SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy + SZ(4), SZ(3), SZ(2), "#fff"); } } }
+    function pxFish(cx, cy, ph, dir) { dir = dir || 1; var s = SZ(1); disc(cx, cy, SZ(16), "#ff7a4a"); P(cx + dir * SZ(10), cy - SZ(12), SZ(16), SZ(24), "#ff7a4a"); P(cx + dir * SZ(20), cy - SZ(14), SZ(10), SZ(28), "#ff9a6a"); P(cx - dir * SZ(8), cy - SZ(6), SZ(6), SZ(6), "#fff"); P(cx - dir * SZ(6), cy - SZ(4), SZ(3), SZ(3), "#111"); P(cx + SZ(2), cy - SZ(16), SZ(10), SZ(6), "#ff9a6a"); if (ph < 0.35) { for (var w = -18; w <= 18; w += 9) P(cx + SZ(w), FY(GROUND) + SZ(2), SZ(4), SZ(3), "#ffffff"); } }
     function pxBrick(px, py, w, h, th) { P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
@@ -1372,6 +1390,7 @@
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
+      get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
       get chunks() { return G ? G.gates.length : 0; },
       warp: function (wx) { if (G) { while (G.nextGate < G.gates.length && G.gates[G.nextGate].x < wx - 60) { G.gates[G.nextGate].solved = true; G.nextGate++; } G.hero.wx = wx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.cam = wx - HEROX; } },
       unwarp: function () {}
