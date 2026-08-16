@@ -927,6 +927,8 @@
         if (seg <= 2 || Math.random() < cf.trapChance) G.traps.push({ x: bt + SEG * 0.34, type: pick(cf.trapPool), done: false, sprung: false });
         if (level >= 3 && Math.random() < cf.trapChance - 0.3) G.traps.push({ x: bt + SEG * 0.80, type: pick(cf.trapPool), done: false, sprung: false });
       }
+      // don't let a trap sit right where the showdown drops you back in (would spring instantly)
+      if (G.showdown) { var sdl = G.showdown.x - 70, sdr = G.showdown.x + 240; G.traps = G.traps.filter(function (t) { return t.x < sdl || t.x > sdr; }); }
       // shiny purple coins: rare, placed high so you must jump for them
       for (seg = 1; seg < gx.length; seg++) { if (seg % 2 === 0 && Math.random() < cf.gemChance) G.gemsA.push({ x: gx[seg] - SEG * 0.72, hAbove: 300 + (seg % 3) * 22, got: false }); }
       if (!G.gemsA.length) G.gemsA.push({ x: gx[Math.min(1, gx.length - 1)] - SEG * 0.72, hAbove: 320, got: false });
@@ -1093,7 +1095,7 @@
           // shiny purple coins (magnetised while super)
           for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (mag && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
           // traps: run into one on the ground and you're caught (jump over to dodge; smash through while super)
-          for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0 || G.bigT > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST) { springTrap(tp); break; } } }
+          for (var tp = 0; tp < G.traps.length; tp++) { var trp2 = G.traps[tp]; if (trp2.done) continue; if (Math.abs(trp2.x - h.wx) < 34 && h.y > GROUND - 26) { if (h.power > 0 || G.bigT > 0) { trp2.done = true; addCoins(2); aStomp(); coinBurst(trp2.x, GROUND - 40); } else if (G.shield) { G.shield = false; trp2.done = true; h.inv = 1.2; aStar(); haptic([10, 30, 10]); coinBurst(trp2.x, GROUND - 40); hint("SHIELD SAVED YOU!"); } else if (!TEST && h.inv <= 0) { springTrap(tp); break; } } }
           for (var fsh = 0; fsh < G.fish.length; fsh++) { var fz = G.fish[fsh]; var fph = Math.sin((G.t / fz.period + fz.phase) * Math.PI * 2); if (fph > 0) { var ffy = GROUND - fph * fz.amp; if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && Math.abs(fz.x - h.wx) < 42 && Math.abs(ffy - (h.y - 40)) < 52) hurt(); } }
           for (var f = 0; f < G.flags.length; f++) { var fl = G.flags[f]; if (!fl.hit && h.wx >= fl.x) { fl.hit = true; G.lastCP = fl.x; aFlag(); } }
           if (G.chest && !G.chest.taken && Math.abs(G.chest.x - h.wx) < 46) { G.chest.taken = true; aWin(); haptic([12, 30, 12]); for (var cg = 0; cg < 10; cg++) G.particles.push({ wx: G.chest.x, y: GROUND - 40, vx: (cg - 5) * 60, vy: -260 - cg * 12, life: 1, kind: "star" }); }
@@ -1288,12 +1290,11 @@
       if (!G || G.state !== "run") return;
       var gy = Math.round(PIXH * 0.82), q = nextQ();   // ground low on the screen: lots of sky to loft into, little dead space
       var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)], dim = sdDims(shp);
-      // size the arena to the ACTUAL viewport; keep a WIDE left zone so there's room to pull the slingshot back
-      var rightM = Math.round(PIXW * 0.03), slingZone = Math.round(PIXW * 0.42), availW = PIXW - slingZone - rightM;
-      var topReserve = Math.round(PIXH * 0.22), availH = gy - topReserve;
-      var cs = Math.max(14, Math.floor(Math.min(PIXH * 0.12, availW / dim.cols, availH / Math.max(dim.rows, 2))));  // smaller boxes
+      // small crates + a LONG arc: sling on the far left, fortress on the far right (feels like a real slingshot)
+      var rightM = Math.round(PIXW * 0.03), topReserve = Math.round(PIXH * 0.20), availH = gy - topReserve;
+      var cs = Math.max(13, Math.floor(Math.min(PIXH * 0.11, availH / Math.max(dim.rows, 2), (PIXW * 0.56 - SZ(12)) / (dim.cols + 1.7))));
       var ox = PIXW - rightM - dim.cols * cs;
-      var slingX = Math.min(ox - Math.round(cs * 1.4), Math.max(Math.round(cs * 1.7) + SZ(6), Math.round(PIXW * 0.24)));
+      var slingX = Math.round(cs * 1.6) + SZ(8);
       var sd = { q: q, correct: q.a * q.b, shp: shp, cs: cs, gy: gy, ox: ox, shots: 5, clean: true, phase: "intro", it: 0,
         sling: { x: slingX, y: gy - Math.round(cs * 1.5) }, ents: [], ball: null, demo: null, parts: [], shake: 0,
         dragging: false, msg: "", msgT: 0, wonT: 0, t0: Date.now(), pull: { x: -cs * 1.15, y: cs * 0.78 } };
@@ -1365,7 +1366,7 @@
       if (e.tnt) { P(e.x, e.y, w, h, "#ff5c6c"); P(e.x, e.y, w, SZ(4), "#ff9aa6"); P(e.x + w/2 - SZ(11), e.y + h/2 - SZ(8), SZ(22), SZ(16), "#3a1010"); x.fillStyle = "#ffe06a"; x.font = "800 " + Math.round(h * 0.26) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("TNT", e.x + w/2, e.y + h/2 + 1); return; }
       var base = e.mat === "ice" ? "#7cd0ff" : e.mat === "stone" ? "#9b8bbf" : "#c67a3a", hi = e.mat === "ice" ? "#c8efff" : e.mat === "stone" ? "#c2b6e0" : "#e0a860";
       P(e.x, e.y, w, h, base); P(e.x, e.y, w, SZ(4), hi); P(e.x, e.y, SZ(4), h, hi); P(e.x + w - SZ(4), e.y, SZ(4), h, "#8a4f22"); P(e.x, e.y + h - SZ(4), w, SZ(4), "#8a4f22");
-      x.fillStyle = e.mat === "ice" ? "#0a3352" : "#241406"; x.font = "800 " + Math.round(h * 0.44) + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(String(e.val), e.x + w/2, e.y + h/2 + 1);
+      x.fillStyle = e.mat === "ice" ? "#0a3352" : "#241406"; var nvf = Math.max(8, Math.round(h * 0.5)); x.font = "800 " + nvf + "px monospace"; if (x.measureText(String(e.val)).width > w - 4) nvf = Math.max(7, Math.floor(nvf * (w - 4) / x.measureText(String(e.val)).width)), x.font = "800 " + nvf + "px monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(String(e.val), e.x + w/2, e.y + h/2 + 1);
     }
     function sdMon(sd, e) { var w = e.w, h = e.h; P(e.x + SZ(2), e.y + SZ(4), w - SZ(4), h - SZ(6), "#3ad46a"); P(e.x + SZ(2), e.y + SZ(4), w - SZ(4), SZ(4), "#63e88a"); P(e.x, e.y, SZ(7), SZ(8), "#25a24c"); P(e.x + w - SZ(7), e.y, SZ(7), SZ(8), "#25a24c"); var bl = (Math.floor(e.bl) % 4 === 0) ? SZ(2) : SZ(7); P(e.x + SZ(8), e.y + h*0.32, SZ(7), bl, "#fff"); P(e.x + w - SZ(15), e.y + h*0.32, SZ(7), bl, "#fff"); P(e.x + SZ(10), e.y + h*0.36, SZ(3), SZ(3), "#201"); P(e.x + w - SZ(13), e.y + h*0.36, SZ(3), SZ(3), "#201"); P(e.x + SZ(9), e.y + h - SZ(12), w - SZ(18), SZ(3), "#123"); }
     function sdDraw() {
