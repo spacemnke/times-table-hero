@@ -1981,7 +1981,7 @@
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
-      for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor); }
+      for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor, icd.falling); }
       for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
       for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
@@ -2148,11 +2148,15 @@
     }
     function hfEnemy(cx, gY, dir) {
       var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(44) - bnc, w = SZ(22), O = "#3a2580";
+      x.fillStyle = "rgba(0,0,0,.24)"; x.beginPath(); x.ellipse(cx, gY - SZ(1), SZ(18), SZ(5), 0, 0, 6.29); x.fill();   // ground shadow anchors it
       oE(cx - SZ(11), gY - SZ(3), SZ(8), SZ(4), "#4a2f9a", O); oE(cx + SZ(11), gY - SZ(3), SZ(8), SZ(4), "#4a2f9a", O);
       oR(cx - w, fy, w * 2, SZ(42), w, "#8b6cf0", O); oE(cx, fy + SZ(36), w * 0.82, SZ(7), "#6a4bd0", null);
       oE(cx - SZ(8), fy + SZ(16), SZ(6), SZ(7), "#fff", O, Math.max(1, Math.round(sx * 0.8))); oE(cx + SZ(8), fy + SZ(16), SZ(6), SZ(7), "#fff", O, Math.max(1, Math.round(sx * 0.8)));
       oE(cx - SZ(8) + dir * SZ(2), fy + SZ(17), SZ(2.4), SZ(3), "#241a4a", null); oE(cx + SZ(8) + dir * SZ(2), fy + SZ(17), SZ(2.4), SZ(3), "#241a4a", null);
-      x.strokeStyle = O; x.lineWidth = Math.max(1, Math.round(sx * 0.8)); x.beginPath(); x.moveTo(cx - SZ(4), fy + SZ(28)); x.quadraticCurveTo(cx, fy + SZ(31), cx + SZ(4), fy + SZ(28)); x.stroke();
+      x.strokeStyle = O; x.lineWidth = Math.max(1, Math.round(sx * 0.8)); x.beginPath(); x.moveTo(cx - SZ(4), fy + SZ(30)); x.quadraticCurveTo(cx, fy + SZ(33), cx + SZ(4), fy + SZ(30)); x.stroke();
+      x.strokeStyle = "#ff2e2e"; x.lineWidth = Math.max(2, Math.round(sx * 1.4)); x.lineCap = "round";   // angry red brows = the danger cue
+      x.beginPath(); x.moveTo(cx - SZ(14), fy + SZ(9)); x.lineTo(cx - SZ(3), fy + SZ(13)); x.stroke();
+      x.beginPath(); x.moveTo(cx + SZ(14), fy + SZ(9)); x.lineTo(cx + SZ(3), fy + SZ(13)); x.stroke();
     }
     function hfFlower(cx, cy, k) {
       var cols = [["#ff5ca8", "#ffe14a"], ["#ff9f1c", "#ffe14a"], ["#8f5bff", "#ffe14a"]][k];
@@ -2182,7 +2186,16 @@
     function pxFlower(cx, cy, k) { if (HIFI) { hfFlower(cx, cy, k); return; } var cols = [["#ff5ca8", "#fff2a8"], ["#ff9f1c", "#fff2a8"], ["#8f5bff", "#fff2a8"]][k]; P(cx - 1, cy - 3, 2, 4, "#3aa64a"); P(cx - 2, cy - 6, 4, 4, cols[0]); P(cx - 1, cy - 5, 2, 2, cols[1]); }
     function pxCoin(cx, cy, spin) { if (HIFI) { hfCoin(cx, cy, spin); return; } var w = Math.max(1, Math.round(Math.abs(Math.cos(spin)) * SZ(15))); var r = SZ(15); P(cx - w, cy - r, w * 2, r * 2, C.coin); P(cx - w, cy - r, w * 2, SZ(3), C.coinHi); P(cx - w, cy + r - SZ(3), w * 2, SZ(3), C.coinLo); if (w > SZ(6)) P(cx - SZ(2), cy - SZ(4), SZ(4), SZ(8), C.coinLo); }
     function pxBox(px, py, w, h, used, power) { if (HIFI) { hfBox(px, py, w, h, used, power); return; } var main = used ? "#b39b7a" : (power ? "#37c0ff" : C.box), hi = used ? "#c9b48f" : (power ? "#a8ecff" : C.boxHi), lo = used ? "#8f7a4f" : (power ? "#1f8fd0" : C.boxLo); P(px, py, w, h, main); P(px, py, w, SZ(3), hi); P(px, py + h - SZ(3), w, SZ(3), lo); P(px, py, SZ(3), h, hi); P(px + w - SZ(3), py, SZ(3), h, lo); if (!used) { var cx = px + w / 2, cy = py + h / 2; if (power) { P(cx - SZ(2), cy - SZ(7), SZ(4), SZ(14), "#fff"); P(cx - SZ(7), cy - SZ(2), SZ(14), SZ(4), "#fff"); } else { P(cx - SZ(3), cy - SZ(6), SZ(6), SZ(3), "#fff"); P(cx + SZ(1), cy - SZ(3), SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy, SZ(3), SZ(3), "#fff"); P(cx - SZ(2), cy + SZ(4), SZ(3), SZ(2), "#fff"); } } }
-    function pxFish(cx, cy, ph, dir) { dir = dir || 1; var s = SZ(1); disc(cx, cy, SZ(16), "#ff7a4a"); P(cx + dir * SZ(10), cy - SZ(12), SZ(16), SZ(24), "#ff7a4a"); P(cx + dir * SZ(20), cy - SZ(14), SZ(10), SZ(28), "#ff9a6a"); P(cx - dir * SZ(8), cy - SZ(6), SZ(6), SZ(6), "#fff"); P(cx - dir * SZ(6), cy - SZ(4), SZ(3), SZ(3), "#111"); P(cx + SZ(2), cy - SZ(16), SZ(10), SZ(6), "#ff9a6a"); if (ph < 0.35) { for (var w = -18; w <= 18; w += 9) P(cx + SZ(w), FY(GROUND) + SZ(2), SZ(4), SZ(3), "#ffffff"); } }
+    function pxFish(cx, cy, ph, dir) {
+      dir = dir || 1; var O = "#2a1010";
+      // splash telegraph at the water line as it breaks the surface (a beat before the leap)
+      if (ph < 0.42) { x.strokeStyle = "rgba(255,255,255,.95)"; x.lineWidth = Math.max(2, SZ(2)); for (var k = -2; k <= 2; k++) { var wxx = cx + SZ(k * 9); x.beginPath(); x.moveTo(wxx, FY(GROUND) + SZ(2)); x.lineTo(wxx + SZ(k * 1.5), FY(GROUND) - SZ(11)); x.stroke(); } }
+      disc(cx, cy, SZ(18), O); P(cx + dir * SZ(10) - SZ(2), cy - SZ(14), SZ(20), SZ(28), O);   // dark outline behind the mass
+      disc(cx, cy, SZ(16), "#ff7a4a"); P(cx + dir * SZ(10), cy - SZ(12), SZ(16), SZ(24), "#ff7a4a"); P(cx + dir * SZ(20), cy - SZ(14), SZ(10), SZ(28), "#ff9a6a");
+      P(cx + SZ(2), cy - SZ(16), SZ(10), SZ(6), "#ff9a6a");
+      P(cx - dir * SZ(8), cy - SZ(6), SZ(6), SZ(6), "#fff"); P(cx - dir * SZ(6), cy - SZ(4), SZ(3), SZ(3), "#111");
+      disc(cx + SZ(3), cy - SZ(15), SZ(3), "#ff3b30");   // red danger glint on the fin
+    }
     function pxBrick(px, py, w, h, th) { if (HIFI) { hfBrick(px, py, w, h); return; } P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
@@ -2228,17 +2241,33 @@
       P(cx - SZ(1), padY - SZ(6), SZ(2), SZ(6), "#fff");
     }
     // Snow icicle — an ice spike (hanging while falling, embedded when landed). Space = fiery meteor.
-    function pxIcicle(cx, cyTop, landed, meteor) {
+    function spikeRaw(cx, cyTop, h, w, landed, col) { for (var r = 0; r < h; r += 2) { var frac = landed ? (r / h) : (1 - r / h); var ww = Math.max(1, Math.round(w * frac)); P(cx - ww / 2, cyTop + r, ww, 2, col); } }
+    // red ground telegraph so a falling hazard is seen a beat before it lands
+    function dropTarget(cx, meteor) {
+      var gy = FY(GROUND), pulse = 0.55 + 0.45 * Math.abs(Math.sin(G.t * 7));
+      x.save(); x.globalAlpha = pulse; x.strokeStyle = "#ff3b30"; x.lineWidth = Math.max(2, SZ(2.4)); x.lineCap = "round";
+      if (meteor) { x.beginPath(); x.arc(cx, gy - SZ(4), SZ(15), 0, 6.29); x.stroke(); P(cx - SZ(1), gy - SZ(13), SZ(2), SZ(18), "#ff3b30"); P(cx - SZ(9), gy - SZ(5), SZ(18), SZ(2), "#ff3b30"); }
+      else { x.setLineDash([SZ(6), SZ(5)]); x.beginPath(); x.ellipse(cx, gy - SZ(3), SZ(22), SZ(7), 0, 0, 6.29); x.stroke(); x.setLineDash([]); }
+      x.restore();
+    }
+    function pxIcicle(cx, cyTop, landed, meteor, falling) {
+      if (falling && !landed) dropTarget(cx, meteor);
       if (meteor) {
-        var mr = SZ(13); disc(cx, cyTop + mr, mr, "#6a4a4a"); disc(cx - SZ(2), cyTop + mr - SZ(2), Math.round(mr * 0.6), "#4a3438");
-        if (!landed) { for (var tr4 = 1; tr4 < 5; tr4++) { x.globalAlpha = 0.5 - tr4 * 0.09; disc(cx, cyTop + mr - tr4 * SZ(7), Math.round(mr * (1 - tr4 * 0.15)), tr4 % 2 ? "#ff8a2a" : "#ffd23f"); } x.globalAlpha = 1; }
-        else { P(cx - mr, cyTop + mr * 1.6, mr * 2, SZ(3), "#ff6a2a"); }
+        var mr = SZ(13);
+        if (!landed) { for (var tr4 = 1; tr4 < 6; tr4++) { x.globalAlpha = 0.5 - tr4 * 0.08; disc(cx, cyTop + mr - tr4 * SZ(8), Math.round(mr * (1 - tr4 * 0.13)), tr4 % 2 ? "#ff8a2a" : "#ffd23f"); } x.globalAlpha = 1; }
+        disc(cx, cyTop + mr, mr + SZ(2), "#3a1a04");                 // dark outline
+        disc(cx, cyTop + mr, mr, "#ff8a2a");                          // molten body
+        disc(cx - SZ(3), cyTop + mr - SZ(3), Math.round(mr * 0.55), "#ffe14a");
+        P(cx - SZ(2), cyTop + mr - SZ(2), SZ(4), SZ(4), "#fff7d0");
+        if (landed) P(cx - mr, cyTop + mr * 1.6, mr * 2, SZ(3), "#ff6a2a");
         return;
       }
-      var h = SZ(40), w = SZ(16);
-      for (var r = 0; r < h; r += 2) { var ww = Math.max(1, Math.round(w * (landed ? (r / h) : (1 - r / h)))); P(cx - ww / 2, cyTop + r, ww, 2, "#bfe4ff"); }
-      P(cx - SZ(2), cyTop + (landed ? 0 : 2), SZ(3), h - SZ(4), "#eaf6ff");
-      P(cx - w / 2, cyTop, w, SZ(3), landed ? "#9fd0f0" : "#eaf6ff");
+      var h = SZ(40), w = SZ(16), o = SZ(2);
+      var offs = [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, o], [-o, o], [o, -o]];
+      for (var i = 0; i < offs.length; i++) spikeRaw(cx + offs[i][0], cyTop + offs[i][1], h, w, landed, "#243a66");   // dark outline
+      spikeRaw(cx, cyTop, h, w, landed, "#e6f4ff");                 // bright body
+      P(cx - SZ(2), cyTop + (landed ? 0 : 2), SZ(3), h - SZ(4), "#ffffff");
+      P(cx - w / 2, cyTop, w, SZ(3), landed ? "#bfe0f5" : "#dff2ff");
     }
     // Jungle vine — a hanging, swaying rope of leaves you swing from
     function pxVine(cx, gY, t) {
@@ -2248,11 +2277,12 @@
     }
     // Volcano fire-bar — a rotating arm of flame around a pivot
     function pxFireBar(cx, cyP, len, ang, frozen) {
-      P(cx - SZ(4), cyP - SZ(4), SZ(8), SZ(8), "#6b4235");   // pivot
+      P(cx - SZ(4), cyP - SZ(4), SZ(8), SZ(8), frozen ? "#3a5a7a" : "#3a1c10");   // darkened pivot
       for (var s2 = 0.2; s2 <= 1.001; s2 += 0.12) {
-        var fx2 = cx + Math.round(Math.cos(ang) * len * s2), fy2 = cyP + Math.round(Math.sin(ang) * len * s2);
-        var col = frozen ? (s2 > 0.7 ? "#bfe4ff" : "#8fd0ff") : (Math.floor(ang * 3 + s2 * 6) % 2 ? "#ff5a1a" : "#ffd23f");
-        disc(fx2, fy2, SZ(s2 > 0.8 ? 6 : 5), col);
+        var fx2 = cx + Math.round(Math.cos(ang) * len * s2), fy2 = cyP + Math.round(Math.sin(ang) * len * s2), r = SZ(s2 > 0.8 ? 6 : 5);
+        disc(fx2, fy2, r + SZ(2), frozen ? "#1f4a6a" : "#5a1400");                 // dark halo → reads on the orange sky
+        if (frozen) { disc(fx2, fy2, r, s2 > 0.7 ? "#bfe4ff" : "#8fd0ff"); }
+        else { disc(fx2, fy2, r, Math.floor(ang * 3 + s2 * 6) % 2 ? "#ff5a1a" : "#ff9a1a"); disc(fx2 - SZ(1), fy2 - SZ(1), Math.max(1, Math.round(r * 0.5)), "#fff2c0"); }   // white-hot core
       }
     }
     function pxStar(cx, cy, r) { P(cx - 1, cy - r, 2, r * 2, C.star); P(cx - r, cy - 1, r * 2, 2, C.star); P(cx - Math.round(r * .6), cy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), C.star); P(cx - 2, cy - 2, 4, 4, "#fff2a8"); }
