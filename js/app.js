@@ -822,9 +822,17 @@
       card.addEventListener("click", function () { sTap(); setActive(p.id); renderHome(); show("home"); });
       grid.appendChild(card);
     });
+    if (Cloud.enabled) {
+      var addEx = el("button", "pcard pcard--signin");
+      addEx.appendChild(el("span", "pcard__av", "☁︎"));
+      addEx.appendChild(el("span", "pcard__name", "Add existing player"));
+      addEx.appendChild(el("span", "pcard__meta", "Sign in to a saved account"));
+      addEx.addEventListener("click", function () { sTap(); openCloud("in", null, "profiles"); });
+      grid.appendChild(addEx);
+    }
     var add = el("button", "pcard pcard--add");
     add.appendChild(el("span", "pcard__av", "＋"));
-    add.appendChild(el("span", "pcard__name", "Add player"));
+    add.appendChild(el("span", "pcard__name", "Add new player"));
     add.addEventListener("click", function () { sTap(); openProfileNew(false); });
     grid.appendChild(add);
   }
@@ -2925,8 +2933,6 @@
     $("#lp-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); });
 
     // cloud sign-in / save-online
-    if (!Cloud.enabled) { var csl = $("#cloud-signin"); if (csl) csl.style.display = "none"; }
-    $("#cloud-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "profiles"); });
     $("#cl-back").addEventListener("click", function () { sTap(); if (cloudFrom === "parent") { renderPlayers(); show("parent"); } else if (cloudFrom === "landing") { show("landing"); } else { renderProfiles(); show("profiles"); } });
     $("#cl-name").addEventListener("input", cloudValidate);
     $("#cl-pin").addEventListener("input", function () { this.value = this.value.replace(/[^0-9]/g, ""); cloudValidate(); });
