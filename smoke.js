@@ -41,7 +41,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // TYPED QUIZ, 25 questions — enough to meet the daily goal so the streak lights up
   // (the Daily Quest itself is the adventure, covered by test-adventure.js)
-  await page.click('.screen--home.is-active [data-go="quiz-setup"]');
+  await page.evaluate(() => window.__go("quiz-setup"));   // Quiz is no longer a home button; navigate directly
+  await page.waitForSelector('.screen[data-screen="quiz-setup"].is-active');
   await page.click('[data-select-all="quiz"]');
   await page.click('#quiz-mode .seg__btn[data-mode="type"]');
   await page.click('#quiz-length .seg__btn[data-len="25"]');
@@ -73,7 +74,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log("✓ dashboard: streak =", streak.trim(), "| xp =", xpText.trim());
 
   // CHOOSE-mode quiz
-  await page.click('.screen--home.is-active [data-go="quiz-setup"]');
+  await page.evaluate(() => window.__go("quiz-setup"));
+  await page.waitForSelector('.screen[data-screen="quiz-setup"].is-active');
   await page.click('[data-select-all="quiz"]');
   await page.click('#quiz-mode .seg__btn[data-mode="choose"]');
   await page.click('#quiz-length .seg__btn[data-len="10"]');
@@ -91,32 +93,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForSelector('.screen--results.is-active');
   console.log("✓ choose-mode quiz finished:", (await page.textContent('#results-score')).trim());
 
-  // PRACTICE (now typed, no timer)
+  // PRACTICE (now a simplified "My Tricky Ones" → Surprise Me arena, no pickers)
   await page.click('.screen--results.is-active [data-go="home"]');
   await page.click('.screen--home.is-active [data-go="practice-setup"]');
-  await page.click('#practice-picker .num-btn:nth-child(3)'); // the 3s
-  await page.click('#practice-start');
-  await page.waitForSelector('.screen--play.is-active');
-  const practiceKeypad = !(await page.getAttribute('#keypad', 'hidden'));
-  const practiceTimerHidden = (await page.getAttribute('#timerbar', 'hidden')) !== null;
-  const pcount = parseInt((await page.textContent('#play-counter')).split("/")[1].trim(), 10);
-  console.log("✓ practice started — typed keypad:", practiceKeypad, "| timer hidden:", practiceTimerHidden, "| questions:", pcount);
-  if (!practiceKeypad) throw new Error("practice should use the typed keypad");
-  if (!practiceTimerHidden) throw new Error("practice should have no timer");
-  if (pcount !== 12) throw new Error("practice on the 3s should be 12 questions, got " + pcount);
-  // answer all by typing (all should be 3 × n)
-  for (let i = 0; i < pcount; i++) {
-    const q = await page.textContent('#play-question');
-    const [a, b] = q.split("×").map(s => parseInt(s.trim(), 10));
-    if (a !== 3) throw new Error("practice on the 3s served " + q);
-    for (const ch of String(a * b)) await page.click(`.key[data-key="${ch}"]`);
-    await sleep(650);
-  }
-  await page.waitForSelector('.screen--results.is-active');
-  console.log("✓ practice finished (typed):", (await page.textContent('#results-title')).trim());
+  await page.waitForSelector('.screen[data-screen="practice-setup"].is-active');
+  const noPickers = !(await page.$('#practice-picker')) && !(await page.$('#practice-answer')) && !(await page.$('#practice-start'));
+  console.log("✓ practice setup simplified (no table/game pickers, no separate start):", noPickers);
+  if (!noPickers) throw new Error("practice pickers/selector should be gone");
+  await page.click('#practice-weak');
+  await page.waitForSelector('.screen--adv.is-active');
+  await page.waitForFunction(() => window.__adv.arena && window.__adv.arena.mode === "mix", { timeout: 6000 });
+  console.log("✓ practice launched a Surprise Me arena (auto-mixed games on tricky facts)");
+  await page.click('#adv-quit');   // arena quit → home
+  await page.waitForSelector('.screen--home.is-active');
 
   // BADGES screen
-  await page.click('.screen--results.is-active [data-go="home"]');
   await page.click('.screen--home.is-active [data-go="badges"]');
   await page.waitForSelector('.screen--badges.is-active');
   const unlocked = await page.$$eval('.badge:not(.locked)', els => els.length);
@@ -178,9 +169,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForSelector('#adv-mapOv:not(.hidden)');
   await page.click('#adv-map-close');                  // map → home
 
-  // LEARN (we're back on home after quitting the quest)
+  // LEARN (we're back on home after quitting the quest) — no longer a home button; navigate directly
   await page.waitForSelector('.screen--home.is-active');
-  await page.click('.screen--home.is-active [data-go="learn"]');
+  await page.evaluate(() => window.__go("learn"));
+  await page.waitForSelector('.screen[data-screen="learn"].is-active');
   await page.click('#learn-picker .num-btn:nth-child(8)');
   await page.waitForSelector('#learn-table .table-row');
   const r = (await page.$$eval('#learn-table .table-row', e => e.map(x => x.textContent))).find(t => t.includes("8 × 7"));

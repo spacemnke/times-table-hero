@@ -31,39 +31,48 @@ async function solve(page) {
   await page.addInitScript(() => localStorage.setItem("tth.profiles.v1", JSON.stringify({ activeId: "mia", profiles: [{ id: "mia", name: "Mia", avatar: "🦄" }] })));
   await page.addInitScript(() => localStorage.setItem("tth.progress.v2.mia", JSON.stringify({
     v: 2, xp: 0, coins: 0, gems: 0, worldsUnlocked: 3, totalCorrect: 0, totalQ: 0, totalMs: 0, fastCount: 0, bestStreak: 0,
-    recent: [], facts: {}, days: {}, badges: {}, secretsFound: {}, settings: { dailyGoal: 8, focusTables: [1,2,3,4,5,6,7,8,9,10,11,12], streakFreeze: true } })));
+    // seed a few genuinely weak facts so "tricky ones" has real material
+    recent: [], facts: { "7x8": { n: 6, c: 1, ms: 9000 }, "6x9": { n: 5, c: 1, ms: 8000 }, "8x8": { n: 4, c: 0, ms: 7000 } }, days: {}, badges: {}, secretsFound: {}, settings: { dailyGoal: 8, focusTables: [1,2,3,4,5,6,7,8,9,10,11,12], streakFreeze: true } })));
 
   await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: "networkidle" });
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForSelector('.screen--home.is-active');
 
-  // ---- 1. UI path: practice → pick table → pick a game → start → lands in a mini-game ----
+  // ---- 1. Home Practice button → simplified practice setup (no table picker, no game selector) ----
   await page.click('.screen--home.is-active [data-go="practice-setup"]');
-  await page.waitForSelector('.screen--setup.is-active');
-  await page.click('#practice-picker .num-btn:nth-child(3)'); // the 3s
-  await page.click('#practice-answer .seg__btn[data-ans="whack"]');
-  const ansSel = await page.$eval('#practice-answer .seg__btn.is-on', b => b.getAttribute('data-ans'));
-  console.log("✓ practice answer-style selector works, chose:", ansSel);
-  if (ansSel !== "whack") throw new Error("selector should reflect chosen game");
-  await page.click('#practice-start');
+  await page.waitForSelector('.screen[data-screen="practice-setup"].is-active');
+  const gonePicker = await page.$('#practice-picker');
+  const goneAnswer = await page.$('#practice-answer');
+  const goneStart = await page.$('#practice-start');
+  if (gonePicker || goneAnswer || goneStart) throw new Error("practice setup should have no table picker, game selector, or separate Start button");
+  const weakBtn = await page.$('#practice-weak');
+  if (!weakBtn) throw new Error("practice setup must keep the 'My Tricky Ones' button");
+  console.log("✓ practice setup is simplified — only 'My Tricky Ones' remains");
+
+  // ---- 2. Start Tricky Ones → launches a Surprise Me (mix) arena in the adventure ----
+  await page.click('#practice-weak');
   await page.waitForSelector('.screen--adv.is-active');
-  await page.waitForFunction(() => window.__adv.inMini === "whack", { timeout: 5000 });
-  console.log("✓ Start Practice launched the Whack mini-game (UI path)");
+  await page.waitForFunction(() => window.__adv.arena && window.__adv.arena.mode === "mix", { timeout: 6000 });
+  const total = await page.evaluate(() => window.__adv.arena.total);
+  console.log("✓ Tricky Ones launched a Surprise Me arena —", total, "rounds, auto-mixing games");
+  if (!total || total < 4) throw new Error("expected a multi-round arena");
 
-  // ---- 2. arena is FORGIVING: a wrong answer must NOT drop a heart ----
+  // ---- 3. arena is FORGIVING: a wrong answer must NOT drop a heart ----
+  await page.waitForFunction(() => window.__adv.inLanes || window.__adv.inAst || window.__adv.inMini, { timeout: 6000 });
   const hearts0 = await page.evaluate(() => window.__adv.hearts);
-  const wrongV = await page.evaluate(() => window.__adv.miniVals.find(v => v !== window.__adv.miniCorrect));
-  await page.evaluate(v => window.__adv.miniChoose(v), wrongV);
-  await sleep(300);
-  const heartsAfterWrong = await page.evaluate(() => window.__adv.hearts);
-  console.log("✓ wrong answer in practice kept hearts:", hearts0, "→", heartsAfterWrong, "(no fail state)");
-  if (heartsAfterWrong !== hearts0) throw new Error("practice arena must not cost hearts");
-  await page.click('#adv-quit'); // in a practice arena, quit routes home
-  await page.waitForSelector('.screen--home.is-active');
+  const kind = await page.evaluate(() => window.__adv.inLanes ? "lane" : window.__adv.inAst ? "ast" : "mini");
+  if (kind === "mini") {
+    const wrongV = await page.evaluate(() => window.__adv.miniVals.find(v => v !== window.__adv.miniCorrect));
+    await page.evaluate(v => window.__adv.miniChoose(v), wrongV);
+    await sleep(300);
+    const heartsAfterWrong = await page.evaluate(() => window.__adv.hearts);
+    console.log("✓ wrong answer in practice kept hearts:", hearts0, "→", heartsAfterWrong, "(no fail state)");
+    if (heartsAfterWrong !== hearts0) throw new Error("practice arena must not cost hearts");
+  } else {
+    console.log("✓ first round is a", kind, "game (heart-forgiveness checked on mini rounds)");
+  }
 
-  // ---- 3. drive a full "Surprise Me" mix arena to completion via debug hooks ----
-  await page.evaluate(() => window.__adv.startArena({ tables: [4, 6], len: 6, mode: "mix" }));
-  await page.waitForFunction(() => window.__adv.arena && window.__adv.arena.total === 6, { timeout: 5000 });
+  // ---- 4. drive the whole arena to completion ----
   const qBefore = await page.evaluate(() => JSON.parse(localStorage.getItem("tth.progress.v2.mia")).totalQ);
   let guard = 0;
   while (await solve(page)) { guard++; if (guard > 40) throw new Error("arena did not terminate"); await sleep(120); }
@@ -71,15 +80,15 @@ async function solve(page) {
   const title = (await page.textContent('#adv-winTitle')).trim();
   const msg = (await page.textContent('#adv-winMsg')).trim();
   const againBtn = (await page.textContent('#adv-mapBtn')).trim();
-  console.log("✓ mix arena finished →", JSON.stringify(title), "|", JSON.stringify(msg), "| replay btn:", JSON.stringify(againBtn));
+  console.log("✓ practice arena finished →", JSON.stringify(title), "|", JSON.stringify(msg), "| replay btn:", JSON.stringify(againBtn));
   if (!/PRACTICE/.test(title)) throw new Error("expected a practice-complete title");
   if (againBtn !== "AGAIN") throw new Error("MAP button should say AGAIN in a practice arena");
 
   const qAfter = await page.evaluate(() => JSON.parse(localStorage.getItem("tth.progress.v2.mia")).totalQ);
   console.log("✓ practice recorded to progress — totalQ:", qBefore, "→", qAfter);
-  if (qAfter < qBefore + 6) throw new Error("all 6 practice answers should be recorded");
+  if (qAfter < qBefore + total) throw new Error("all practice answers should be recorded");
 
-  // ---- 4. AGAIN restarts a fresh arena ----
+  // ---- 5. AGAIN restarts a fresh arena ----
   await page.click('#adv-mapBtn');
   await page.waitForFunction(() => window.__adv.arena && window.__adv.arena.i === 0, { timeout: 5000 });
   console.log("✓ AGAIN restarted a fresh practice arena");

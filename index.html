@@ -95,20 +95,23 @@
         <span class="cta__go">➜</span>
       </button>
 
-      <div class="menu">
-        <button class="tile tile--quiz" data-go="quiz-setup">
-          <span class="tile__emoji">🎮</span><span class="tile__label">Quiz</span>
-        </button>
-        <button class="tile tile--practice" data-go="practice-setup">
-          <span class="tile__emoji">🧠</span><span class="tile__label">Practice</span>
-        </button>
-        <button class="tile tile--learn" data-go="learn">
-          <span class="tile__emoji">📚</span><span class="tile__label">Learn</span>
-        </button>
-        <button class="tile tile--badges" data-go="badges">
-          <span class="tile__emoji">🏅</span><span class="tile__label">Badges</span>
-        </button>
-      </div>
+      <button class="cta cta--practice" data-go="practice-setup">
+        <span class="cta__icon">🧠</span>
+        <span class="cta__text">
+          <span class="cta__title">Practice</span>
+          <span class="cta__sub">A mix of games on your tricky ones</span>
+        </span>
+        <span class="cta__go">➜</span>
+      </button>
+
+      <button class="cta cta--badges" data-go="badges">
+        <span class="cta__icon">🏅</span>
+        <span class="cta__text">
+          <span class="cta__title">Badges</span>
+          <span class="cta__sub">See the rewards you've earned</span>
+        </span>
+        <span class="cta__go">➜</span>
+      </button>
 
       <button class="grownup-link" data-go="parent">🔒 Grown-ups</button>
     </section>
@@ -156,26 +159,12 @@
         <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
         <h2 class="topbar__title">Practice</h2><div class="topbar__spacer"></div>
       </div>
-      <p class="picker-label">Which tables? (no timer, unlimited tries)</p>
-      <div class="number-grid number-grid--multi" id="practice-picker"></div>
-      <div class="setup-actions">
-        <button class="chip" data-select-all="practice">All 1–12</button>
-        <button class="chip" data-clear="practice">Clear</button>
-        <button class="chip chip--accent" id="practice-weak">🎯 My tricky ones</button>
+      <div class="practice-intro">
+        <span class="practice-intro__emoji">🎯</span>
+        <h3 class="practice-intro__title">Your Tricky Ones</h3>
+        <p class="practice-intro__text">We'll pick the facts you keep missing and mix up the games — no timer, unlimited tries. Just play!</p>
       </div>
-      <p class="picker-label">How do you want to answer?</p>
-      <div class="seg seg--wrap" id="practice-answer">
-        <button class="seg__btn is-on" data-ans="keypad">⌨️ Keypad</button>
-        <button class="seg__btn" data-ans="lane">🏁 Lanes</button>
-        <button class="seg__btn" data-ans="asteroid">☄️ Blast</button>
-        <button class="seg__btn" data-ans="whack">🔨 Whack</button>
-        <button class="seg__btn" data-ans="hoop">🏀 Hoops</button>
-        <button class="seg__btn" data-ans="beat">🥁 Beat</button>
-        <button class="seg__btn" data-ans="slash">🍉 Slash</button>
-        <button class="seg__btn" data-ans="catch">🛡️ Catch</button>
-        <button class="seg__btn" data-ans="mix">🎲 Surprise Me</button>
-      </div>
-      <button class="btn-primary" id="practice-start" disabled>Start Practice ➜</button>
+      <button class="btn-primary" id="practice-weak">🎯 Practice My Tricky Ones ➜</button>
     </section>
 
     <!-- ============ PLAY (typed / choose quiz + daily challenge) ============ -->
@@ -250,16 +239,16 @@
           </div>
         </div>
 
-        <div id="adv-mapOv" class="adv8-ov">
-          <div class="adv8-scrim"></div>
-          <div class="adv8-panel">
+        <div id="adv-mapOv" class="adv8-ov adv8-ov--map">
+          <div class="map-stage">
+            <canvas id="adv-mapCanvas"></canvas>
+            <h1 class="map-title">★ QUEST LAND ★</h1>
             <button class="adv8-close" id="adv-map-close" aria-label="Back home">✕</button>
-            <h1>★ QUEST LAND ★</h1>
-            <p>Pick your hero, then a level. Beat one to unlock the next!</p>
-            <div id="adv-charRow"></div>
-            <div class="adv8-hint" id="adv-gemInfo"></div>
-            <canvas id="adv-mapCanvas" width="260" height="150"></canvas>
-            <div class="adv8-hint">Locked levels open as you win.</div>
+            <div class="map-dock">
+              <div id="adv-charRow"></div>
+              <div class="adv8-hint" id="adv-gemInfo"></div>
+              <div class="adv8-hint map-foot">Pick a hero, then tap a level — locked levels open as you win</div>
+            </div>
           </div>
         </div>
 

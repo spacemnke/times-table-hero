@@ -136,6 +136,14 @@ body {
 .cta__title { font-size: 21px; font-weight: 900; }
 .cta__sub { font-size: 13px; opacity: .9; font-weight: 600; }
 .cta__go { font-size: 26px; font-weight: 900; }
+.cta--practice { background: linear-gradient(120deg, #43c56f, #2fa457); box-shadow: 0 12px 26px rgba(47, 157, 85, .38); }
+.cta--badges { background: linear-gradient(120deg, #ffca4a, #ff9e2e); box-shadow: 0 12px 26px rgba(255, 150, 60, .38); }
+.cta--badges .cta__sub { color: #3a2600; opacity: 1; }
+
+.practice-intro { text-align: center; padding: 22px 18px; margin-top: 8px; }
+.practice-intro__emoji { font-size: 56px; display: block; line-height: 1; }
+.practice-intro__title { font-size: 22px; font-weight: 900; margin: 12px 0 6px; }
+.practice-intro__text { font-size: 14px; line-height: 1.55; color: var(--ink-soft); max-width: 30ch; margin: 0 auto; }
 
 .menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
 .tile { border: none; border-radius: 18px; padding: 16px 6px 12px; background: var(--card); box-shadow: var(--shadow-sm);
@@ -303,6 +311,18 @@ body {
 #adv-mapCanvas { width: 100%; height: auto; image-rendering: pixelated; margin: 8px 0 4px; cursor: pointer; }
 .adv8-hint { font-size: 11px; color: #8f9ac9; }
 #adv-gemInfo { color: #d6a8ff; font-weight: 700; }
+
+/* ---- full-screen Quest Land map ---- */
+.adv8-ov--map { padding: 0; gap: 0; }
+.map-stage { position: absolute; inset: 0; overflow: hidden; }
+.adv8-ov--map #adv-mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; image-rendering: pixelated; cursor: pointer; touch-action: manipulation; }
+.map-title { position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 2; text-align: center;
+  font-size: 22px; font-weight: 800; color: #ffd23f; text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0,0,0,.6); letter-spacing: .04em; pointer-events: none; margin: 0; }
+.adv8-ov--map .adv8-close { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); z-index: 3; }
+.map-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(8,8,20,.9) 55%, rgba(8,8,20,0)); }
+.map-dock #adv-charRow { justify-content: center; margin: 0 auto; max-width: 520px; }
+.map-foot { text-align: center; margin-top: 3px; }
 #adv-gemInfo.flash { animation: gemflash .7s; }
 @keyframes gemflash { 0%,100%{color:#d6a8ff;} 40%{color:#fff;transform:scale(1.06);} }
 .adv8-gem { color: #c088ff; margin-left: 8px; font-size: 12px; }
@@ -481,6 +501,10 @@ body {
 .picker-label { color: var(--ink-soft); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 800; }
 /* flatten gradient/pill buttons into flat pixel colours */
 .cta { background: #ff4fa3; color: #fff; border-radius: var(--radius); }
+.cta.cta--practice { background: #33b866; }
+.cta.cta--badges { background: #ffbf3f; }
+.cta.cta--badges .cta__title { color: #241000; text-shadow: 1px 1px 0 rgba(255, 255, 255, .35); }
+.cta.cta--badges .cta__sub, .cta.cta--badges .cta__go { color: #3a2600; }
 .btn-primary { background: #ffd23f; color: #241000; }
 .num-btn.is-selected, .mini-btn.is-on { background: #3ad44a; color: #06210a; box-shadow: var(--shadow-sm); }
 .seg__btn.is-on { background: #ffd23f; color: #241000; }
