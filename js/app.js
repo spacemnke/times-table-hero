@@ -868,7 +868,7 @@
       row.appendChild(ren);
       if (Cloud.enabled) {
         if (p.cloud) { row.appendChild(el("span", "pm-cloud", "☁︎ saved online")); }
-        else { var up = el("button", "pm-btn pm-btn--cloud", "☁︎ Save online"); up.addEventListener("click", function () { sTap(); openCloud("up", p.id); }); row.appendChild(up); }
+        else { var up = el("button", "pm-btn pm-btn--cloud", "☁︎ Save online"); up.addEventListener("click", function () { sTap(); openCloud("up", p.id, "parent"); }); row.appendChild(up); }
       }
       if (reg.profiles.length > 1) {
         var del = el("button", "pm-btn pm-btn--del", "Delete");
@@ -884,7 +884,7 @@
   }
 
   /* ---------------- cloud sign-in / save-online screen ---------------- */
-  var cloudMode = "in", cloudTarget = null;
+  var cloudMode = "in", cloudTarget = null, cloudFrom = "profiles";
   function cloudValidate() {
     var n = $("#cl-name").value.trim(), pin = $("#cl-pin").value;
     $("#cl-go").disabled = !(n.length >= 2 && /^[0-9]{4,8}$/.test(pin));
@@ -901,20 +901,24 @@
     if (e === "disabled") return "Online save isn't switched on.";
     return "Something went wrong — try again.";
   }
-  function openCloud(mode, targetId) {
-    cloudMode = mode; cloudTarget = targetId || null;
-    var isUp = mode === "up";
-    $("#cl-title").textContent = isUp ? "Save online" : "Sign in";
-    $("#cl-sub").textContent = isUp
-      ? "Pick a nickname and a secret PIN. Progress will be saved so you can sign in on any device."
-      : "Enter your nickname and secret PIN to load your saved progress on this device.";
-    $("#cl-go").textContent = isUp ? "Save online ➜" : "Sign in ➜";
+  function openCloud(mode, targetId, from) {
+    cloudMode = mode; cloudTarget = targetId || null; cloudFrom = from || "profiles";
+    var titles = { up: "Save online", "in": "Sign in", "new": "Create account" };
+    var subs = {
+      up: "Pick a nickname and a secret PIN. Progress will be saved so you can sign in on any device.",
+      "in": "Enter your nickname and secret PIN to load your saved progress on this device.",
+      "new": "Pick a nickname and a secret PIN. Your progress saves automatically and follows you to any device."
+    };
+    var btns = { up: "Save online ➜", "in": "Sign in ➜", "new": "Create account ➜" };
+    $("#cl-title").textContent = titles[mode] || titles["in"];
+    $("#cl-sub").textContent = subs[mode] || subs["in"];
+    $("#cl-go").textContent = btns[mode] || btns["in"];
     var prefill = "";
-    if (isUp && targetId) { var p = reg.profiles.filter(function (x) { return x.id === targetId; })[0]; if (p) prefill = p.name; }
+    if (mode === "up" && targetId) { var p = reg.profiles.filter(function (x) { return x.id === targetId; })[0]; if (p) prefill = p.name; }
     $("#cl-name").value = prefill; $("#cl-pin").value = "";
     $("#cl-err").hidden = true; cloudValidate();
     show("cloud");
-    setTimeout(function () { (isUp ? $("#cl-pin") : $("#cl-name")).focus(); }, 250);
+    setTimeout(function () { (mode === "up" ? $("#cl-pin") : $("#cl-name")).focus(); }, 250);
   }
   function cloudSubmit() {
     var name = $("#cl-name").value.trim(), pin = $("#cl-pin").value;
@@ -928,6 +932,12 @@
         if (res && res.ok) { linkProfileToCloud(cloudTarget, res.display_name || name, pin); renderPlayers(); show("parent"); }
         else cloudErr(cloudMsg(res));
       });
+    } else if (cloudMode === "new") {
+      Cloud.signup(name, pin).then(function (res) {
+        done();
+        if (res && res.ok) { createCloudProfile(res.display_name || name, {}, pin, res.updated_at); renderHome(); show("home"); }
+        else cloudErr(cloudMsg(res));
+      });
     } else {
       Cloud.login(name, pin).then(function (res) {
         done();
@@ -936,6 +946,7 @@
       });
     }
   }
+  function openLanding() { show("landing"); }
 
   /* ---------------- ADVENTURE — 8-bit Quest Land (daily quest) ---------------- */
   var Adv = (function () {
@@ -2897,10 +2908,16 @@
       sTap(); createProfile(name, newAvatar); renderHome(); show("home");
     });
 
+    // landing (front door)
+    if (!Cloud.enabled) { ["lp-create", "lp-signin"].forEach(function (i) { var b = $("#" + i); if (b) b.style.display = "none"; }); }
+    $("#lp-create").addEventListener("click", function () { sTap(); openCloud("new", null, "landing"); });
+    $("#lp-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); });
+    $("#lp-guest").addEventListener("click", function () { sTap(); openProfileNew(true); });
+
     // cloud sign-in / save-online
     if (!Cloud.enabled) { var csl = $("#cloud-signin"); if (csl) csl.style.display = "none"; }
-    $("#cloud-signin").addEventListener("click", function () { sTap(); openCloud("in"); });
-    $("#cl-back").addEventListener("click", function () { sTap(); if (cloudMode === "up") { renderPlayers(); show("parent"); } else { renderProfiles(); show("profiles"); } });
+    $("#cloud-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "profiles"); });
+    $("#cl-back").addEventListener("click", function () { sTap(); if (cloudFrom === "parent") { renderPlayers(); show("parent"); } else if (cloudFrom === "landing") { show("landing"); } else { renderProfiles(); show("profiles"); } });
     $("#cl-name").addEventListener("input", cloudValidate);
     $("#cl-pin").addEventListener("input", function () { this.value = this.value.replace(/[^0-9]/g, ""); cloudValidate(); });
     $("#cl-name").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#cl-pin").focus(); } });
@@ -2922,7 +2939,7 @@
     else bootReal();
   }
   function bootReal() {
-    if (!reg.profiles.length) { openProfileNew(true); return; }              // first run → create
+    if (!reg.profiles.length) { openLanding(); return; }                     // brand-new visitor → landing / sign in
     if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); return; }
     // more than one → let them choose
     if (reg.activeId) activeId = reg.activeId;

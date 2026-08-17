@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1786987844" />
+  <link rel="stylesheet" href="css/styles.css?v=1786988964" />
 </head>
 <body>
   <div id="app">
@@ -24,6 +24,22 @@
     <!-- ============ ARCADE SPLASH ============ -->
     <section class="screen screen--splash" data-screen="splash">
       <canvas id="splash-c"></canvas>
+    </section>
+
+    <!-- ============ LANDING ============ -->
+    <section class="screen screen--landing" data-screen="landing">
+      <div class="landing">
+        <div class="landing__badge">8-BIT MATH ADVENTURE</div>
+        <h1 class="landing__title">TIMES<br />TABLE<br />HERO</h1>
+        <div class="landing__hero" aria-hidden="true">🦄</div>
+        <p class="landing__tag">Learn your times tables on a retro quest — run, jump and blast through 8 worlds. Your progress follows you to any device.</p>
+        <div class="landing__worlds" aria-hidden="true">🌸 🏖️ 🍭 🌊 ❄️ 🌴 🌋 🚀</div>
+        <div class="landing__cta">
+          <button class="btn-primary" id="lp-create">Create account ➜</button>
+          <button class="btn-secondary" id="lp-signin">I already have an account</button>
+        </div>
+        <button class="landing__guest" id="lp-guest">Just play on this device →</button>
+      </div>
     </section>
 
     <!-- ============ PROFILES PICKER ============ -->
@@ -412,6 +428,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1786987844"></script>
+  <script src="js/app.js?v=1786988964"></script>
 </body>
 </html>
