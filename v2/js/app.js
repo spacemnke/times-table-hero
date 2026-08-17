@@ -947,6 +947,14 @@
       // shiny purple coins: rare, placed high so you must jump for them
       for (seg = 1; seg < gx.length; seg++) { if (seg % 2 === 0 && Math.random() < cf.gemChance) G.gemsA.push({ x: gx[seg] - SEG * 0.72, hAbove: 300 + (seg % 3) * 22, got: false }); }
       if (!G.gemsA.length) G.gemsA.push({ x: gx[Math.min(1, gx.length - 1)] - SEG * 0.72, hAbove: 320, got: false });
+      // SKIP HOP: a clearly-marked floating platform above some math portals — leap up to it to skip that one problem.
+      // Only on plain keypad gates (never the mini-games), and only every few gates, so most problems still get solved.
+      for (var sk = 0; sk < G.gates.length; sk++) {
+        var sga = G.gates[sk];
+        if (sga.mode !== "keypad" || sk < 1 || sk % 3 !== 1) continue;
+        G.platforms.push({ x: sga.x - 232, hAbove: 200, w: 120, mv: false, amp: 0, period: 2, phase: 0, skip: true, used: false, gi: sk });
+        for (var sc = 0; sc < 4; sc++) G.coinsA.push({ x: sga.x - 344 + sc * 34, hAbove: 60 + sc * 36, got: false }); // a coin staircase pointing up to it
+      }
       var mid2 = Math.floor(gx.length / 2); G.star = { x: gx[mid2] - SEG * 0.2, hAbove: 170, taken: false };
       G.flags = [{ x: HEROX, hit: true, raise: 1 }]; for (var f = 0; f < gx.length; f++) { G.flags.push({ x: gx[f] - SEG * 0.5, hit: false, raise: 0, half: true }); }
       for (var trp = 0; trp < 90; trp++) G.props.push({ x: trp * 250 + ((trp * 71) % 160), s: 52 + ((trp * 53) % 30) });
@@ -1112,6 +1120,8 @@
           for (var fbi = 0; fbi < G.firebars.length; fbi++) { var fbr = G.firebars[fbi]; if (Math.abs(fbr.x - h.wx) > fbr.len + 34) continue; var fang = G.t * fbr.spd + fbr.phase; for (var fseg = 0.32; fseg <= 1.001; fseg += 0.22) { var fxp = fbr.x + Math.cos(fang) * fbr.len * fseg, fyp = fbr.cy + Math.sin(fang) * fbr.len * fseg; if (!TEST && h.inv <= 0 && G.frostT <= 0 && Math.abs(fxp - h.wx) < 26 && Math.abs(fyp - (h.y - 30)) < 30) { hurt(); break; } } }
           // secret warp: just jump while under the golden portal and it pulls you in (very forgiving — no precise landing)
           if (G.warp && !G.warp.done && !h.ground && h.wx > G.warp.x0 && h.wx < G.warp.x1) { G.warp.done = true; startWarp(level); }
+          // SKIP HOP: leap up to a marked skip platform (very forgiving — reach its height near it) and its portal's problem is skipped
+          for (var ski = 0; ski < G.platforms.length; ski++) { var skp = G.platforms[ski]; if (!skp.skip || skp.used) continue; if (h.wx > skp.x - 16 && h.wx < skp.x + skp.w + 16 && h.y <= platTop(skp) + 24) { skp.used = true; skipGate(skp.gi); break; } }
           var headY = h.y - HEROSIZE * 0.9;
           for (var b = 0; b < G.boxes.length; b++) { var bx = G.boxes[b]; if (bx.used) continue; var by = GROUND - bx.hAbove; if (h.vy < 0 && h.wx >= bx.x - 8 && h.wx <= bx.x + bx.w + 8 && headY <= by + bx.h && headY >= by - 12) { bx.used = true; bx.pop = .2; h.vy = 80; if (bx.power) { spawnPowerup(bx.x + bx.w / 2, by - 20); } else { addCoins(1); aCoin(); G.particles.push({ wx: bx.x + bx.w / 2, y: by - 14, vx: 0, vy: -220, life: .7, kind: "coin" }); } } }
           for (var bkr = 0; bkr < G.bricks.length; bkr++) { var bk = G.bricks[bkr]; if (bk.used) continue; var bky = GROUND - bk.hAbove; if (h.vy < 0 && h.wx >= bk.x - 8 && h.wx <= bk.x + bk.w + 8 && headY <= bky + bk.h && headY >= bky - 12) { if (G.bigT > 0) { bk.used = true; aStomp(); coinBurst(bk.x + bk.w / 2, bky); } else { h.vy = 80; if (!bk.tapped) { bk.tapped = true; addCoins(1); aCoin(); } } } }
@@ -1160,6 +1170,16 @@
     }
     function respawn() { var h = G.hero; h.wx = G.lastCP; h.y = GROUND; h.vy = 0; h.inv = 1; h.ground = true; }
     function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); mdisp(); $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mathShow(); hint(""); }
+    // SKIP HOP: you reached the skip platform above a portal — pass that math problem for free (no coins/combo; the reward is the leap itself)
+    function skipGate(gi) {
+      if (gi == null || gi !== G.nextGate) return;
+      var ga = G.gates[gi]; if (!ga || ga.solved) return;
+      ga.solved = true; ga.skipped = true; G.nextGate++;
+      var h = G.hero; h.wx = ga.x + 46; h.vy = -420; h.ground = false; h.dbl = true; h.inv = 1.0; G.dash = Math.max(G.dash, .7); G.cam = h.wx - HEROX;
+      aWin(); haptic([10, 24, 10]); showPow("SKIPPED!");
+      for (var i = 0; i < 12; i++) G.particles.push({ wx: ga.x, y: GROUND - 130, vx: (i - 6) * 55, vy: -230 - i * 8, life: 1, kind: i % 2 ? "star" : "puff" });
+      hint(G.nextGate >= G.gates.length ? "DASH TO THE CASTLE!" : "SKIPPED — HOP ON!");
+    }
     function win() {
       G.state = "win"; musicStop(); aWin(); haptic([15, 60, 15, 60, 15]);
       var lost = G.maxHearts - G.hearts, stars = lost === 0 ? 3 : lost <= 1 ? 2 : 1, perfect = G.wrong === 0;
@@ -1938,7 +1958,7 @@
       }
       if (th.water && !PIER) { for (var s2 = 0; s2 < G.grounds.length - 1; s2++) { var wa = FX(G.grounds[s2][1]), wb = FX(G.grounds[s2 + 1][0]); if (wb < -4 || wa > W + 4) continue; if (HIFI) hfWater(wa, wb - wa, gY + SZ(4), th.water); else { P(wa, gY + SZ(4), wb - wa, H, th.water); for (var wv = wa; wv < wb; wv += 6) P(wv + ((G.t * 20) % 6), gY + SZ(6), 3, 1, "#ffffff"); } } }
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
-      for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
+      for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); if (pl.skip) { pxSkipPlat(px, ptp, pw, pl.used, G.t); continue; } P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
       if (G.warp && (!G.warp.done || G.state === "warping")) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.state !== "warping" && G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
       if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
@@ -2229,6 +2249,20 @@
     }
     function pxStar(cx, cy, r) { P(cx - 1, cy - r, 2, r * 2, C.star); P(cx - r, cy - 1, r * 2, 2, C.star); P(cx - Math.round(r * .6), cy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), C.star); P(cx - 2, cy - 2, 4, 4, "#fff2a8"); }
     function pxGate(gxs, gY) { if (HIFI) { hfGate(gxs, gY); return; } var hh = SZ(150); P(gxs - SZ(46), gY - hh, SZ(20), hh, C.stone); P(gxs + SZ(26), gY - hh, SZ(20), hh, C.stone); P(gxs - SZ(56), gY - hh - SZ(16), SZ(112), SZ(18), C.stoneD); var ly = gY - SZ(90); P(gxs - SZ(10), ly, SZ(20), SZ(18), C.lock); P(gxs - SZ(6), ly - SZ(8), SZ(12), SZ(8), C.stoneD); P(gxs - SZ(3), ly + SZ(6), SZ(6), SZ(6), "#8a5a00"); }
+    function pxSkipPlat(px, ptp, pw, used, t) {
+      // a glowing sky-platform (clearly not a plain brown ledge) with a bobbing "SKIP!" sign + up-arrow
+      P(px, ptp, pw, SZ(18), used ? "#8a8f9c" : "#3fb7ff");
+      P(px, ptp, pw, SZ(5), used ? "#b6bcc8" : "#bff0ff");
+      P(px, ptp + SZ(14), pw, SZ(4), used ? "#5c6270" : "#1f7fbf");
+      if (used) return;
+      for (var i = 0; i < 3; i++) { var spx = px + pw * (0.22 + i * 0.28); P(spx, ptp - SZ(3) + Math.round(Math.sin(t * 4 + i) * SZ(1)), SZ(2), SZ(2), "#fff"); }
+      var bob = Math.round(Math.sin(t * 5) * SZ(3)), sgx = px + pw / 2, sgy = ptp - SZ(44) + bob;
+      P(sgx - SZ(2), sgy + SZ(26), SZ(4), SZ(12), "#ffd23f"); P(sgx - SZ(8), sgy + SZ(30), SZ(4), SZ(5), "#ffd23f"); P(sgx + SZ(4), sgy + SZ(30), SZ(4), SZ(5), "#ffd23f");
+      var bw = SZ(70), bh = SZ(22);
+      P(sgx - bw / 2 - SZ(2), sgy - SZ(2), bw + SZ(4), bh + SZ(4), "#1b2144");
+      P(sgx - bw / 2, sgy, bw, bh, "#ff4fa3"); P(sgx - bw / 2, sgy, bw, SZ(4), "#ff8ac8");
+      x.textAlign = "center"; x.fillStyle = "#fff"; x.font = "800 " + SZ(13) + "px monospace"; x.fillText("SKIP!", sgx, sgy + SZ(16)); x.textAlign = "left";
+    }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
     function pxEnemy(cx, gY, dir) { if (HIFI) { hfEnemy(cx, gY, dir); return; } var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(46) - bnc, w = SZ(24); P(cx - w, fy + SZ(6), w * 2, SZ(40), C.enemy); P(cx - w + SZ(3), fy, w * 2 - SZ(6), SZ(8), C.enemy); P(cx - w, fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx + w - SZ(8), fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx - SZ(12), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx + SZ(4), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx - SZ(11) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); P(cx + SZ(5) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); }
 
@@ -2480,7 +2514,12 @@
       get secretsFound() { return progress.secretsFound || {}; },
       enterSecret: function () { if (G && SECRET_CHARS[level] && !G.secretWorld) enterSecret(level); },
       warp: function (wx) { if (G) { while (G.nextGate < G.gates.length && G.gates[G.nextGate].x < wx - 60) { G.gates[G.nextGate].solved = true; G.nextGate++; } G.hero.wx = wx; G.hero.y = GROUND; G.hero.ground = true; G.hero.vy = 0; G.cam = wx - HEROX; } },
-      unwarp: function () {}
+      unwarp: function () {},
+      get correct() { return G ? G.correct : null; },
+      get gatesX() { return G ? G.gates.map(function (g) { return Math.round(g.x); }) : []; },
+      get skipPlats() { return G ? G.platforms.filter(function (p) { return p.skip; }).map(function (p) { return { x: Math.round(p.x), top: Math.round(GROUND - p.hAbove), w: p.w, gi: p.gi, used: !!p.used }; }) : []; },
+      get skipped() { return G ? G.gates.map(function (g) { return !!g.skipped; }) : []; },
+      placeHero: function (wx, y) { if (!G) return; G.hero.wx = wx; if (y != null) { G.hero.y = y; G.hero.ground = false; G.hero.vy = -10; } G.cam = wx - HEROX; }
     };
 
     return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena };
