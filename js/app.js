@@ -20,8 +20,17 @@
         method: "POST",
         headers: { "apikey": CLOUD_KEY, "Authorization": "Bearer " + CLOUD_KEY, "Content-Type": "application/json" },
         body: JSON.stringify(body)
-      }).then(function (r) { return r.json().then(function (j) { return j; }, function () { return { ok: false, error: "bad_response" }; }); },
-        function () { return { ok: false, error: "offline" }; });
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (j && typeof j.ok !== "undefined") return j;               // our function's own {ok:...}
+          if (j && (j.code || j.message)) {                             // PostgREST / Postgres error object
+            try { console.warn("[cloud]", fn, r.status, j); } catch (e) {}
+            var miss = j.code === "PGRST202" || /could not find the function|does not exist|schema cache/i.test(j.message || "");
+            return { ok: false, error: miss ? "not_setup" : "server", detail: j.message || j.code };
+          }
+          return { ok: false, error: "bad_response" };
+        }, function () { return { ok: false, error: "bad_response" }; });
+      }, function () { return { ok: false, error: "offline" }; });
     }
     return {
       enabled: on,
@@ -897,7 +906,9 @@
     if (e === "locked") return "Too many wrong tries. Wait 5 minutes, then try again.";
     if (e === "bad_pin") return "PIN must be 4–8 numbers.";
     if (e === "bad_name") return "Nickname must be 2–20 letters.";
-    if (e === "offline" || e === "bad_response") return "No internet connection — try again.";
+    if (e === "offline") return "No internet connection — try again.";
+    if (e === "not_setup") return "Online save isn't set up on the server yet." + (res.detail ? " (" + res.detail + ")" : "");
+    if (e === "server" || e === "bad_response") return "The server had a problem — try again." + (res.detail ? " (" + res.detail + ")" : "");
     if (e === "disabled") return "Online save isn't switched on.";
     return "Something went wrong — try again.";
   }
@@ -2912,7 +2923,6 @@
     if (!Cloud.enabled) { ["lp-create", "lp-signin"].forEach(function (i) { var b = $("#" + i); if (b) b.style.display = "none"; }); }
     $("#lp-create").addEventListener("click", function () { sTap(); openCloud("new", null, "landing"); });
     $("#lp-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); });
-    $("#lp-guest").addEventListener("click", function () { sTap(); openProfileNew(true); });
 
     // cloud sign-in / save-online
     if (!Cloud.enabled) { var csl = $("#cloud-signin"); if (csl) csl.style.display = "none"; }
