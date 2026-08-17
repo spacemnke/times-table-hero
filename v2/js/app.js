@@ -2934,8 +2934,10 @@
   function boot() {
     reg = profilesLoad();
     migrateLegacy();
-    // arcade title screen first (skipped under automation so tests reach the menu directly)
-    if (!navigator.webdriver || /splash/.test(location.search)) Splash.start(bootReal);
+    // Brand-new visitors go straight to the landing page (the front door). Returning players get the
+    // arcade splash first. (Splash is skipped under automation unless ?splash is present.)
+    var useSplash = reg.profiles.length > 0 && (!navigator.webdriver || /splash/.test(location.search));
+    if (useSplash) Splash.start(bootReal);
     else bootReal();
   }
   function bootReal() {
