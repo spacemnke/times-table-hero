@@ -803,6 +803,7 @@
     var cv, x;                       // canvas + ctx (assigned in advInit)
     var WORLDH = 760, LW = 760, LH = 760, GROUND = 520, HEROX = 150, sx = 0.4, PIXW = 140, PIXH = 300;
     var HEROSIZE = 96, MAXLEVELS = 8, unlocked = 1, HEROTYPE = "unicorn";
+    var LANE_LEAD = 5.0;             // seconds a Lane Runner wall takes to arrive (reading/think time for kids)
     var G = null, level = 1, running = false, looping = false;
 
     // pixel palettes per theme
@@ -1474,11 +1475,17 @@
       var hx = Math.round(PIXW * 0.2), wx0 = PIXW + SZ(30);
       var L = { q: q, correct: cor, vals: vals, corIdx: vals.indexOf(cor), lane: 1, heroX: hx,
         laneY: [Math.round(PIXH * 0.42), Math.round(PIXH * 0.61), Math.round(PIXH * 0.80)],
-        wallX: wx0, spd: (wx0 - hx) / 2.6, phase: "run", t0: Date.now(), msg: "", msgT: 0, flash: 0, resT: 0, showCor: false, hy: 0, run: 0 };
+        wallX: wx0, spd: (wx0 - hx) / LANE_LEAD, phase: "run", t0: Date.now(), msg: "", msgT: 0, flash: 0, resT: 0, showCor: false, hy: 0, run: 0 };
       L.hy = L.laneY[L.lane];
       G.lane = L; G.state = "lanes"; hudShow(false); mathHide(); hint("");
     }
+    // move the hero TOWARD the player's input (tap a lane, or swipe up/down) — never the opposite way
     function laneTap() { var L = G.lane; if (!L || L.phase !== "run") return; L.lane = (L.lane + 1) % 3; aJump(); haptic(8); }
+    function laneShift(dir) { var L = G.lane; if (!L || L.phase !== "run") return; var t = clamp(L.lane + dir, 0, 2); if (t !== L.lane) { L.lane = t; aJump(); haptic(8); } }
+    function laneGoto(idx) { var L = G.lane; if (!L || L.phase !== "run") return; idx = clamp(idx, 0, 2); if (idx !== L.lane) { L.lane = idx; aJump(); haptic(8); } }
+    function laneNearest(clientY) { var L = G.lane, rect = cv.getBoundingClientRect(), yy = (clientY - rect.top) * (PIXH / Math.max(1, rect.height)), best = 0, bd = 1e9; for (var i = 0; i < 3; i++) { var d = Math.abs(yy - L.laneY[i]); if (d < bd) { bd = d; best = i; } } return best; }
+    function laneDown(e) { var L = G.lane; if (!L || L.phase !== "run") return; L.downY = e.clientY; }
+    function laneUp(e) { var L = G.lane; if (!L || L.phase !== "run") return; var dy = (L.downY != null ? e.clientY - L.downY : 0); if (Math.abs(dy) > 22) laneShift(dy > 0 ? 1 : -1); else laneGoto(laneNearest(e.clientY)); L.downY = null; }
     function laneResolve() {
       var L = G.lane, chosen = L.vals[L.lane], ok = chosen === L.correct;
       if (recordAnswer(L.q.a, L.q.b, ok, Date.now() - L.t0)) G.goalMet = true; L.flash = 0.5;
@@ -1517,7 +1524,7 @@
       var bw = Math.min(W - SZ(6), x.measureText(qs).width + SZ(20)), bh = Math.round(pf * 1.7);
       x.fillStyle = "rgba(10,8,26,.82)"; x.fillRect(W / 2 - bw / 2, SZ(6), bw, bh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(W / 2 - bw / 2, SZ(6), bw, bh); x.fillStyle = "#fff"; x.fillText(qs, W / 2, SZ(6) + bh / 2 + 1);
       for (var hh = 0; hh < G.maxHearts; hh++) { var hxp = SZ(10) + hh * SZ(15), hyp = SZ(8) + bh; x.fillStyle = hh < G.hearts ? "#ff4d6d" : "#3a3a68"; x.fillRect(hxp, hyp + SZ(1), SZ(4), SZ(4)); x.fillRect(hxp + SZ(5), hyp + SZ(1), SZ(4), SZ(4)); x.fillRect(hxp + SZ(1), hyp + SZ(4), SZ(7), SZ(4)); }
-      x.textAlign = "center"; x.fillStyle = "#c7ccf0"; x.font = "800 " + Math.max(8, Math.round(H * 0.03)) + "px monospace"; x.fillText("▲ TAP TO SWITCH LANE ▲", W / 2, H - SZ(14));
+      x.textAlign = "center"; x.fillStyle = "#c7ccf0"; x.font = "800 " + Math.max(8, Math.round(H * 0.03)) + "px monospace"; x.fillText("TAP OR SWIPE TO A LANE", W / 2, H - SZ(14));
       if (L.msgT > 0 && L.msg) { x.font = "800 " + Math.round(H * 0.05) + "px monospace"; var mw = x.measureText(L.msg).width + SZ(20); x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(W / 2 - mw / 2, Math.round(H * 0.28) - SZ(16), mw, SZ(32)); x.textBaseline = "middle"; x.fillStyle = /CORRECT/.test(L.msg) ? "#3ad46a" : "#ffd23f"; x.fillText(L.msg, W / 2, Math.round(H * 0.28)); }
     }
 
@@ -2468,15 +2475,15 @@
       function mapVisible() { return !$("#adv-mapOv").classList.contains("hidden"); }
       window.addEventListener("resize", function () { if (running) resize(); if (mapVisible()) buildMap(); });
       window.addEventListener("orientationchange", function () { if (running) { resize(); setTimeout(function () { if (running) resize(); if (mapVisible()) buildMap(); }, 300); } });
-      cv.addEventListener("pointerdown", function (e) { ac(); if (G && G.state === "showdown") sdDown(e); else if (G && G.state === "lanes") laneTap(); else if (G && G.state === "asteroid") astTap(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.down) G.mini.down(e); } else jump(); });
+      cv.addEventListener("pointerdown", function (e) { ac(); if (G && G.state === "showdown") sdDown(e); else if (G && G.state === "lanes") laneDown(e); else if (G && G.state === "asteroid") astTap(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.down) G.mini.down(e); } else jump(); });
       cv.addEventListener("pointermove", function (e) { if (G && G.state === "showdown") sdMove(e); else if (G && G.mini && G.state === G.mini.key && G.mini.move) G.mini.move(e); });
-      cv.addEventListener("pointerup", function (e) { if (G && G.state === "showdown") sdUp(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.up) G.mini.up(e); } else if (G && (G.state === "lanes" || G.state === "asteroid")) { /* tap handled on down */ } else jumpRelease(); });
+      cv.addEventListener("pointerup", function (e) { if (G && G.state === "showdown") sdUp(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.up) G.mini.up(e); } else if (G && G.state === "lanes") laneUp(e); else if (G && G.state === "asteroid") { /* tap handled on down */ } else jumpRelease(); });
       $("#adv-kpad").addEventListener("click", function (e) { var b = e.target.closest(".key"); if (b) { ac(); key(b.getAttribute("data-k")); } });
       $("#adv-mapCanvas").addEventListener("click", mapClick);
       document.addEventListener("keydown", function (e) {
         if (!isActive() || !G) return;
         if (G.state === "gate" || G.state === "trapped") { if (e.key >= "0" && e.key <= "9") key(e.key); else if (e.key === "Backspace") key("del"); else if (e.key === "Enter") key("enter"); }
-        else if (G.state === "lanes") { if (e.key === " " || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter") { e.preventDefault(); laneTap(); } }
+        else if (G.state === "lanes") { if (e.key === "ArrowUp") { e.preventDefault(); laneShift(-1); } else if (e.key === "ArrowDown") { e.preventDefault(); laneShift(1); } else if (e.key === " " || e.key === "Enter") { e.preventDefault(); laneTap(); } }
         else if (e.key === " " || e.key === "ArrowUp") { e.preventDefault(); jump(); }
       });
       document.addEventListener("keyup", function (e) { if (isActive() && (e.key === " " || e.key === "ArrowUp")) jumpRelease(); });
