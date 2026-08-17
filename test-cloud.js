@@ -119,7 +119,9 @@ async function device(browser) {
   if (!DB.rows['leo']) throw new Error('create-account did not make a cloud account');
   const cLinked = await C.evaluate(() => { const reg = JSON.parse(localStorage.getItem('tth.profiles.v1')); const p = reg.profiles.find(x => x.id === reg.activeId); return !!(p && p.cloud && p.cloud.name === 'Leo'); });
   if (!cLinked) throw new Error('new-account profile should be cloud-linked');
-  console.log('✓ Device C: created a new account from the landing → playing, auto-linked');
+  const landingHidden = await C.evaluate(() => getComputedStyle(document.querySelector('.screen--landing')).display === 'none');
+  if (!landingHidden) throw new Error('landing must be hidden once signed in (no overlap with home)');
+  console.log('✓ Device C: created a new account from the landing → playing, auto-linked, landing hidden');
 
   // ---------- wrong PIN rejected ----------
   await B.click('#player-switch');
