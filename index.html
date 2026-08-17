@@ -33,6 +33,25 @@
         <p class="profiles__sub">Tap your character</p>
       </div>
       <div class="profiles-grid" id="profiles-grid"></div>
+      <button class="cloud-signin-link" id="cloud-signin">☁︎ Sign in to load a saved player</button>
+    </section>
+
+    <!-- ============ CLOUD SIGN IN / SAVE ONLINE ============ -->
+    <section class="screen screen--cloud" data-screen="cloud">
+      <div class="topbar">
+        <button class="btn-back" id="cl-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title" id="cl-title">Sign in</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="cloud-intro">
+        <span class="cloud-intro__emoji">☁︎</span>
+        <p class="cloud-intro__text" id="cl-sub">Enter your nickname and secret PIN to load your progress on this device.</p>
+      </div>
+      <p class="picker-label">Nickname</p>
+      <input class="name-input" id="cl-name" type="text" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="e.g. Mia" />
+      <p class="picker-label">Secret PIN (4–8 numbers)</p>
+      <input class="name-input" id="cl-pin" type="tel" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="number PIN" />
+      <p class="cloud-err" id="cl-err" hidden></p>
+      <button class="btn-primary" id="cl-go" disabled>Sign in ➜</button>
     </section>
 
     <!-- ============ NEW PROFILE ============ -->
@@ -54,6 +73,7 @@
       <button class="player-switch" id="player-switch" aria-label="Switch player">
         <span class="player-switch__av" id="ps-av">⭐️</span>
         <span class="player-switch__name" id="ps-name">Player</span>
+        <span class="cloud-badge" id="cloud-badge" hidden aria-label="Saved online">☁︎</span>
         <span class="player-switch__caret">▾</span>
       </button>
       <header class="dash-top">
