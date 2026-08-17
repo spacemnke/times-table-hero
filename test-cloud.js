@@ -52,6 +52,8 @@ async function device(browser) {
   // ---------- DEVICE A: make a local player, give them progress, then "Save online" ----------
   const A = await device(browser);
   await A.goto(`http://localhost:${PORT}/index.html`, { waitUntil: "networkidle" });
+  await A.waitForSelector('.screen--landing.is-active');
+  await A.click('#lp-guest');                                 // "Just play on this device"
   await A.waitForSelector('.screen--profile-new.is-active');
   await A.click('#avatar-grid .av-btn:nth-child(1)');
   await A.fill('#pn-name', 'Mia');
@@ -89,17 +91,11 @@ async function device(browser) {
   const cloudGoal = DB.rows['mia'].progress.settings && DB.rows['mia'].progress.settings.dailyGoal;
   console.log('✓ Device A: app auto-synced a change (cloud dailyGoal =', cloudGoal, ')');
 
-  // ---------- DEVICE B: fresh browser → "Sign in" → Mia's progress appears ----------
+  // ---------- DEVICE B: fresh browser → landing → "Sign in" → Mia's progress appears ----------
   const B = await device(browser);
   await B.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'networkidle' });
-  await B.waitForSelector('.screen--profile-new.is-active');
-  await B.click('#avatar-grid .av-btn:nth-child(2)');
-  await B.fill('#pn-name', 'Guest');
-  await B.click('#pn-create');
-  await B.waitForSelector('.screen--home.is-active');
-  await B.click('#player-switch');
-  await B.waitForSelector('.screen--profiles.is-active');
-  await B.click('#cloud-signin');
+  await B.waitForSelector('.screen--landing.is-active');
+  await B.click('#lp-signin');
   await B.waitForSelector('.screen--cloud.is-active');
   await B.fill('#cl-name', 'Mia');
   await B.fill('#cl-pin', '1357');
@@ -112,6 +108,23 @@ async function device(browser) {
   const badgeShown = await B.evaluate(() => !document.getElementById('cloud-badge').hidden);
   if (!badgeShown) throw new Error('cloud badge should be visible for a linked profile');
   console.log('✓ Device B: profile cloud-linked and ☁︎ badge shown');
+
+  // ---------- DEVICE C: fresh browser → landing → "Create account" → straight into the game ----------
+  const C = await device(browser);
+  await C.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'networkidle' });
+  await C.waitForSelector('.screen--landing.is-active');
+  await C.click('#lp-create');
+  await C.waitForSelector('.screen--cloud.is-active');
+  if (!/Create account/.test(await C.textContent('#cl-title'))) throw new Error('expected the Create account screen');
+  await C.fill('#cl-name', 'Leo');
+  await C.fill('#cl-pin', '2468');
+  await C.click('#cl-go');
+  await C.waitForSelector('.screen--home.is-active', { timeout: 5000 });
+  await sleep(300);
+  if (!DB.rows['leo']) throw new Error('create-account did not make a cloud account');
+  const cLinked = await C.evaluate(() => { const reg = JSON.parse(localStorage.getItem('tth.profiles.v1')); const p = reg.profiles.find(x => x.id === reg.activeId); return !!(p && p.cloud && p.cloud.name === 'Leo'); });
+  if (!cLinked) throw new Error('new-account profile should be cloud-linked');
+  console.log('✓ Device C: created a new account from the landing → playing, auto-linked');
 
   // ---------- wrong PIN rejected ----------
   await B.click('#player-switch');

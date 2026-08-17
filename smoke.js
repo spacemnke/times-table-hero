@@ -17,10 +17,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const base = `http://localhost:${PORT}/index.html`;
   await page.goto(base, { waitUntil: "networkidle" });
 
-  // First run → create-profile screen
+  // First run → landing page → "just play on this device" → create-profile
+  await page.waitForSelector('.screen--landing.is-active');
+  console.log("✓ first run shows the landing page");
+  await page.click('#lp-guest');
   await page.waitForSelector('.screen--profile-new.is-active');
   const backHidden = await page.evaluate(() => getComputedStyle(document.querySelector('#pn-back')).visibility === 'hidden');
-  console.log("✓ first run shows profile creation (back hidden:", backHidden + ")");
+  console.log("✓ guest → profile creation (back hidden:", backHidden + ")");
   await page.click('#avatar-grid .av-btn:nth-child(2)');
   await page.fill('#pn-name', 'Mia');
   await page.click('#pn-create');
