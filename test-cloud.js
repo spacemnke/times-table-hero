@@ -126,7 +126,7 @@ async function device(browser) {
   // ---------- wrong PIN rejected ----------
   await B.click('#player-switch');
   await B.waitForSelector('.screen--profiles.is-active');
-  await B.click('#cloud-signin');
+  await B.click('.profiles-grid .pcard--signin');   // "Add existing player" (sign in)
   await B.waitForSelector('.screen--cloud.is-active');
   await B.fill('#cl-name', 'Mia');
   await B.fill('#cl-pin', '9999');

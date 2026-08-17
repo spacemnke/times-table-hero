@@ -178,9 +178,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const miaXp = (await readActive()).xp;
   await page.click('#player-switch');
   await page.waitForSelector('.screen--profiles.is-active');
-  const cards1 = await page.$$eval('.profiles-grid .pcard:not(.pcard--add)', e => e.length);
+  const cards1 = await page.$$eval('.profiles-grid .pcard:not(.pcard--add):not(.pcard--signin)', e => e.length);
   console.log("✓ profile picker shows", cards1, "player(s) + add");
-  await page.click('.profiles-grid .pcard--add');
+  await page.click('.profiles-grid .pcard--add');   // "Add new player"
   await page.waitForSelector('.screen--profile-new.is-active');
   await page.click('#avatar-grid .av-btn:nth-child(5)');
   await page.fill('#pn-name', 'Ava');
@@ -195,8 +195,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // switch back to Mia — her progress intact
   await page.click('#player-switch');
   await page.waitForSelector('.screen--profiles.is-active');
-  const names = await page.$$eval('.profiles-grid .pcard__name', e => e.map(x => x.textContent));
-  console.log("✓ both players listed:", names.filter(n => n !== "Add player").join(", "));
+  const names = await page.$$eval('.profiles-grid .pcard:not(.pcard--add):not(.pcard--signin) .pcard__name', e => e.map(x => x.textContent));
+  console.log("✓ both players listed:", names.join(", "));
   await page.click('.profiles-grid .pcard'); // first card = Mia
   await page.waitForSelector('.screen--home.is-active');
   const backXp = (await readActive()).xp;
