@@ -2480,9 +2480,30 @@
       if (w > SZ(5)) P(cx - SZ(2), cy - SZ(5), SZ(3), SZ(10), "#f2e0ff");
       if (Math.floor(spin * 3) % 2) { P(cx + SZ(7), cy - SZ(9), 2, 2, "#ffffff"); P(cx - SZ(9), cy + SZ(5), 2, 2, "#ffffff"); }
     }
+    // ---- shared "danger costume" so every trap reads as AVOID (not a prize or a platform) ----
+    function trapGlow(cx, gY) {
+      var cy = gY - SZ(24), r = SZ(40), pulse = 0.22 + 0.16 * Math.abs(Math.sin(G.t * 4));
+      var g = x.createRadialGradient(cx, cy, SZ(3), cx, cy, r);
+      g.addColorStop(0, "rgba(255,58,48," + pulse.toFixed(3) + ")"); g.addColorStop(1, "rgba(255,58,48,0)");
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+    }
+    function trapBase(cx, gY) {
+      var bw = SZ(56), bx = cx - bw / 2, by = gY + SZ(1), step = SZ(8), lw = Math.max(1, Math.round(sx));
+      for (var i = 0; i < bw; i += step) { P(bx + i, by, SZ(5), SZ(6), "#ff3b30"); P(bx + i + SZ(4), by, SZ(4), SZ(6), "#141018"); }   // red-&-black caution tape
+      var tw = SZ(9);
+      for (var t = bx; t < bx + bw - SZ(4); t += tw) { x.fillStyle = "#ff3b30"; x.beginPath(); x.moveTo(t, by); x.lineTo(t + tw / 2, by - SZ(8)); x.lineTo(t + tw, by); x.closePath(); x.fill(); x.strokeStyle = "#7a0f0a"; x.lineWidth = lw; x.stroke(); }   // spike teeth
+    }
+    function trapBeacon(cx, gY, ph) {
+      var wy = gY - SZ(80), s = SZ(11), on = Math.floor(ph * 3) % 2, o = SZ(2);
+      x.fillStyle = "#101018"; x.beginPath(); x.moveTo(cx, wy - o); x.lineTo(cx + s + o, wy + s * 1.7 + o); x.lineTo(cx - s - o, wy + s * 1.7 + o); x.closePath(); x.fill();
+      x.fillStyle = on ? "#ffd21f" : "#ff8a1a"; x.beginPath(); x.moveTo(cx, wy); x.lineTo(cx + s, wy + s * 1.7); x.lineTo(cx - s, wy + s * 1.7); x.closePath(); x.fill();
+      var mw = Math.max(2, SZ(3));
+      P(cx - mw / 2, wy + Math.round(s * 0.5), mw, Math.round(s * 0.7), "#101018");
+      P(cx - mw / 2, wy + Math.round(s * 1.35), mw, mw, "#101018");
+    }
     function pxTrap(type, cx, gY, ph, sprung) {
-      // hazard stripe on the ground so it never reads as decoration
-      for (var hz = -26; hz < 26; hz += 8) P(cx + SZ(hz), gY + SZ(2), SZ(4), SZ(4), (Math.floor(hz / 4) % 2 ? "#ff3b30" : "#241018"));
+      var baseX = cx;
+      trapGlow(baseX, gY);                       // red danger aura behind the trap
       var wob = Math.round(Math.sin(ph * 4) * SZ(2)); cx += wob;
       if (type === "bush") {
         disc(cx, gY - SZ(28), SZ(26), "#1f6e2a"); disc(cx, gY - SZ(28), SZ(17), "#3aa64a");
@@ -2507,13 +2528,13 @@
       else if (type === "hoop") { for (var a = 0; a < 14; a++) { var an = a / 14 * 6.283, hxp = cx + Math.round(Math.cos(an) * SZ(26)), hyp = gY - SZ(32) + Math.round(Math.sin(an) * SZ(26)); disc(hxp, hyp, SZ(6), "#5a1400"); disc(hxp, hyp, SZ(4), (a + Math.floor(ph * 6)) % 2 ? "#ff5a1a" : "#ff9a1a"); disc(hxp, hyp, SZ(2), "#fff2c0"); } }
       else if (type === "snowball") { disc(cx, gY - SZ(13), SZ(16), "#8fb4d4"); disc(cx, gY - SZ(13), SZ(14), "#ffffff"); disc(cx + SZ(5), gY - SZ(11), SZ(9), "#cfe0ee"); disc(cx, gY - SZ(32), SZ(12), "#8fb4d4"); disc(cx, gY - SZ(32), SZ(10), "#ffffff"); disc(cx + SZ(3), gY - SZ(31), SZ(6), "#cfe0ee"); P(cx - SZ(5), gY - SZ(34), SZ(3), SZ(3), "#111"); P(cx + SZ(2), gY - SZ(34), SZ(3), SZ(3), "#111"); P(cx - SZ(1), gY - SZ(31), SZ(5), SZ(2), "#ff8a2a"); P(cx - SZ(16), gY - SZ(24), SZ(10), SZ(3), "#8a5a2a"); var sbz = gY - SZ(22) - Math.round(Math.abs(Math.sin(ph * 5)) * SZ(6)); disc(cx + SZ(20), sbz, SZ(7), "#8fb4d4"); disc(cx + SZ(20), sbz, SZ(5), "#fff"); }
       else if (type === "iceblock") { var dd = Math.round((Math.sin(ph * 3) + 1) * SZ(9)); P(cx - SZ(3), gY - SZ(58), SZ(6), SZ(12), "#8fdcff"); var ibx = cx - SZ(15), iby = gY - SZ(42) - dd; P(ibx, iby, SZ(30), SZ(30), "#4fbdec"); P(ibx, iby, SZ(30), SZ(5), "#bfeeff"); P(ibx, iby, SZ(6), SZ(30), "#8fdcff"); P(ibx + SZ(24), iby, SZ(6), SZ(30), "#2f93c8"); P(ibx, iby + SZ(25), SZ(30), SZ(5), "#2f93c8"); }
-      else if (type === "star") { disc(cx, gY - SZ(26), SZ(21), "#3a2606"); pxStar(cx, gY - SZ(26), SZ(18)); for (var ss = 0; ss < 3; ss++) P(cx - SZ(20) + ss * SZ(14), gY - SZ(6), SZ(3), SZ(3), "#ffe06a"); }
+      else if (type === "star") { var sy = gY - SZ(26), r = SZ(18); disc(cx, sy, SZ(21), "#2a1a06"); P(cx - 1, sy - r, 2, r * 2, "#a8781e"); P(cx - r, sy - 1, r * 2, 2, "#a8781e"); P(cx - Math.round(r * .6), sy - Math.round(r * .6), Math.round(r * 1.2), Math.round(r * 1.2), "#c99a2e"); P(cx - SZ(2), sy - SZ(2), SZ(4), SZ(4), "#6a4a10"); }   // dull "cursed" star — not the shiny pickup
       else if (type === "rps") { P(cx - SZ(13), gY - SZ(34), SZ(26), SZ(34), "#8b6cf0"); P(cx - SZ(13), gY - SZ(34), SZ(26), SZ(5), "#a98bff"); P(cx - SZ(8), gY - SZ(28), SZ(6), SZ(6), "#fff"); P(cx + SZ(3), gY - SZ(28), SZ(6), SZ(6), "#fff"); P(cx - SZ(6), gY - SZ(26), SZ(3), SZ(3), "#111"); P(cx + SZ(5), gY - SZ(26), SZ(3), SZ(3), "#111"); var gg = Math.floor(ph * 2) % 3; if (gg === 0) disc(cx, gY - SZ(48), SZ(9), "#f2d6b0"); else if (gg === 1) P(cx - SZ(11), gY - SZ(54), SZ(22), SZ(12), "#f2d6b0"); else { P(cx - SZ(3), gY - SZ(56), SZ(3), SZ(15), "#f2d6b0"); P(cx + SZ(3), gY - SZ(56), SZ(3), SZ(15), "#f2d6b0"); } }
       else if (type === "police") { var pf = Math.floor(ph * 4) % 2; P(cx - SZ(20), gY - SZ(16), SZ(40), SZ(16), "#e8ecff"); for (var pb = -14; pb <= 14; pb += 9) P(cx + SZ(pb), gY - SZ(16), SZ(3), SZ(16), "#2a3350"); P(cx - SZ(20), gY - SZ(16), SZ(40), SZ(4), "#ffd23f"); P(cx - SZ(12), gY - SZ(28), SZ(11), SZ(9), pf ? "#ff3b30" : "#3a6bff"); P(cx + SZ(1), gY - SZ(28), SZ(11), SZ(9), pf ? "#3a6bff" : "#ff3b30"); }
       else if (type === "booger") { var bwf = Math.sin(ph * 8) > 0 ? SZ(4) : 0; disc(cx, gY - SZ(28), SZ(13), "#f2c9a0"); P(cx - SZ(5), gY - SZ(24), SZ(4), SZ(5), "#a9743f"); P(cx + SZ(2), gY - SZ(24), SZ(4), SZ(5), "#a9743f"); P(cx - SZ(22), gY - SZ(34) - bwf, SZ(11), SZ(6), "#fff"); P(cx + SZ(12), gY - SZ(34) - bwf, SZ(11), SZ(6), "#fff"); disc(cx - SZ(2), gY - SZ(12) + Math.round(Math.abs(Math.sin(ph * 6)) * SZ(6)), SZ(4), "#8fd14a"); }
       else { P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(56), "#38316e"); for (var v = -22; v <= 22; v += 8) P(cx + SZ(v), gY - SZ(54), SZ(4), SZ(54), "#a9c4ff"); P(cx - SZ(26), gY - SZ(56), SZ(52), SZ(5), "#37e0ff"); P(cx - SZ(26), gY - SZ(5), SZ(52), SZ(5), "#37e0ff"); P(cx - SZ(7), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); P(cx + SZ(2), gY - SZ(34), SZ(6), SZ(7), "#37e0ff"); }
-      // pulsing warning mark floating above
-      if (!sprung) { var wy = gY - SZ(74), on = Math.floor(ph * 3) % 2; var wc = on ? "#ff3b30" : "#ffd23f"; P(cx - SZ(2), wy, SZ(5), SZ(11), wc); P(cx - SZ(2), wy + SZ(13), SZ(5), SZ(4), wc); }
+      trapBase(baseX, gY);                       // red-&-black caution band + spike teeth
+      if (!sprung) trapBeacon(baseX, gY, ph);    // ⚠ warning beacon
     }
 
     /* ---- HUD (pixel) ---- */
