@@ -15,20 +15,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   page.on("pageerror", e => errors.push("pageerror: " + e.message));
 
   const base = `http://localhost:${PORT}/index.html`;
+  // fresh visitors now land on the account front door; seed a local player so this broad suite
+  // can exercise the game itself (account flows are covered by test-cloud.js)
+  await page.addInitScript(() => localStorage.setItem("tth.profiles.v1", JSON.stringify({ activeId: "mia", profiles: [{ id: "mia", name: "Mia", avatar: "🐰" }] })));
   await page.goto(base, { waitUntil: "networkidle" });
-
-  // First run → landing page → "just play on this device" → create-profile
-  await page.waitForSelector('.screen--landing.is-active');
-  console.log("✓ first run shows the landing page");
-  await page.click('#lp-guest');
-  await page.waitForSelector('.screen--profile-new.is-active');
-  const backHidden = await page.evaluate(() => getComputedStyle(document.querySelector('#pn-back')).visibility === 'hidden');
-  console.log("✓ guest → profile creation (back hidden:", backHidden + ")");
-  await page.click('#avatar-grid .av-btn:nth-child(2)');
-  await page.fill('#pn-name', 'Mia');
-  await page.click('#pn-create');
   await page.waitForSelector('.screen--home.is-active');
-  console.log("✓ created profile, player switch shows:", (await page.textContent('#ps-name')).trim(), (await page.textContent('#ps-av')).trim());
+  console.log("✓ booted into home as seeded player:", (await page.textContent('#ps-name')).trim(), (await page.textContent('#ps-av')).trim());
 
   // helper: answer a typed play question correctly via keypad
   async function answerTyped() {

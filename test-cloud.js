@@ -51,13 +51,8 @@ async function device(browser) {
 
   // ---------- DEVICE A: make a local player, give them progress, then "Save online" ----------
   const A = await device(browser);
+  await A.addInitScript(() => localStorage.setItem('tth.profiles.v1', JSON.stringify({ activeId: 'mia', profiles: [{ id: 'mia', name: 'Mia', avatar: '🦄' }] })));
   await A.goto(`http://localhost:${PORT}/index.html`, { waitUntil: "networkidle" });
-  await A.waitForSelector('.screen--landing.is-active');
-  await A.click('#lp-guest');                                 // "Just play on this device"
-  await A.waitForSelector('.screen--profile-new.is-active');
-  await A.click('#avatar-grid .av-btn:nth-child(1)');
-  await A.fill('#pn-name', 'Mia');
-  await A.click('#pn-create');
   await A.waitForSelector('.screen--home.is-active');
   await A.evaluate(() => { const reg = JSON.parse(localStorage.getItem('tth.profiles.v1')); const id = reg.activeId; const p = JSON.parse(localStorage.getItem('tth.progress.v2.' + id) || '{}'); p.xp = 500; p.coins = 42; p.worldsUnlocked = 4; localStorage.setItem('tth.progress.v2.' + id, JSON.stringify(p)); });
   await A.reload({ waitUntil: 'networkidle' });
