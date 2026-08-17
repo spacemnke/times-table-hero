@@ -268,6 +268,7 @@
     else if (dest === "parent") { openParent(); }
     else show(dest);
   }
+  window.__go = route;   // debug/test hook for direct navigation
 
   /* ---------------- HOME / dashboard ---------------- */
   function renderHome() {
@@ -2323,49 +2324,68 @@
 
     /* ---- level map (pixel canvas) ---- */
     var mapNodes = [];
+    function mapR(W, H) { return Math.round(Math.max(15, Math.min(46, Math.min(W, H) * 0.078))); }
     function buildMap() {
-      var mcv = $("#adv-mapCanvas"), mg = mcv.getContext("2d"); var W = 320, H = 208; mcv.width = W; mcv.height = H; mg.imageSmoothingEnabled = false;
+      var mcv = $("#adv-mapCanvas"), stage = mcv.parentElement;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      var W = (stage && stage.clientWidth) || window.innerWidth || 360;
+      var H = (stage && stage.clientHeight) || window.innerHeight || 640;
+      mcv.width = Math.round(W * dpr); mcv.height = Math.round(H * dpr);
+      var mg = mcv.getContext("2d"); mg.setTransform(dpr, 0, 0, dpr, 0, 0); mg.imageSmoothingEnabled = false;
+      var portrait = H >= W, R = mapR(W, H), k = R / 12;
+      var topM = H * 0.13, botM = H * (portrait ? 0.2 : 0.14);   // clear the title strip + hero dock
       mapNodes = [];
-      for (var i = 0; i < MAXLEVELS; i++) { var nx = Math.round(30 + i * ((W - 60) / (MAXLEVELS - 1))), ny = Math.round(112 + Math.sin(i * 0.82 + 0.5) * 52); mapNodes.push({ x: nx, y: ny, n: i + 1, theme: THEMES[i % THEMES.length] }); }
+      if (portrait) {   // serpentine down the screen (fills a tall phone)
+        var cx = W * 0.5, ampX = Math.min(W * 0.32, W * 0.5 - R - 22), usableH = H - topM - botM;
+        for (var i = 0; i < MAXLEVELS; i++) { var t = MAXLEVELS > 1 ? i / (MAXLEVELS - 1) : 0; mapNodes.push({ x: Math.round(cx + Math.sin(i * 0.95 + 0.5) * ampX), y: Math.round(topM + t * usableH), n: i + 1, theme: THEMES[i % THEMES.length] }); }
+      } else {          // serpentine across the screen (fills a wide desktop / landscape)
+        var x0 = W * 0.08, usableW = W * 0.84, cy = (topM + (H - botM)) / 2, ampY = Math.min((H - topM - botM) * 0.42, H * 0.5 - R - 16);
+        for (var j = 0; j < MAXLEVELS; j++) { var tj = MAXLEVELS > 1 ? j / (MAXLEVELS - 1) : 0; mapNodes.push({ x: Math.round(x0 + tj * usableW), y: Math.round(cy + Math.sin(j * 0.82 + 0.5) * ampY), n: j + 1, theme: THEMES[j % THEMES.length] }); }
+      }
       function rrect(x0, y0, w, h, r) { mg.beginPath(); mg.moveTo(x0 + r, y0); mg.arcTo(x0 + w, y0, x0 + w, y0 + h, r); mg.arcTo(x0 + w, y0 + h, x0, y0 + h, r); mg.arcTo(x0, y0 + h, x0, y0, r); mg.arcTo(x0, y0, x0 + w, y0, r); mg.closePath(); }
       // water
       var wg = mg.createLinearGradient(0, 0, 0, H); wg.addColorStop(0, "#3a8fd8"); wg.addColorStop(1, "#1f5fa8"); mg.fillStyle = wg; mg.fillRect(0, 0, W, H);
-      mg.fillStyle = "rgba(255,255,255,.13)"; for (var s = 0; s < 80; s++) mg.fillRect((s * 61) % W, (s * 43) % H, (s % 4 ? 2 : 3), 1);
+      mg.fillStyle = "rgba(255,255,255,.13)"; var sN = Math.round(W * H / 900); for (var s = 0; s < sN; s++) mg.fillRect((s * 61) % W, (s * 43) % H, (s % 4 ? 2 : 3), 1);
       // clouds (behind the land)
-      mg.fillStyle = "rgba(255,255,255,.9)";[[44, 24], [268, 18], [150, 30]].forEach(function (c) {[[0, 0, 9], [8, 2, 7], [-8, 2, 6]].forEach(function (o) { mg.beginPath(); mg.arc(c[0] + o[0], c[1] + o[1], o[2], 0, 7); mg.fill(); }); });
+      mg.fillStyle = "rgba(255,255,255,.9)";[[.14, .12], [.84, .09], [.47, .16], [.68, .32], [.2, .46]].forEach(function (c) { var ccx = c[0] * W, ccy = c[1] * H, cr = R * 0.7;[[0, 0, cr], [cr * .82, cr * .22, cr * .78], [-cr * .82, cr * .22, cr * .66]].forEach(function (o) { mg.beginPath(); mg.arc(ccx + o[0], ccy + o[1], o[2], 0, 7); mg.fill(); }); });
       // landmass — sand + grass blobs following the winding path
       var pts = []; mapNodes.forEach(function (p, i) { pts.push([p.x, p.y]); if (i < mapNodes.length - 1) pts.push([(p.x + mapNodes[i + 1].x) / 2, (p.y + mapNodes[i + 1].y) / 2]); });
       function blobs(r, col, dy) { mg.fillStyle = col; pts.forEach(function (pt) { mg.beginPath(); mg.arc(pt[0], pt[1] + (dy || 0), r, 0, 7); mg.fill(); }); }
-      blobs(32, "#e2c184"); blobs(30, "#c9a865", 2); blobs(27, "#2f8f3a", 3); blobs(26, "#49ba52"); blobs(19, "#5fce62", -3);
+      blobs(32 * k, "#e2c184"); blobs(30 * k, "#c9a865", 2 * k); blobs(27 * k, "#2f8f3a", 3 * k); blobs(26 * k, "#49ba52"); blobs(19 * k, "#5fce62", -3 * k);
       // winding road
       function road(w, col, dash) { mg.strokeStyle = col; mg.lineWidth = w; mg.lineCap = "round"; mg.lineJoin = "round"; mg.setLineDash(dash || []); mg.beginPath(); mapNodes.forEach(function (p, i) { i ? mg.lineTo(p.x, p.y) : mg.moveTo(p.x, p.y); }); mg.stroke(); }
-      road(10, "#7a4e26"); road(6, "#d2a45f"); road(1.6, "rgba(255,255,255,.75)", [2, 5]); mg.setLineDash([]);
+      road(10 * k, "#7a4e26"); road(6 * k, "#d2a45f"); road(Math.max(1, 1.6 * k), "rgba(255,255,255,.75)", [2 * k, 5 * k]); mg.setLineDash([]);
       var savedX = x; x = mg;
       // little trees dotted on the grass beside a few tiles (kept clear of badges/labels)
-      [[0, -16, -13], [2, 16, -12], [5, -16, 13], [6, 15, 13]].forEach(function (d) { var nd = mapNodes[d[0]]; pxProp("tree", nd.x + d[1], nd.y + d[2] + 6, 18, THEMES[0]); });
+      [[0, -1.3, -1.1], [Math.min(2, MAXLEVELS - 1), 1.3, -1], [Math.min(5, MAXLEVELS - 1), -1.3, 1.1], [Math.min(6, MAXLEVELS - 1), 1.25, 1.1]].forEach(function (d) { var nd = mapNodes[d[0]]; if (nd) pxProp("tree", Math.round(nd.x + d[1] * R), Math.round(nd.y + d[2] * R + 6), Math.round(R * 1.5), THEMES[0]); });
       // level tiles
+      var labels = [];
       mapNodes.forEach(function (p) {
-        var open = p.n <= unlocked, done = p.n < unlocked, here = p.n === Math.min(unlocked, MAXLEVELS), R = 12;
-        mg.save(); rrect(p.x - R, p.y - R, R * 2, R * 2, 4); mg.clip();
+        var open = p.n <= unlocked, done = p.n < unlocked, here = p.n === Math.min(unlocked, MAXLEVELS), gs = R * 0.58;
+        mg.save(); rrect(p.x - R, p.y - R, R * 2, R * 2, R * 0.34); mg.clip();
         mg.fillStyle = p.theme.sky; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2);
         mg.fillStyle = p.theme.sky2 || p.theme.sky; mg.fillRect(p.x - R, p.y, R * 2, R);
-        mg.fillStyle = p.theme.grass; mg.fillRect(p.x - R, p.y + R - 7, R * 2, 7);
-        pxProp(p.theme.prop, p.x, p.y + R - 7, 17, p.theme);
+        mg.fillStyle = p.theme.grass; mg.fillRect(p.x - R, p.y + R - gs, R * 2, gs);
+        pxProp(p.theme.prop, p.x, p.y + R - gs, Math.round(R * 1.4), p.theme);
         if (!open) { mg.fillStyle = "rgba(14,18,34,.66)"; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2); }
         mg.restore();
-        rrect(p.x - R, p.y - R, R * 2, R * 2, 4); mg.lineWidth = here ? 3 : 2; mg.strokeStyle = here ? "#ff4fa3" : open ? "#ffffff" : "#59648c"; mg.stroke();
+        rrect(p.x - R, p.y - R, R * 2, R * 2, R * 0.34); mg.lineWidth = here ? 3 : 2; mg.strokeStyle = here ? "#ff4fa3" : open ? "#ffffff" : "#59648c"; mg.stroke();
         // number badge (pink=here, green=done, gold=open, grey=locked)
-        mg.beginPath(); mg.arc(p.x + R - 1, p.y - R + 1, 7, 0, 7); mg.fillStyle = here ? "#ff4fa3" : done ? "#3ad44a" : open ? "#ffd23f" : "#39447a"; mg.fill(); mg.lineWidth = 1.4; mg.strokeStyle = "#101828"; mg.stroke();
-        mg.fillStyle = open ? "#101828" : "#cfd6ff"; mg.font = "900 9px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, p.x + R - 1, p.y - R + 2);
-        if (!open) { mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - 4, p.y - 1, 8, 6); mg.strokeStyle = "#ffd23f"; mg.lineWidth = 1.4; mg.beginPath(); mg.arc(p.x, p.y - 1, 3, Math.PI, 0); mg.stroke(); mg.fillStyle = "#101828"; mg.fillRect(p.x - 1, p.y + 1, 2, 3); }
-        mg.fillStyle = open ? "#ffffff" : "#8f9ac9"; mg.font = "700 8px monospace"; mg.textBaseline = "alphabetic"; mg.fillText(p.theme.name, p.x, p.y + R + 10);
-        if (progress.secretsFound && progress.secretsFound[p.n]) { var cq = p.x - R + 3, cy = p.y - R + 3; mg.fillStyle = "#ffd23f"; for (var a = 0; a < 5; a++) { var an = a / 5 * 6.28 - 1.57; mg.fillRect(Math.round(cq + Math.cos(an) * 3) - 1, Math.round(cy + Math.sin(an) * 3) - 1, 2, 2); } }
+        var br = R * 0.58, bx = p.x + R - br * 0.5, by = p.y - R + br * 0.5;
+        mg.beginPath(); mg.arc(bx, by, br, 0, 7); mg.fillStyle = here ? "#ff4fa3" : done ? "#3ad44a" : open ? "#ffd23f" : "#39447a"; mg.fill(); mg.lineWidth = 1.4; mg.strokeStyle = "#101828"; mg.stroke();
+        mg.fillStyle = open ? "#101828" : "#cfd6ff"; mg.font = "900 " + Math.round(R * 0.72) + "px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, bx, by + 1);
+        if (!open) { mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - R * 0.33, p.y - R * 0.08, R * 0.66, R * 0.5); mg.strokeStyle = "#ffd23f"; mg.lineWidth = Math.max(1, R * 0.12); mg.beginPath(); mg.arc(p.x, p.y - R * 0.08, R * 0.25, Math.PI, 0); mg.stroke(); mg.fillStyle = "#101828"; mg.fillRect(p.x - R * 0.08, p.y + R * 0.08, R * 0.16, R * 0.24); }
+        labels.push({ name: p.theme.name, x: p.x, y: p.y + R + R * 0.85, open: open });
+        if (progress.secretsFound && progress.secretsFound[p.n]) { var cq = p.x - R + R * 0.28, cy2 = p.y - R + R * 0.28; mg.fillStyle = "#ffd23f"; for (var a = 0; a < 5; a++) { var an = a / 5 * 6.28 - 1.57; mg.fillRect(Math.round(cq + Math.cos(an) * R * 0.24) - 1, Math.round(cy2 + Math.sin(an) * R * 0.24) - 1, 2, 2); } }
       });
+      // world-name labels in a second pass so no neighbouring tile ever clips one
+      mg.font = "700 " + Math.round(R * 0.6) + "px monospace"; mg.textBaseline = "alphabetic"; mg.textAlign = "center"; mg.lineJoin = "round"; mg.lineWidth = Math.max(2, R * 0.18);
+      labels.forEach(function (l) { mg.strokeStyle = "rgba(8,10,20,.92)"; mg.strokeText(l.name, l.x, l.y); mg.fillStyle = l.open ? "#ffffff" : "#c2c9e8"; mg.fillText(l.name, l.x, l.y); });
       x = savedX;
       // "you are here" hero standee above the current node
-      var cp = mapNodes[Math.min(unlocked, MAXLEVELS) - 1]; if (cp) heroDraw(mg, HEROTYPE, cp.x - 13, cp.y - 40, 26, 24, 0, true);
+      var cp = mapNodes[Math.min(unlocked, MAXLEVELS) - 1]; if (cp) heroDraw(mg, HEROTYPE, cp.x - R * 1.1, cp.y - R * 3.3, R * 2.2, R * 2, 0, true);
     }
-    function mapClick(ev) { var mcv = $("#adv-mapCanvas"), rect = mcv.getBoundingClientRect(), scale = mcv.width / rect.width; var mxp = (ev.clientX - rect.left) * scale, myp = (ev.clientY - rect.top) * scale; for (var i = 0; i < mapNodes.length; i++) { var p = mapNodes[i]; if (p.n <= unlocked && Math.abs(mxp - p.x) < 16 && Math.abs(myp - p.y) < 16) { ac(); startLevel(p.n); return; } } }
+    function mapClick(ev) { var mcv = $("#adv-mapCanvas"), rect = mcv.getBoundingClientRect(); var mxp = ev.clientX - rect.left, myp = ev.clientY - rect.top, tol = mapR(rect.width, rect.height) + 8; for (var i = 0; i < mapNodes.length; i++) { var p = mapNodes[i]; if (p.n <= unlocked && Math.abs(mxp - p.x) < tol && Math.abs(myp - p.y) < tol) { ac(); startLevel(p.n); return; } } }
     function buildCharRow() {
       var row = $("#adv-charRow"); row.innerHTML = ""; var gems = progress.gems || 0;
       CHARS.forEach(function (ch) {
@@ -2404,9 +2424,9 @@
     function leave() { running = false; warpFX = null; musicStop(); }
     function startDaily() {
       HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1);
-      enter(); hideAllOv(); reset(1); G.state = "map"; buildCharRow(); buildMap(); redrawPmapHero(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden");
+      enter(); hideAllOv(); reset(1); G.state = "map"; buildCharRow(); redrawPmapHero(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); buildMap();
     }
-    function openMap() { unlocked = Math.max(1, progress.worldsUnlocked || 1); hideAllOv(); if (G) G.state = "map"; buildMap(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); }
+    function openMap() { unlocked = Math.max(1, progress.worldsUnlocked || 1); hideAllOv(); if (G) G.state = "map"; hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); buildMap(); }
     function exitHome() { leave(); musicStop(); renderHome(); show("home"); }
 
     /* ---- PRACTICE ARENA: drill the mini-games back-to-back on chosen tables (no world, no fail) ---- */
@@ -2445,8 +2465,9 @@
     function advInit() {
       cv = $("#adv-c"); x = cv.getContext("2d"); buildHeroArt();
       var ci = $("#adv-coin-icon"); ci.width = 8; ci.height = 8; var cig = ci.getContext("2d"); cig.imageSmoothingEnabled = false; coinPix(cig);
-      window.addEventListener("resize", function () { if (running) resize(); });
-      window.addEventListener("orientationchange", function () { if (running) { resize(); setTimeout(function () { if (running) resize(); }, 300); } });
+      function mapVisible() { return !$("#adv-mapOv").classList.contains("hidden"); }
+      window.addEventListener("resize", function () { if (running) resize(); if (mapVisible()) buildMap(); });
+      window.addEventListener("orientationchange", function () { if (running) { resize(); setTimeout(function () { if (running) resize(); if (mapVisible()) buildMap(); }, 300); } });
       cv.addEventListener("pointerdown", function (e) { ac(); if (G && G.state === "showdown") sdDown(e); else if (G && G.state === "lanes") laneTap(); else if (G && G.state === "asteroid") astTap(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.down) G.mini.down(e); } else jump(); });
       cv.addEventListener("pointermove", function (e) { if (G && G.state === "showdown") sdMove(e); else if (G && G.mini && G.state === G.mini.key && G.mini.move) G.mini.move(e); });
       cv.addEventListener("pointerup", function (e) { if (G && G.state === "showdown") sdUp(e); else if (G && G.mini && G.state === G.mini.key) { if (G.mini.up) G.mini.up(e); } else if (G && (G.state === "lanes" || G.state === "asteroid")) { /* tap handled on down */ } else jumpRelease(); });
@@ -2616,7 +2637,6 @@
     ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
     buildLearn();
     buildMulti("#quiz-picker", state.quizTables, function () { $("#quiz-start").disabled = state.quizTables.length === 0; });
-    buildMulti("#practice-picker", state.practiceTables, function () { $("#practice-start").disabled = state.practiceTables.length === 0; });
 
     $all("[data-select-all]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -2649,19 +2669,11 @@
     $("#daily-challenge").addEventListener("click", function () { sTap(); ac(); Adv.startDaily(); });
 
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
-    $all("#practice-answer .seg__btn").forEach(function (b) { b.addEventListener("click", function () { sTap(); $all("#practice-answer .seg__btn").forEach(function (x) { x.classList.remove("is-on"); }); b.classList.add("is-on"); state.practiceAnswer = b.getAttribute("data-ans"); }); });
-    $("#practice-start").addEventListener("click", function () {
-      sTap();
-      var ans = state.practiceAnswer || "keypad", tables = state.practiceTables.slice();
-      if (ans === "keypad" || !tables.length) { startPractice(deckFromTables(tables)); return; }
-      ac(); Adv.startArena({ tables: tables, len: Math.max(8, Math.min(16, deckFromTables(tables).length)), mode: ans });
-    });
+    // Practice = always a "Surprise Me" mix of games on the kid's tricky facts (no game/table picker)
     $("#practice-weak").addEventListener("click", function () {
-      sTap();
-      var ans = state.practiceAnswer || "keypad";
-      if (ans === "keypad") { startPractice(weakFacts(15)); return; }
+      sTap(); ac();
       var wk = weakFacts(15), tbls = []; wk.forEach(function (q) { if (tbls.indexOf(q.a) < 0) tbls.push(q.a); });
-      ac(); Adv.startArena({ tables: tbls.length ? tbls : focusTables(), len: 12, mode: ans });
+      Adv.startArena({ tables: tbls.length ? tbls : focusTables(), len: 12, mode: "mix" });
     });
 
     $("#play-quit").addEventListener("click", function () { sTap(); renderHome(); show("home"); });
