@@ -2414,22 +2414,26 @@
         ell(g, 62, 25, 2.4, 2, "#20140c", null);
         eye(g, 50, 21, 2.6, "#6a3a12");
       }
+      // Pixel-art unicorn ported from the landing hero (rainbow mane & tail, gold spiral horn, star flank).
       function uniSide(g, fr) {
-        var B = "#ffffff", D = "#e3d8ef", O = "#3a2a4a", hf = "#b9a7d6", go = "#f5c33f", go2 = "#ffe08a", pk = "#ff9ec7", f = fr ? 2 : -2;
-        for (var t = 0; t < 6; t++) { g.strokeStyle = RB[t]; g.lineCap = "round"; g.lineWidth = 2.2; g.beginPath(); g.moveTo(15, 31 + t * 0.6); g.bezierCurveTo(6, 34 + t * 0.8, 5, 46 + t * 0.6, 10 + t * 0.7, 52); g.stroke(); }
-        limb(g, 18, 40, 18, 51, 5.5, D, O); limb(g, 35 + f, 40, 35 + f, 51, 5.5, D, O);
-        ell(g, 29, 32, 18, 13, B, O); clipEll(g, 29, 32, 17.4, 12.4, function () { g.fillStyle = D; g.beginPath(); g.ellipse(30, 39, 18, 9, 0, 0, 7); g.fill(); });
-        limb(g, 24, 40, 24, 51, 5.5, B, O); limb(g, 40 - f, 40, 40 - f, 51, 5.5, B, O);
-        g.fillStyle = hf;[18, 24, 35 + f, 40 - f].forEach(function (lx) { rrf(g, lx - 2.7, 49, 5.4, 3.6, 1.6, hf, O, 1.4); });
-        pth(g, function (c) { c.moveTo(40, 35); c.lineTo(43, 17); c.lineTo(54, 19); c.lineTo(51, 37); }, B, O);
-        ell(g, 49, 19, 11, 10, B, O); ell(g, 58, 22, 5, 4.4, B, O);
-        ell(g, 60, 22, .9, .9, "#c98fb0", null);
-        pth(g, function (c) { c.moveTo(43, 11); c.lineTo(45, 4); c.lineTo(49, 13); }, B, O);
-        pth(g, function (c) { c.moveTo(45.5, 13); c.lineTo(50, 0); c.lineTo(53, 13); }, go2, O); g.strokeStyle = go; g.lineWidth = 1; for (var s = 2; s < 12; s += 3) { g.beginPath(); g.moveTo(46.5 + (13 - s) * .13, s); g.lineTo(52.5 - (13 - s) * .13, s); g.stroke(); }
-        for (var m = 0; m < 6; m++) { g.strokeStyle = RB[m]; g.lineCap = "round"; g.lineWidth = 2.4; g.beginPath(); g.moveTo(45 - m * 0.3, 10 + m * 0.8); g.bezierCurveTo(36 - m * 0.4, 18, 35, 30, 42 - m * 0.3, 42); g.stroke(); }
-        g.strokeStyle = O; g.lineWidth = 1.4; g.beginPath(); g.moveTo(45, 9); g.bezierCurveTo(35, 16, 34, 30, 41, 43); g.stroke();
-        g.fillStyle = pk; g.beginPath(); g.arc(45, 24, 2, 0, 7); g.fill();
-        eye(g, 51, 18, 2.4, null);
+        var WT = "#ffffff", WS = "#e2e7ff", INK = "#241a4a", GOLD = "#ffd23f", GHI = "#fff2a8", GLO = "#c9930a", PINK = "#ff9ecb", HOOF = "#b07be0";
+        var RBu = ["#ff5a7a", "#ff9a3f", "#ffd23f", "#5fd06a", "#4aa8ff", "#a06bff"], U = 2.7;
+        function P2(rx, ry, w, h, col) { g.fillStyle = col; g.fillRect(Math.round((rx + 3.5) * U) + 1, Math.round((ry + 3.1) * U) + 1, Math.max(1, Math.round(w * U)), Math.max(1, Math.round(h * U))); }
+        function ob(rx, ry, w, h) { P2(rx - 0.45, ry - 0.45, w + 0.9, h + 0.9, INK); }   // chunky dark outline behind a mass
+        function leg(rx, alt) { var up = (fr === 0) ? alt : (1 - alt), h = 4.4 - up * 2.2; ob(rx, 11, 2, h); P2(rx, 11, 2, h, WT); P2(rx, 11 + h - 1.1, 2, 1.4, HOOF); }
+        for (var i = 0; i < 6; i++) P2(-1 - i * 0.5, 5 + i * 1.5, 3.2, 1.6, RBu[i]);        // tail
+        leg(3, 0); leg(5.4, 1);                                                            // back legs
+        ob(2, 6, 11, 6); P2(2, 6, 11, 6, WT); P2(2, 10.6, 11, 1.4, WS); P2(1.4, 7, 1.6, 4, WT);   // body
+        ob(9.5, 3.5, 4, 5); ob(10.5, 2, 5.4, 4.4);                                         // neck + head outline
+        P2(9.5, 3.5, 4, 5, WT); P2(10.5, 2, 5.4, 4.4, WT); P2(15, 4.4, 1.8, 2.2, PINK); P2(15.4, 5, 0.9, 0.9, INK); P2(9.8, 2, 1.8, 1.8, WT);
+        P2(12.6, 3.4, 1.3, 1.5, INK); P2(14.1, 5.1, 1.1, 1.1, "#ff8ab5");                  // eye + cheek
+        for (var hgt = 0; hgt < 4; hgt++) { var hw = 2.0 - hgt * 0.45; P2(11.6 + hgt * 0.25, -0.4 - hgt * 0.9, hw, 1.0, hgt % 2 ? GHI : GOLD); }  // horn
+        for (var m = 0; m < 6; m++) P2(8.4 - (m > 2 ? 0.6 : 0), 1.2 + m * 1.3, 2.6, 1.5, RBu[m]);  // mane
+        P2(10.2, 1, 2.4, 1.4, RBu[0]);                                                     // forelock
+        leg(9, 1); leg(11.4, 0);                                                           // front legs
+        starP(g, Math.round((6.4 + 3.5) * U) + 1, Math.round((8.4 + 3.1) * U) + 1, 1.9 * U, GOLD, GLO, 1);   // star on flank
+        var sx0 = Math.round((17 + 3.5) * U), sy0 = Math.round((-1 + 3.1) * U);            // sparkle by the horn
+        g.fillStyle = GOLD; g.fillRect(sx0 - 2, sy0 + 1, 6, 1); g.fillRect(sx0 + 1, sy0 - 2, 1, 6); g.fillStyle = GHI; g.fillRect(sx0, sy0, 2, 2);
       }
       function catFront(g) {
         var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", O = "#2b2838", am = "#f5b731", pk = "#ff8fb0", st = "#616d88";
@@ -2459,18 +2463,22 @@
         g.strokeStyle = O; g.lineWidth = 1; g.beginPath(); g.moveTo(46, 37); g.lineTo(46, 38.5); g.moveTo(46, 38.5); g.arc(43.5, 38.5, 2.5, 0, Math.PI * .7); g.moveTo(46, 38.5); g.arc(48.5, 38.5, 2.5, Math.PI * .3, Math.PI, true); g.stroke();
         frontEyes(g, 39, 53, 28, 3.2, "#6a3a12");
       }
+      // Pixel-art front-facing unicorn to match the running side sprite.
       function uniFront(g) {
-        var B = "#ffffff", D = "#e3d8ef", O = "#3a2a4a", hf = "#b9a7d6", go = "#f5c33f", go2 = "#ffe08a", pk = "#ff9ec7";
-        rrf(g, 32, 40, 28, 14, 8, B, O);[40, 52].forEach(function (px) { rrf(g, px - 4, 49, 8, 6, 3, hf, O, 1.3); });
-        ell(g, 30, 32, 5, 8, RB[0], O, 1.2); ell(g, 62, 32, 5, 8, RB[5], O, 1.2);
-        ell(g, 46, 28, 19, 18, B, O);
-        for (var m = 0; m < 6; m++) { ell(g, 34.5 + m * 4.6, 17, 3.4, 5, RB[m], O, 1.1); }
-        pth(g, function (c) { c.moveTo(33, 20); c.lineTo(31, 6); c.lineTo(42, 18); }, B, O); pth(g, function (c) { c.moveTo(59, 20); c.lineTo(61, 6); c.lineTo(50, 18); }, B, O);
-        pth(g, function (c) { c.moveTo(41, 14); c.lineTo(46, -6); c.lineTo(51, 14); }, go2, O); g.strokeStyle = go; g.lineWidth = 1; for (var s = -4; s < 14; s += 3) { g.beginPath(); g.moveTo(42.5 + (14 - s) * .13, s); g.lineTo(49.5 - (14 - s) * .13, s); g.stroke(); }
-        ell(g, 46, 37, 12, 9, B, O); ell(g, 42, 37, 1, 1.4, "#c98fb0", null); ell(g, 50, 37, 1, 1.4, "#c98fb0", null);
-        g.strokeStyle = "#b98aa0"; g.lineWidth = 1.2; g.beginPath(); g.arc(46, 39, 4, .2, Math.PI - .2); g.stroke();
-        ell(g, 35, 34, 3, 2.2, pk, null); ell(g, 57, 34, 3, 2.2, pk, null);
-        frontEyes(g, 39, 53, 29, 3.4, null);
+        var WT = "#ffffff", WS = "#e2e7ff", INK = "#241a4a", GOLD = "#ffd23f", GHI = "#fff2a8", GLO = "#c9930a", HOOF = "#b07be0";
+        var RBu = ["#ff5a7a", "#ff9a3f", "#ffd23f", "#5fd06a", "#4aa8ff", "#a06bff"];
+        function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+        function ob(x, y, w, h) { R(x - 2, y - 2, w + 4, h + 4, INK); }
+        ob(30, 46, 7, 13); ob(43, 46, 7, 13); R(30, 46, 7, 13, WT); R(43, 46, 7, 13, WT); R(30, 55, 7, 4, HOOF); R(43, 55, 7, 4, HOOF);  // legs
+        ob(26, 40, 28, 15); R(26, 40, 28, 15, WT); R(26, 50, 28, 4, WS);                       // body
+        for (var k = 0; k < 6; k++) { var hw = 9 - k * 1.3; R(40 - hw / 2, 2 + k * 3, hw, 3, k % 2 ? GHI : GOLD); }   // horn
+        ob(28, 18, 7, 8); ob(45, 18, 7, 8); R(28, 18, 7, 8, WT); R(45, 18, 7, 8, WT); R(30, 20, 3, 4, "#ff9ecb"); R(47, 20, 3, 4, "#ff9ecb");  // ears
+        ob(26, 22, 28, 24); R(26, 22, 28, 24, WT);                                             // head
+        for (var m = 0; m < 6; m++) R(27 + m * 4.3, 20, 4.4, 6, RBu[m]);                        // rainbow bangs
+        R(33, 32, 5, 6, INK); R(42, 32, 5, 6, INK); R(34, 33, 2, 2, "#fff"); R(43, 33, 2, 2, "#fff");  // eyes
+        R(28, 38, 4, 3, "#ff8ab5"); R(48, 38, 4, 3, "#ff8ab5");                                 // cheeks
+        R(34, 40, 12, 6, WS); R(37, 43, 2, 2, INK); R(41, 43, 2, 2, INK);                       // muzzle + nostrils
+        starP(g, 40, 48, 5, GOLD, GLO, 1);                                                     // chest star
       }
       // ---- unlockable object heroes ----
       function starP(g, cx, cy, r, fill, out, ow) { g.beginPath(); for (var i = 0; i < 10; i++) { var a = Math.PI / 5 * i - Math.PI / 2, rr2 = i % 2 ? r * .44 : r; g[i ? "lineTo" : "moveTo"](cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2); } g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (out) { g.strokeStyle = out; g.lineWidth = ow || 1.6; g.lineJoin = "round"; g.stroke(); } }
