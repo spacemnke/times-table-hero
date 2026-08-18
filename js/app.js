@@ -965,7 +965,117 @@
       });
     }
   }
-  function openLanding() { show("landing"); }
+  /* ---- landing hero scene: STARLIGHT gallops through a living pixel world ----
+     Self-contained canvas engine. Runs only while the landing screen is active
+     and the tab is visible, so it never costs battery once a player signs in. */
+  var LandingFX = (function () {
+    var cvs, ctx, W = 0, H = 0, cell = 8, VW = 0, VH = 86, dpr = 1, GROUND = VH - 16;
+    var running = false, t0 = null, reduce = false, inited = false;
+    function active() { var s = document.querySelector(".screen--landing"); return !!(s && s.classList.contains("is-active")); }
+    function resize() {
+      if (!cvs) return; var r = cvs.getBoundingClientRect();
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+      cvs.width = Math.round(W * dpr); cvs.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); cell = H / VH; VW = W / cell;
+    }
+    function P(gx, gy, gw, gh, c) {
+      var x0 = Math.round(gx * cell), y0 = Math.round(gy * cell);
+      var x1 = Math.round((gx + gw) * cell), y1 = Math.round((gy + gh) * cell);
+      ctx.fillStyle = c; ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    }
+    var RB = ["#ff5a7a", "#ff9a3f", "#ffd23f", "#5fd06a", "#4aa8ff", "#a06bff"];
+    var WT = "#ffffff", WS = "#e2e7ff", INK = "#241a4a", GOLD = "#ffd23f", GHI = "#fff2a8", GLO = "#c9930a";
+    var PINK = "#ff9ecb", HOOF = "#b07be0", FOE = "#8b6cf0", FOED = "#5b3fc0";
+    function cloud(cx, cy, s) { var c = "#ffffff"; P(cx, cy + 2 * s, 10 * s, 3 * s, c); P(cx + 2 * s, cy, 6 * s, 3 * s, c); P(cx + 1 * s, cy + 1 * s, 8 * s, 2 * s, c); ctx.globalAlpha = .5; P(cx + 1 * s, cy + 4 * s, 9 * s, 1 * s, "#d6e6ff"); ctx.globalAlpha = 1; }
+    function hill(cx, baseY, w, h, top, side) { for (var i = 0; i < h; i++) { var t = i / h, ww = Math.round(w * Math.sqrt(1 - t * t)); P(cx - ww / 2, baseY - i - 1, ww, 1, i < 2 ? top : side); } }
+    function bush(cx, baseY) { var g = "#57bf3a", d = "#3a9e2a"; P(cx, baseY - 2, 8, 2, g); P(cx + 1, baseY - 4, 3, 2, g); P(cx + 4, baseY - 3, 3, 1, g); P(cx, baseY - 1, 8, 1, d); }
+    function coin(cx, cy, t) { var w = Math.abs(Math.cos(t)) * 4 + 1.4, x = cx - w / 2; P(x, cy, w, 6, GOLD); P(x, cy, w, 1.4, GHI); P(x, cy + 4.6, w, 1.4, GLO); if (w > 3) P(cx - 0.7, cy + 1.6, 1.4, 3, GLO); }
+    function block(cx, cy, glyph) {
+      P(cx, cy, 9, 9, "#e79a1e"); P(cx, cy, 9, 1.4, GHI); P(cx, cy + 7.6, 9, 1.4, "#a86a00"); P(cx + 0.6, cy + 0.6, 7.8, 7.8, "#ffb020");
+      P(cx + 0.9, cy + 0.9, 1, 1, "#7a4a00"); P(cx + 7.1, cy + 0.9, 1, 1, "#7a4a00"); P(cx + 0.9, cy + 7.1, 1, 1, "#7a4a00"); P(cx + 7.1, cy + 7.1, 1, 1, "#7a4a00");
+      ctx.fillStyle = "#5a3200"; ctx.font = "bold " + (6.6 * cell) + "px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(glyph, Math.round((cx + 4.5) * cell), Math.round((cy + 5.0) * cell));
+    }
+    function foe(cx, baseY, t) {
+      var step = Math.floor(t * 6) % 2;
+      P(cx + 1, baseY - 7, 6, 5, FOE); P(cx, baseY - 5, 8, 3, FOE); P(cx + 1, baseY - 7, 6, 1.2, "#a98cff");
+      P(cx + 1.4, baseY - 2, 5.2, 2, "#efe7ff"); P(cx + 2.4, baseY - 3.4, 1.4, 1.6, INK); P(cx + 4.4, baseY - 3.4, 1.4, 1.6, INK);
+      P(cx + 2.2, baseY, 2, 1.6, step ? FOED : "#3a2a7a"); P(cx + 4.2, baseY, 2, 1.6, step ? "#3a2a7a" : FOED);
+    }
+    function star(cx, cy, r, t) {
+      var tw = 0.85 + Math.sin(reduce ? 0 : t * 5) * 0.15;
+      ctx.save(); ctx.translate(cx * cell, cy * cell); ctx.scale(tw, tw); ctx.fillStyle = GOLD; ctx.beginPath();
+      for (var i = 0; i < 10; i++) { var ang = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2 ? r * 0.45 : r) * cell; ctx[i ? "lineTo" : "moveTo"](Math.cos(ang) * rr, Math.sin(ang) * rr); }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    function unicorn(bx, groundTop, t) {
+      var bob = reduce ? 0 : Math.sin(t * 7) * 0.5, by = groundTop - 16 + bob;
+      ctx.globalAlpha = .18; P(bx + 1, groundTop - 0.6, 15, 2.2, "#101a2e"); ctx.globalAlpha = 1;
+      if (!reduce) { for (var s = 0; s < 6; s++) { ctx.globalAlpha = 0.30 - s * 0.035 + Math.sin(t * 10 + s) * 0.04; P(bx - 3 - s * 2.4, by + 5 + s * 1.4, 5, 1.4, RB[s % RB.length]); } ctx.globalAlpha = 1; }
+      var twl = reduce ? 0 : Math.sin(t * 6);
+      for (var i = 0; i < 6; i++) { var ty = by + 5 + i * 1.5, tx = bx - 1 - i * 0.5 + Math.round(twl * (i * 0.35)); P(tx, ty, 3.2, 1.6, RB[i]); }
+      function leg(lx, phase) { var lift = Math.max(0, Math.sin(reduce ? 1.2 : (t * 9 + phase))), h = 4.4 - lift * 2.2; P(lx, by + 11, 2, h, WT); P(lx, by + 11 + h - 1.1, 2, 1.4, HOOF); }
+      leg(bx + 3, 0.0); leg(bx + 5.4, Math.PI);
+      P(bx + 2, by + 6, 11, 6, WT); P(bx + 2, by + 6, 11, 1.4, "#ffffff"); P(bx + 2, by + 10.6, 11, 1.4, WS); P(bx + 1.4, by + 7, 1.6, 4, WT);
+      P(bx + 9.5, by + 3.5, 4, 5, WT); P(bx + 10.5, by + 2, 5.4, 4.4, WT); P(bx + 15, by + 4.4, 1.8, 2.2, PINK); P(bx + 15.4, by + 5, 0.9, 0.9, INK); P(bx + 9.8, by + 2, 1.8, 1.8, WT);
+      P(bx + 12.6, by + 3.4, 1.3, 1.5, INK); P(bx + 14.1, by + 5.1, 1.1, 1.1, "#ff8ab5");
+      for (var hgt = 0; hgt < 4; hgt++) { var hw = 2.0 - hgt * 0.45; P(bx + 11.6 + hgt * 0.25, by - 0.4 - hgt * 0.9, hw, 1.0, hgt % 2 ? GHI : GOLD); }
+      var mf = reduce ? 0 : Math.sin(t * 7 + 1);
+      for (var m = 0; m < 6; m++) { var my = by + 1.2 + m * 1.3, mx = bx + 8.4 - (m > 2 ? 0.6 : 0) + Math.round(mf * 0.4); P(mx, my, 2.6, 1.5, RB[m]); }
+      P(bx + 10.2, by + 1, 2.4, 1.4, RB[0]);
+      leg(bx + 9, Math.PI); leg(bx + 11.4, 0.0);
+      star(bx + 6.4, by + 8.4, 1.9, t);
+      if (!reduce) { for (var k = 0; k < 3; k++) { var sp = (t * 0.8 + k * 0.7) % 1; ctx.globalAlpha = Math.sin(sp * Math.PI); var sx2 = bx + 17 + k * 2.2, sy2 = by - 2 + (k * 5) - sp * 3; P(sx2, sy2, 1.2, 1.2, GHI); P(sx2 - 1, sy2 + 0.6, 3.2, 0.5, GOLD); P(sx2 + 0.6, sy2 - 1, 0.5, 3.2, GOLD); } ctx.globalAlpha = 1; }
+    }
+    var props = [
+      { t: "coin", x: 46 }, { t: "coin", x: 49 }, { t: "coin", x: 52 },
+      { t: "block", x: 40, g: "×" }, { t: "block", x: 70, g: "7" }, { t: "block", x: 73, g: "8" },
+      { t: "foe", x: 60 }, { t: "bush", x: 32 }, { t: "bush", x: 84 }, { t: "coin", x: 90 }, { t: "coin", x: 93 }, { t: "coin", x: 96 }
+    ];
+    function frame(now) {
+      if (!running) return;
+      if (document.hidden || !active()) { running = false; return; }
+      if (t0 === null) t0 = now; var t = (now - t0) / 1000;
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = .5;
+      var sg = ctx.createRadialGradient((VW * 0.82) * cell, (VH * 0.2) * cell, 2, (VW * 0.82) * cell, (VH * 0.2) * cell, 22 * cell);
+      sg.addColorStop(0, "#fff7cf"); sg.addColorStop(1, "rgba(255,247,207,0)"); ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+      var cd = reduce ? 0 : t * 2.2, span = VW + 40;
+      var clouds = [[10, 8, 1.5], [34, 14, 1.1], [60, 6, 1.8], [86, 16, 1.2], [112, 11, 1.4]];
+      for (var i = 0; i < clouds.length; i++) { var cx = ((clouds[i][0] - cd) % span + span) % span - 20; cloud(cx, clouds[i][1], clouds[i][2]); }
+      var hd = reduce ? 0 : t * 6, hills = [[24, 90], [70, 70], [118, 100]];
+      for (var hI = 0; hI < hills.length; hI++) { var hx = ((hills[hI][0] - hd * 0.5) % span + span) % span - 20; hill(hx, GROUND + 0.5, hills[hI][1] / 5, hills[hI][1] / 8, "#8fd85f", "#5fbf3f"); }
+      var gd = reduce ? 0 : t * 24;
+      P(0, GROUND, VW, 2.2, "#7cd04a"); P(0, GROUND + 2.2, VW, 0.7, "#3a9e2a"); P(0, GROUND + 2.9, VW, VH - GROUND, "#c9803f");
+      var seam = 6, off = (gd % seam);
+      for (var gx = -off; gx < VW + seam; gx += seam) { P(gx, GROUND + 2.9, 0.7, VH - GROUND, "#a8632f"); P(gx + 3, GROUND, 0.7, 2.2, "#8fd85f"); }
+      P(0, GROUND + 7, VW, 0.7, "#a8632f");
+      for (var p = 0; p < props.length; p++) {
+        var pr = props[p], px = ((pr.x - gd) % span + span) % span - 20;
+        if (px < -14 || px > VW + 14) continue;
+        if (pr.t === "coin") coin(px, GROUND - 14 + Math.sin(t * 3 + pr.x) * 1.2, t * 4 + pr.x);
+        else if (pr.t === "block") block(px, GROUND - 22 + Math.sin(t * 2 + pr.x) * 1.0, pr.g);
+        else if (pr.t === "foe") foe(px, GROUND, t);
+        else if (pr.t === "bush") bush(px, GROUND);
+      }
+      unicorn(VW * 0.16, GROUND, t);
+      requestAnimationFrame(frame);
+    }
+    function start() {
+      cvs = document.getElementById("lp-scene"); if (!cvs) return; ctx = cvs.getContext("2d");
+      reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!inited) {
+        window.addEventListener("resize", function () { if (running) resize(); });
+        document.addEventListener("visibilitychange", function () { if (!document.hidden && active()) start(); });
+        inited = true;
+      }
+      resize(); GROUND = VH - 16;
+      if (running) return; running = true; t0 = null; requestAnimationFrame(frame);
+    }
+    return { start: start };
+  })();
+  function openLanding() { show("landing"); LandingFX.start(); }
 
   /* ---------------- ADVENTURE — 8-bit Quest Land (daily quest) ---------------- */
   var Adv = (function () {
@@ -2948,10 +3058,10 @@
       sTap(); createProfile(name, newAvatar); renderHome(); show("home");
     });
 
-    // landing (front door)
-    if (!Cloud.enabled) { ["lp-create", "lp-signin"].forEach(function (i) { var b = $("#" + i); if (b) b.style.display = "none"; }); }
-    $("#lp-create").addEventListener("click", function () { sTap(); openCloud("new", null, "landing"); });
-    $("#lp-signin").addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); });
+    // landing (front door) — buttons wired by data-lp so the hero + final CTA both work
+    if (!Cloud.enabled) { $all("[data-lp]").forEach(function (b) { b.style.display = "none"; }); }
+    $all('[data-lp="create"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openCloud("new", null, "landing"); }); });
+    $all('[data-lp="signin"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); }); });
 
     // cloud sign-in / save-online
     $("#cl-back").addEventListener("click", function () { sTap(); if (cloudFrom === "parent") { renderPlayers(); show("parent"); } else if (cloudFrom === "landing") { show("landing"); } else { renderProfiles(); show("profiles"); } });
