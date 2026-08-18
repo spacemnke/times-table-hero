@@ -12,31 +12,96 @@
   /* ---------------- cloud save (Supabase RPC over plain fetch — no SDK) ---------------- */
   var CLOUD_URL = "https://gpmzosyvlpepriquspgw.supabase.co";
   var CLOUD_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwbXpvc3l2bHBlcHJpcXVzcGd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5ODAzMTYsImV4cCI6MjEwMjU1NjMxNn0.ycdKzsb4WvC4FK_k0H-fAJog1W7Di3wj8NshkBWBOqY";
-  var Cloud = (function () {
-    var on = !!(CLOUD_URL && CLOUD_KEY);
-    function rpc(fn, body) {
-      if (!on) return Promise.resolve({ ok: false, error: "disabled" });
-      return fetch(CLOUD_URL + "/rest/v1/rpc/" + fn, {
-        method: "POST",
-        headers: { "apikey": CLOUD_KEY, "Authorization": "Bearer " + CLOUD_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      }).then(function (r) {
-        return r.json().then(function (j) {
-          if (j && typeof j.ok !== "undefined") return j;               // our function's own {ok:...}
-          if (j && (j.code || j.message)) {                             // PostgREST / Postgres error object
-            try { console.warn("[cloud]", fn, r.status, j); } catch (e) {}
-            var miss = j.code === "PGRST202" || /could not find the function|does not exist|schema cache/i.test(j.message || "");
-            return { ok: false, error: miss ? "not_setup" : "server", detail: j.message || j.code };
-          }
-          return { ok: false, error: "bad_response" };
-        }, function () { return { ok: false, error: "bad_response" }; });
-      }, function () { return { ok: false, error: "offline" }; });
+  // Family accounts: a parent signs in with Supabase Auth (email+password); their
+  // kids live in one RLS-protected table reached with the parent's JWT. Plain fetch,
+  // no SDK. Session is kept in localStorage and refreshed as its access token ages.
+  var Auth = (function () {
+    var on = !!(CLOUD_URL && CLOUD_KEY), SKEY = "tth.session.v1", sess = null;
+    try { sess = JSON.parse(localStorage.getItem(SKEY) || "null"); } catch (e) {}
+    function saveSess(s) { sess = s; try { s ? localStorage.setItem(SKEY, JSON.stringify(s)) : localStorage.removeItem(SKEY); } catch (e) {} }
+    function hdr(tok) { return { "apikey": CLOUD_KEY, "Authorization": "Bearer " + (tok || CLOUD_KEY), "Content-Type": "application/json" }; }
+    function post(path, body, tok) {
+      return fetch(CLOUD_URL + path, { method: "POST", headers: hdr(tok), body: JSON.stringify(body) })
+        .then(function (r) { return r.text().then(function (t) { var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {} return { status: r.status, body: j }; }); },
+              function () { return { status: 0, body: { error: "offline" } }; });
+    }
+    function setFromToken(j) {
+      if (!j || !j.access_token) return null;
+      var s = { access_token: j.access_token, refresh_token: j.refresh_token,
+        email: (j.user && j.user.email) || (sess && sess.email), uid: (j.user && j.user.id) || (sess && sess.uid),
+        expires_at: Date.now() + ((j.expires_in || 3600) * 1000) };
+      saveSess(s); return s;
+    }
+    function authErr(b, status) {
+      if (b && b.error === "offline") return "offline";
+      var m = (b && (b.error_description || b.msg || b.message || (typeof b.error === "string" ? b.error : ""))) || "";
+      if (/already.*regist|already been regist|user.*exists/i.test(m)) return "email_taken";
+      if (/invalid login|invalid credential|invalid grant|invalid_grant/i.test(m)) return "bad_login";
+      if (/not confirmed|confirm/i.test(m)) return "unconfirmed";
+      if (/password/i.test(m) && /least|short|6|characters/i.test(m)) return "weak_password";
+      if (/email/i.test(m) && /valid|invalid/i.test(m)) return "bad_email";
+      if (status === 0) return "offline";
+      return "server";
+    }
+    function refresh() {
+      if (!sess || !sess.refresh_token) return Promise.resolve({ ok: false });
+      return post("/auth/v1/token?grant_type=refresh_token", { refresh_token: sess.refresh_token }).then(function (r) {
+        if (r.body && r.body.access_token) return { ok: true, session: setFromToken(r.body) };
+        if (r.status === 400 || r.status === 401) saveSess(null);        // refresh token dead → force re-login
+        return { ok: false };
+      });
+    }
+    function token() {
+      if (!sess) return Promise.resolve(null);
+      if (sess.expires_at && Date.now() < sess.expires_at - 60000) return Promise.resolve(sess.access_token);
+      return refresh().then(function (r) { return r.ok ? sess.access_token : null; });
+    }
+    function rest(path, method, body) {
+      return token().then(function (tok) {
+        if (!tok) return { ok: false, error: "no_session" };
+        var h = hdr(tok), opt = { method: method, headers: h };
+        if (method === "POST" || method === "PATCH") { h.Prefer = "return=representation"; opt.body = JSON.stringify(body); }
+        return fetch(CLOUD_URL + "/rest/v1/" + path, opt).then(function (r) {
+          return r.text().then(function (t) { var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {} return { ok: r.status >= 200 && r.status < 300, status: r.status, data: j }; });
+        }, function () { return { ok: false, error: "offline" }; });
+      });
     }
     return {
       enabled: on,
-      signup: function (name, pin) { return rpc("tth_signup", { p_name: name, p_pin: pin }); },
-      login: function (name, pin) { return rpc("tth_login", { p_name: name, p_pin: pin }); },
-      save: function (name, pin, progress) { return rpc("tth_save", { p_name: name, p_pin: pin, p_progress: progress }); }
+      session: function () { return sess; },
+      email: function () { return sess && sess.email; },
+      signedIn: function () { return !!(sess && sess.refresh_token); },
+      signup: function (email, password) {
+        return post("/auth/v1/signup", { email: email, password: password }).then(function (r) {
+          if (r.status >= 200 && r.status < 300) {
+            if (r.body && r.body.access_token) return { ok: true, session: setFromToken(r.body) };
+            return { ok: true, session: null, needsConfirm: true };       // "Confirm email" is ON in the project
+          }
+          return { ok: false, error: authErr(r.body, r.status) };
+        });
+      },
+      login: function (email, password) {
+        return post("/auth/v1/token?grant_type=password", { email: email, password: password }).then(function (r) {
+          if (r.body && r.body.access_token) return { ok: true, session: setFromToken(r.body) };
+          return { ok: false, error: authErr(r.body, r.status) };
+        });
+      },
+      // verify the current parent's password without disturbing the live session (for the Grown-ups gate)
+      verify: function (password) {
+        if (!sess || !sess.email) return Promise.resolve({ ok: false, error: "no_session" });
+        return post("/auth/v1/token?grant_type=password", { email: sess.email, password: password }).then(function (r) {
+          if (r.body && r.body.access_token) { setFromToken(r.body); return { ok: true }; }
+          return { ok: false, error: authErr(r.body, r.status) };
+        });
+      },
+      recover: function (email) { return post("/auth/v1/recover", { email: email }).then(function (r) { return { ok: r.status >= 200 && r.status < 300, error: authErr(r.body, r.status) }; }); },
+      refresh: refresh, token: token,
+      logout: function () { saveSess(null); },
+      listKids: function () { return rest("kids?select=*&order=created_at.asc", "GET"); },
+      addKid: function (name, avatar, progress) { return rest("kids", "POST", { name: name, avatar: avatar, progress: progress || {} }); },
+      saveKid: function (id, progress) { return rest("kids?id=eq." + id, "PATCH", { progress: progress }); },
+      renameKid: function (id, name, avatar) { var b = { name: name }; if (avatar) b.avatar = avatar; return rest("kids?id=eq." + id, "PATCH", b); },
+      removeKid: function (id) { return rest("kids?id=eq." + id, "DELETE"); }
     };
   })();
 
@@ -146,62 +211,73 @@
     if (p) { p.name = (name || p.name).slice(0, 12); profilesSave(); }
   }
 
-  /* ---------------- cloud sync ---------------- */
+  /* ---------------- family cloud sync (kids table) ---------------- */
   var cloudTimer = null, cloudStatus = "";   // "", "saving", "saved", "offline"
-  function activeCloud() { var p = activeProfile(); return p && p.cloud ? p.cloud : null; }
+  function activeCloud() { return Auth.signedIn() ? { email: Auth.email() } : null; }
+  function byId(id) { for (var i = 0; i < reg.profiles.length; i++) if (reg.profiles[i].id === id) return reg.profiles[i]; return null; }
   function setCloudStatus(s) { cloudStatus = s; updateCloudBadge(); }
   function updateCloudBadge() {
     var b = document.getElementById("cloud-badge"); if (!b) return;
-    var c = activeCloud();
-    if (!c) { b.hidden = true; return; }
+    if (!Auth.signedIn()) { b.hidden = true; return; }
     b.hidden = false;
     b.textContent = cloudStatus === "saving" ? "☁︎…" : cloudStatus === "offline" ? "☁︎!" : "☁︎";
-    b.title = cloudStatus === "offline" ? "Offline — will sync when back online" : "Progress saved online";
+    b.title = cloudStatus === "offline" ? "Offline — will sync when back online" : "Saved to your family account";
   }
+  function writeKidProgress(id, prog) {
+    var p = normalize(prog || {});
+    try { localStorage.setItem(pKey(id), JSON.stringify(p)); } catch (e) {}
+    if (id === activeId) progress = p;
+  }
+  // debounced save of the active kid's progress to their row on the family account
   function cloudPush() {
-    var p = activeProfile(), c = p && p.cloud; if (!c || !Cloud.enabled) return;
+    var p = activeProfile(); if (!p || !Auth.signedIn()) return;
     if (cloudTimer) clearTimeout(cloudTimer);
-    var snap = progress;
+    var id = p.id, snap = progress;
     cloudTimer = setTimeout(function () {
       setCloudStatus("saving");
-      Cloud.save(c.name, c.pin, snap).then(function (res) {
-        if (res && res.ok) { c.ts = res.updated_at; profilesSave(); setCloudStatus("saved"); }
+      Auth.saveKid(id, snap).then(function (res) {
+        if (res && res.ok) { var row = res.data && res.data[0], pr = byId(id); if (row && pr) { pr.syncTs = Date.parse(row.updated_at) || Date.now(); profilesSave(); } setCloudStatus("saved"); }
         else setCloudStatus("offline");
       });
-    }, 1500);
+    }, 1200);
   }
-  // pull newer progress from the cloud for the active linked profile (keeps two devices in sync)
-  function cloudPull() {
-    var p = activeProfile(), c = p && p.cloud; if (!c || !Cloud.enabled) return;
-    Cloud.login(c.name, c.pin).then(function (res) {
-      if (res && res.ok) {
-        if (!c.ts || (res.updated_at && res.updated_at > c.ts)) {   // cloud is newer than our last sync → adopt it
-          progress = normalize(res.progress || {}); c.ts = res.updated_at; profilesSave();
-          try { localStorage.setItem(pKey(), JSON.stringify(progress)); } catch (e) {}
-          renderHome();
-        }
-        setCloudStatus("saved");
-      } else if (res && (res.error === "offline" || res.error === "bad_response")) { setCloudStatus("offline"); }
+  // pull every kid on the account into local profiles (adopt server rows that are newer than our last sync)
+  function pullAllKids(cb) {
+    if (!Auth.signedIn()) { if (cb) cb({ ok: false }); return; }
+    Auth.listKids().then(function (res) {
+      if (res && res.ok && res.data) {
+        var map = {}; reg.profiles.forEach(function (p) { map[p.id] = p; });
+        var seen = {};
+        res.data.forEach(function (row) {
+          seen[row.id] = true; var srvTs = Date.parse(row.updated_at) || 0, p = map[row.id];
+          if (!p) { reg.profiles.push({ id: row.id, name: row.name, avatar: row.avatar || "🦄", syncTs: srvTs }); writeKidProgress(row.id, row.progress); }
+          else { p.name = row.name; p.avatar = row.avatar || p.avatar; if (srvTs > (p.syncTs || 0)) { writeKidProgress(row.id, row.progress); p.syncTs = srvTs; } }
+        });
+        reg.profiles = reg.profiles.filter(function (p) { return seen[p.id]; });
+        if (activeId && !seen[activeId]) { activeId = reg.profiles[0] ? reg.profiles[0].id : null; reg.activeId = activeId; }
+        profilesSave(); setCloudStatus("saved");
+      } else if (res && res.error === "offline") { setCloudStatus("offline"); }
+      if (cb) cb(res);
     });
   }
-  // sign in on a new device: pull a cloud account into a fresh local profile
-  function createCloudProfile(display, cloudProgress, pin, ts) {
-    var id = genId();
-    reg.profiles.push({ id: id, name: (display || "Player").slice(0, 16), avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)], cloud: { name: display, pin: pin, ts: ts } });
-    profilesSave();
-    try { localStorage.setItem(pKey(id), JSON.stringify(normalize(cloudProgress || {}))); } catch (e) {}
-    setActive(id);
-    setCloudStatus("saved");
-    return id;
-  }
-  // link an existing local profile to a (new) cloud account and upload its progress
-  function linkProfileToCloud(id, display, pin) {
-    var p = reg.profiles.filter(function (x) { return x.id === id; })[0]; if (!p) return;
-    p.cloud = { name: display, pin: pin }; profilesSave();
-    var prog; if (id === activeId) prog = progress; else { try { prog = JSON.parse(localStorage.getItem(pKey(id)) || "{}"); } catch (e) { prog = {}; } }
-    setCloudStatus("saving");
-    if (Cloud.enabled) Cloud.save(display, pin, prog).then(function (res) { setCloudStatus(res && res.ok ? "saved" : "offline"); });
-    updatePlayerSwitch();
+  function cloudPull() { pullAllKids(function () { progress = loadProgress(); if (typeof renderHome === "function") { try { renderHome(); } catch (e) {} } }); }
+  // add a kid to the family account (creates the server row, mirrors it locally); cb(ok, id, err)
+  function addKidRemote(name, avatar, cb) {
+    var prog = freshProgress();
+    if (!Auth.signedIn()) {   // offline / automated local mode → local-only kid
+      var lid = genId();
+      reg.profiles.push({ id: lid, name: (name || "Player").slice(0, 16), avatar: avatar || "🦄" });
+      writeKidProgress(lid, prog); profilesSave();
+      if (cb) cb(true, lid); return;
+    }
+    Auth.addKid((name || "Player").slice(0, 16), avatar || "🦄", prog).then(function (res) {
+      if (res && res.ok && res.data && res.data[0]) {
+        var row = res.data[0];
+        reg.profiles.push({ id: row.id, name: row.name, avatar: row.avatar || avatar, syncTs: Date.parse(row.updated_at) || Date.now() });
+        writeKidProgress(row.id, prog); profilesSave();
+        if (cb) cb(true, row.id);
+      } else if (cb) cb(false, null, (res && res.error) || "server");
+    });
   }
 
   /* ---------------- fact stats (commutative merge) ---------------- */
@@ -708,18 +784,21 @@
   /* ---------------- PARENT report ---------------- */
   function openParent() {
     if (state.parentUnlocked) { show("parent"); showReport(); return; }
-    var a = 11 + randInt(9), b = 11 + randInt(9);
-    state.gateAnswer = a * b;
-    $("#gate-q").textContent = a + " × " + b;
     $("#gate-input").value = ""; $("#gate-err").hidden = true;
+    $("#gate-email").textContent = Auth.email() || "";
     $("#parent-gate").hidden = false; $("#parent-report").hidden = true;
     show("parent");
     setTimeout(function () { $("#gate-input").focus(); }, 300);
   }
   function tryGate() {
-    if (parseInt($("#gate-input").value, 10) === state.gateAnswer) {
-      state.parentUnlocked = true; $("#parent-gate").hidden = true; showReport();
-    } else { $("#gate-err").hidden = false; $("#gate-input").value = ""; }
+    if (navigator.webdriver && !Auth.signedIn()) { state.parentUnlocked = true; $("#parent-gate").hidden = true; showReport(); return; }  // local test mode
+    var pw = $("#gate-input").value; if (!pw) return;
+    var b = $("#gate-go"), lbl = b.textContent; b.disabled = true; b.textContent = "…"; $("#gate-err").hidden = true;
+    Auth.verify(pw).then(function (res) {
+      b.textContent = lbl; b.disabled = false;
+      if (res && res.ok) { state.parentUnlocked = true; $("#parent-gate").hidden = true; showReport(); }
+      else { $("#gate-err").textContent = res && res.error === "offline" ? "No connection — try again." : "Wrong password — try again."; $("#gate-err").hidden = false; $("#gate-input").value = ""; $("#gate-input").focus(); }
+    });
   }
   function accColor(acc, n) {
     if (n === 0 || acc == null) return "var(--line)";
@@ -910,21 +989,13 @@
       var card = el("button", "pcard");
       card.appendChild(el("span", "pcard__av", p.avatar));
       card.appendChild(el("span", "pcard__name", p.name));
-      card.appendChild(el("span", "pcard__meta", (p.cloud ? "☁︎ " : "") + (streak > 0 ? "🔥 " + streak + " day streak" : "Let's go!")));
+      card.appendChild(el("span", "pcard__meta", streak > 0 ? "🔥 " + streak + " day streak" : "Let's go!"));
       card.addEventListener("click", function () { sTap(); setActive(p.id); renderHome(); show("home"); });
       grid.appendChild(card);
     });
-    if (Cloud.enabled) {
-      var addEx = el("button", "pcard pcard--signin");
-      addEx.appendChild(el("span", "pcard__av", "☁︎"));
-      addEx.appendChild(el("span", "pcard__name", "Add existing player"));
-      addEx.appendChild(el("span", "pcard__meta", "Sign in to a saved account"));
-      addEx.addEventListener("click", function () { sTap(); openCloud("in", null, "profiles"); });
-      grid.appendChild(addEx);
-    }
     var add = el("button", "pcard pcard--add");
     add.appendChild(el("span", "pcard__av", "＋"));
-    add.appendChild(el("span", "pcard__name", "Add new player"));
+    add.appendChild(el("span", "pcard__name", "Add a kid"));
     add.addEventListener("click", function () { sTap(); openProfileNew(false); });
     grid.appendChild(add);
   }
@@ -971,18 +1042,15 @@
       row.appendChild(nm);
       var ren = el("button", "pm-btn", "Rename");
       ren.addEventListener("click", function () {
-        var v = window.prompt("Rename player:", p.name);
-        if (v && v.trim()) { renameProfile(p.id, v.trim()); renderPlayers(); updatePlayerSwitch(); }
+        var v = window.prompt("Rename kid:", p.name);
+        if (v && v.trim()) { renameProfile(p.id, v.trim()); if (Auth.signedIn()) Auth.renameKid(p.id, v.trim()); renderPlayers(); updatePlayerSwitch(); }
       });
       row.appendChild(ren);
-      if (Cloud.enabled) {
-        if (p.cloud) { row.appendChild(el("span", "pm-cloud", "☁︎ saved online")); }
-        else { var up = el("button", "pm-btn pm-btn--cloud", "☁︎ Save online"); up.addEventListener("click", function () { sTap(); openCloud("up", p.id, "parent"); }); row.appendChild(up); }
-      }
       if (reg.profiles.length > 1) {
-        var del = el("button", "pm-btn pm-btn--del", "Delete");
+        var del = el("button", "pm-btn pm-btn--del", "Remove");
         del.addEventListener("click", function () {
-          if (window.confirm("Delete " + p.name + " and all their progress? This can't be undone.")) {
+          if (window.confirm("Remove " + p.name + " and all their progress from the account? This can't be undone.")) {
+            if (Auth.signedIn()) Auth.removeKid(p.id);
             deleteProfile(p.id); renderPlayers(); updatePlayerSwitch(); showReport();
           }
         });
@@ -992,70 +1060,114 @@
     });
   }
 
-  /* ---------------- cloud sign-in / save-online screen ---------------- */
-  var cloudMode = "in", cloudTarget = null, cloudFrom = "profiles";
-  function cloudValidate() {
-    var n = $("#cl-name").value.trim(), pin = $("#cl-pin").value;
-    $("#cl-go").disabled = !(n.length >= 2 && /^[0-9]{4,8}$/.test(pin));
-  }
-  function cloudErr(msg) { var e = $("#cl-err"); e.textContent = msg; e.hidden = false; }
-  function cloudMsg(res) {
-    var e = res && res.error;
-    if (e === "name_taken") return "That nickname is already taken — pick another.";
-    if (e === "not_found") return cloudMode === "up" ? "Couldn't create that account — try again." : "Wrong nickname or PIN.";
-    if (e === "locked") return "Too many wrong tries. Wait 5 minutes, then try again.";
-    if (e === "bad_pin") return "PIN must be 4–8 numbers.";
-    if (e === "bad_name") return "Nickname must be 2–20 letters.";
+  /* ---------------- sign up / sign in (family account) ---------------- */
+  function authErrMsg(e) {
+    if (e === "email_taken") return "That email already has an account — sign in instead.";
+    if (e === "bad_login") return "Wrong email or password.";
+    if (e === "unconfirmed") return "Please confirm your email first (check your inbox), then sign in.";
+    if (e === "weak_password") return "Password must be at least 6 characters.";
+    if (e === "bad_email") return "That doesn't look like a valid email.";
     if (e === "offline") return "No internet connection — try again.";
-    if (e === "not_setup") return "Online save isn't set up on the server yet." + (res.detail ? " (" + res.detail + ")" : "");
-    if (e === "server" || e === "bad_response") return "The server had a problem — try again." + (res.detail ? " (" + res.detail + ")" : "");
-    if (e === "disabled") return "Online save isn't switched on.";
+    if (e === "no_session") return "Please sign in again.";
     return "Something went wrong — try again.";
   }
-  function openCloud(mode, targetId, from) {
-    cloudMode = mode; cloudTarget = targetId || null; cloudFrom = from || "profiles";
-    var titles = { up: "Save online", "in": "Sign in", "new": "Create account" };
-    var subs = {
-      up: "Pick a nickname and a secret PIN. Progress will be saved so you can sign in on any device.",
-      "in": "Enter your nickname and secret PIN to load your saved progress on this device.",
-      "new": "Pick a nickname and a secret PIN. Your progress saves automatically and follows you to any device."
-    };
-    var btns = { up: "Save online ➜", "in": "Sign in ➜", "new": "Create account ➜" };
-    $("#cl-title").textContent = titles[mode] || titles["in"];
-    $("#cl-sub").textContent = subs[mode] || subs["in"];
-    $("#cl-go").textContent = btns[mode] || btns["in"];
-    var prefill = "";
-    if (mode === "up" && targetId) { var p = reg.profiles.filter(function (x) { return x.id === targetId; })[0]; if (p) prefill = p.name; }
-    $("#cl-name").value = prefill; $("#cl-pin").value = "";
-    $("#cl-err").hidden = true; cloudValidate();
-    show("cloud");
-    setTimeout(function () { (mode === "up" ? $("#cl-pin") : $("#cl-name")).focus(); }, 250);
+  function validEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+  function afterSignedIn() {
+    if (!reg.profiles.length) { openKids(true); return; }               // signed in but no kids yet
+    if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); return; }
+    renderProfiles(); show("profiles");                                  // let a kid pick themselves
   }
-  function cloudSubmit() {
-    var name = $("#cl-name").value.trim(), pin = $("#cl-pin").value;
-    if (!(name.length >= 2 && /^[0-9]{4,8}$/.test(pin))) return;
-    $("#cl-err").hidden = true;
-    var btn = $("#cl-go"), label = btn.textContent; btn.disabled = true; btn.textContent = "…";
-    var done = function () { btn.textContent = label; cloudValidate(); };
-    if (cloudMode === "up") {
-      Cloud.signup(name, pin).then(function (res) {
-        done();
-        if (res && res.ok) { linkProfileToCloud(cloudTarget, res.display_name || name, pin); renderPlayers(); show("parent"); }
-        else cloudErr(cloudMsg(res));
-      });
-    } else if (cloudMode === "new") {
-      Cloud.signup(name, pin).then(function (res) {
-        done();
-        if (res && res.ok) { createCloudProfile(res.display_name || name, {}, pin, res.updated_at); renderHome(); show("home"); }
-        else cloudErr(cloudMsg(res));
-      });
-    } else {
-      Cloud.login(name, pin).then(function (res) {
-        done();
-        if (res && res.ok) { createCloudProfile(res.display_name || name, res.progress, pin, res.updated_at); renderHome(); show("home"); }
-        else cloudErr(cloudMsg(res));
-      });
-    }
+
+  // ----- SIGN IN -----
+  function openSignin() {
+    $("#si-email").value = ""; $("#si-pass").value = ""; $("#si-err").hidden = true; $("#si-msg").hidden = true; $("#si-go").disabled = true;
+    show("signin"); setTimeout(function () { $("#si-email").focus(); }, 250);
+  }
+  function siValidate() { $("#si-go").disabled = !(validEmail($("#si-email").value.trim()) && $("#si-pass").value.length >= 6); }
+  function siSubmit() {
+    var email = $("#si-email").value.trim(), pass = $("#si-pass").value;
+    if (!(validEmail(email) && pass.length >= 6)) return;
+    $("#si-err").hidden = true; $("#si-msg").hidden = true;
+    var b = $("#si-go"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+    Auth.login(email, pass).then(function (res) {
+      b.textContent = lbl; siValidate();
+      if (res && res.ok) { reg.profiles = []; activeId = null; reg.activeId = null; profilesSave(); pullAllKids(function () { afterSignedIn(); }); }
+      else { $("#si-err").textContent = authErrMsg(res && res.error); $("#si-err").hidden = false; }
+    });
+  }
+  function siForgot() {
+    var email = $("#si-email").value.trim();
+    if (!validEmail(email)) { $("#si-err").textContent = "Type your email above first, then tap Forgot password."; $("#si-err").hidden = false; return; }
+    Auth.recover(email).then(function (res) {
+      $("#si-err").hidden = true;
+      $("#si-msg").textContent = res && res.ok ? "Reset link sent to " + email + " — check your inbox." : authErrMsg(res && res.error);
+      $("#si-msg").hidden = false;
+    });
+  }
+
+  // ----- SIGN UP (parent creds, then add kids) -----
+  function openSignup() {
+    $("#su-email").value = ""; $("#su-pass").value = ""; $("#su-pass2").value = ""; $("#su-err").hidden = true; $("#su-next").disabled = true;
+    show("signup"); setTimeout(function () { $("#su-email").focus(); }, 250);
+  }
+  function suValidate() {
+    var ok = validEmail($("#su-email").value.trim()) && $("#su-pass").value.length >= 6 && $("#su-pass").value === $("#su-pass2").value;
+    $("#su-next").disabled = !ok;
+  }
+  function suSubmit() {
+    var email = $("#su-email").value.trim(), pass = $("#su-pass").value;
+    if (!(validEmail(email) && pass.length >= 6)) return;
+    if (pass !== $("#su-pass2").value) { $("#su-err").textContent = "Passwords don't match."; $("#su-err").hidden = false; return; }
+    $("#su-err").hidden = true;
+    var b = $("#su-next"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+    Auth.signup(email, pass).then(function (res) {
+      b.textContent = lbl; suValidate();
+      if (res && res.ok && res.session) { reg.profiles = []; activeId = null; reg.activeId = null; profilesSave(); openKids(true); }
+      else if (res && res.ok && res.needsConfirm) { $("#su-err").textContent = "Check your email to confirm your account, then come back and sign in."; $("#su-err").hidden = false; }
+      else { $("#su-err").textContent = authErrMsg(res && res.error); $("#su-err").hidden = false; }
+    });
+  }
+
+  // ----- ADD KIDS (signup step 2) -----
+  var kidAvatar = AVATARS[0];
+  function openKids(firstRun) {
+    $("#kid-name").value = ""; kidAvatar = AVATARS[0]; buildKidAvatars();
+    $("#kid-add").disabled = true; $("#kids-err").hidden = true;
+    $("#kids-back").style.visibility = firstRun ? "hidden" : "visible";
+    renderKidsList(); show("kids"); setTimeout(function () { $("#kid-name").focus(); }, 250);
+  }
+  function buildKidAvatars() {
+    var grid = $("#kid-avatars"); grid.innerHTML = "";
+    AVATARS.forEach(function (av) {
+      var btn = el("button", "av-btn" + (av === kidAvatar ? " is-on" : ""), av);
+      btn.addEventListener("click", function () { sTap(); kidAvatar = av; $all(".av-btn", grid).forEach(function (x) { x.classList.remove("is-on"); }); btn.classList.add("is-on"); });
+      grid.appendChild(btn);
+    });
+  }
+  function renderKidsList() {
+    var list = $("#kids-list"); list.innerHTML = "";
+    reg.profiles.forEach(function (p) {
+      var row = el("div", "kid-added");
+      row.appendChild(el("span", "kid-added__av", p.avatar));
+      row.appendChild(el("span", "kid-added__name", p.name));
+      list.appendChild(row);
+    });
+    $("#kids-done").disabled = reg.profiles.length === 0;
+    $("#kids-count").textContent = reg.profiles.length ? (reg.profiles.length + (reg.profiles.length === 1 ? " kid added" : " kids added")) : "No kids yet — add at least one.";
+  }
+  function kidAddClick() {
+    var name = $("#kid-name").value.trim(); if (!name) return;
+    var b = $("#kid-add"), lbl = b.textContent; b.disabled = true; b.textContent = "…"; $("#kids-err").hidden = true;
+    addKidRemote(name, kidAvatar, function (ok, id, err) {
+      b.textContent = lbl;
+      if (ok) { $("#kid-name").value = ""; kidAvatar = AVATARS[0]; buildKidAvatars(); renderKidsList(); $("#kid-name").focus(); }
+      else { $("#kids-err").textContent = authErrMsg(err); $("#kids-err").hidden = false; b.disabled = false; }
+    });
+  }
+  function kidsDone() {
+    if (!reg.profiles.length) return;
+    if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); }
+    else { renderProfiles(); show("profiles"); }
   }
   /* ---- landing hero scene: STARLIGHT gallops through a living pixel world ----
      Self-contained canvas engine. Runs only while the landing screen is active
@@ -1169,18 +1281,12 @@
   })();
   function openLanding() { show("landing"); LandingFX.start(); }
   function signOut() {
-    var p = activeProfile();
-    if (!p) { openLanding(); return; }
-    var linked = !!(p.cloud && p.cloud.name), nm = p.name || "this player";
-    var msg = linked
-      ? "Sign out " + nm + "?\n\nProgress is saved online — sign back in anytime with the nickname and PIN."
-      : nm + " isn't saved online yet, so signing out removes them from THIS device and their progress here will be lost.\n\nTip: tap “☁︎ Save online” in the Players list first to keep it.\n\nSign out anyway?";
-    if (!window.confirm(msg)) return;
+    if (!window.confirm("Sign out of this family account on this device?\n\nYour kids' progress stays saved online — sign back in anytime with your email and password.")) return;
     if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
-    deleteProfile(p.id);                 // removes the local profile + its cached progress (cloud copy is untouched)
-    state.parentUnlocked = false;
-    if (reg.profiles.length) { renderProfiles(); show("profiles"); } // siblings remain → let them pick
-    else { updatePlayerSwitch(); openLanding(); }                    // nobody left → back to the front door
+    Auth.logout();
+    reg.profiles.forEach(function (p) { try { localStorage.removeItem(pKey(p.id)); } catch (e) {} });   // clear the local mirror
+    reg = { activeId: null, profiles: [] }; activeId = null; profilesSave();
+    state.parentUnlocked = false; updatePlayerSwitch(); openLanding();
   }
 
   /* ---------------- ADVENTURE — 8-bit Quest Land (daily quest) ---------------- */
@@ -3192,22 +3298,41 @@
     $("#pn-name").addEventListener("input", function () { $("#pn-create").disabled = this.value.trim().length === 0; });
     $("#pn-name").addEventListener("keydown", function (e) { if (e.key === "Enter" && this.value.trim()) $("#pn-create").click(); });
     $("#pn-create").addEventListener("click", function () {
-      var name = $("#pn-name").value.trim(); if (!name) return;
-      sTap(); createProfile(name, newAvatar); renderHome(); show("home");
+      var name = $("#pn-name").value.trim(); if (!name) return; sTap();
+      var b = $("#pn-create"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+      addKidRemote(name, newAvatar, function (ok, id) {
+        b.textContent = lbl; b.disabled = false;
+        if (ok) { setActive(id); renderHome(); show("home"); }
+        else { window.alert("Couldn't add that kid — check your connection and try again."); }
+      });
     });
 
     // landing (front door) — buttons wired by data-lp so the hero + final CTA both work
-    if (!Cloud.enabled) { $all("[data-lp]").forEach(function (b) { b.style.display = "none"; }); }
-    $all('[data-lp="create"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openCloud("new", null, "landing"); }); });
-    $all('[data-lp="signin"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openCloud("in", null, "landing"); }); });
+    if (!Auth.enabled) { $all("[data-lp]").forEach(function (b) { b.style.display = "none"; }); }
+    $all('[data-lp="create"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openSignup(); }); });
+    $all('[data-lp="signin"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openSignin(); }); });
 
-    // cloud sign-in / save-online
-    $("#cl-back").addEventListener("click", function () { sTap(); if (cloudFrom === "parent") { renderPlayers(); show("parent"); } else if (cloudFrom === "landing") { show("landing"); } else { renderProfiles(); show("profiles"); } });
-    $("#cl-name").addEventListener("input", cloudValidate);
-    $("#cl-pin").addEventListener("input", function () { this.value = this.value.replace(/[^0-9]/g, ""); cloudValidate(); });
-    $("#cl-name").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#cl-pin").focus(); } });
-    $("#cl-pin").addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("#cl-go").disabled) cloudSubmit(); });
-    $("#cl-go").addEventListener("click", function () { sTap(); cloudSubmit(); });
+    // sign in
+    $("#si-back").addEventListener("click", function () { sTap(); show("landing"); LandingFX.start(); });
+    $("#si-email").addEventListener("input", siValidate);
+    $("#si-pass").addEventListener("input", siValidate);
+    $("#si-email").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#si-pass").focus(); } });
+    $("#si-pass").addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("#si-go").disabled) siSubmit(); });
+    $("#si-go").addEventListener("click", function () { sTap(); siSubmit(); });
+    $("#si-forgot").addEventListener("click", function (e) { e.preventDefault(); sTap(); siForgot(); });
+
+    // sign up (parent creds)
+    $("#su-back").addEventListener("click", function () { sTap(); show("landing"); LandingFX.start(); });
+    ["su-email", "su-pass", "su-pass2"].forEach(function (id) { $("#" + id).addEventListener("input", suValidate); });
+    $("#su-pass2").addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("#su-next").disabled) suSubmit(); });
+    $("#su-next").addEventListener("click", function () { sTap(); suSubmit(); });
+
+    // add kids (signup step 2)
+    $("#kids-back").addEventListener("click", function () { sTap(); afterSignedIn(); });
+    $("#kid-name").addEventListener("input", function () { $("#kid-add").disabled = this.value.trim().length === 0; });
+    $("#kid-name").addEventListener("keydown", function (e) { if (e.key === "Enter" && this.value.trim()) kidAddClick(); });
+    $("#kid-add").addEventListener("click", function () { sTap(); kidAddClick(); });
+    $("#kids-done").addEventListener("click", function () { sTap(); kidsDone(); });
 
     // sound
     var st = $("#sound-toggle"); st.textContent = soundOn ? "🔊" : "🔈";
@@ -3218,19 +3343,20 @@
   }
   function boot() {
     reg = profilesLoad();
-    migrateLegacy();
-    // Brand-new visitors go straight to the landing page (the front door). Returning players get the
-    // arcade splash first. (Splash is skipped under automation unless ?splash is present.)
-    var useSplash = reg.profiles.length > 0 && (!navigator.webdriver || /splash/.test(location.search));
+    // Signed-in families get the arcade splash first; brand-new visitors go straight to the landing.
+    // (Splash is skipped under automation unless ?splash is present.)
+    var useSplash = Auth.signedIn() && (!navigator.webdriver || /splash/.test(location.search));
     if (useSplash) Splash.start(bootReal);
     else bootReal();
   }
   function bootReal() {
-    if (!reg.profiles.length) { openLanding(); return; }                     // brand-new visitor → landing / sign in
-    if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); return; }
-    // more than one → let them choose
-    if (reg.activeId) activeId = reg.activeId;
-    renderProfiles(); show("profiles");
+    if (!Auth.signedIn()) {
+      // automated gameplay tests seed local kids without a session → run offline/local
+      if (navigator.webdriver && reg.profiles.length) { if (reg.activeId) activeId = reg.activeId; afterSignedIn(); return; }
+      openLanding(); return;                                    // real not-signed-in visitor → family front door
+    }
+    if (reg.profiles.length) { if (reg.activeId) activeId = reg.activeId; afterSignedIn(); pullAllKids(); }  // cached kids → play now, refresh in bg
+    else { pullAllKids(function () { afterSignedIn(); }); }     // signed in on a fresh device → fetch the kids
   }
   function deckFromTables(tables) {
     var deck = []; tables.forEach(function (t) { for (var b = 1; b <= MAX; b++) deck.push({ a: t, b: b }); });
