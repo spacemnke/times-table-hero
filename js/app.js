@@ -2395,6 +2395,29 @@
       function pOB(R, x, y, w, h) { R(x - 2, y - 2, w + 4, h + 4, INKP); }
       function pEyes(R, lx, rx, y) { R(lx, y, 4, 5, INKP); R(rx, y, 4, 5, INKP); R(lx + 1, y + 1, 1, 1, "#fff"); R(rx + 1, y + 1, 1, 1, "#fff"); }
       function outlineFix(oc, w, h) { var d = oc.getImageData(0, 0, w, h), p = d.data; for (var i = 0; i < p.length; i += 4) { if (p[i + 3] > 0 && p[i + 3] < 160) p[i + 3] = 255; } oc.putImageData(d, 0, 0); }
+      // Snap a smooth vector sprite onto a chunky pixel grid + a 1-block ink outline,
+      // so every hero shares the unicorn's blocky retro look. B = block size in source px.
+      function pixelize(src, B) {
+        var w = src.width, h = src.height, img = src.getContext("2d").getImageData(0, 0, w, h).data;
+        var cols = Math.ceil(w / B), rows = Math.ceil(h / B), grid = [];
+        for (var gy = 0; gy < rows; gy++) { grid[gy] = []; for (var gx = 0; gx < cols; gx++) {
+          var r = 0, gg = 0, b = 0, aw = 0, cov = 0, tot = 0;
+          for (var yy = 0; yy < B; yy++) for (var xx = 0; xx < B; xx++) {
+            var px = gx * B + xx, py = gy * B + yy; if (px >= w || py >= h) continue; tot++;
+            var i = (py * w + px) * 4, al = img[i + 3];
+            if (al > 60) { r += img[i] * al; gg += img[i + 1] * al; b += img[i + 2] * al; aw += al; cov++; }
+          }
+          grid[gy][gx] = (cov >= tot * 0.34 && aw > 0) ? { on: true, r: Math.round(r / aw), g: Math.round(gg / aw), b: Math.round(b / aw) } : { on: false };
+        } }
+        var out = document.createElement("canvas"); out.width = w; out.height = h; var o = out.getContext("2d");
+        function on(gx, gy) { return gy >= 0 && gy < rows && gx >= 0 && gx < cols && grid[gy][gx].on; }
+        for (var oy = 0; oy < rows; oy++) for (var ox = 0; ox < cols; ox++) {
+          if (grid[oy][ox].on || !(on(ox - 1, oy) || on(ox + 1, oy) || on(ox, oy - 1) || on(ox, oy + 1) || on(ox - 1, oy - 1) || on(ox + 1, oy - 1) || on(ox - 1, oy + 1) || on(ox + 1, oy + 1))) continue;
+          o.fillStyle = "#241a4a"; o.fillRect(ox * B, oy * B, B, B);
+        }
+        for (var cy = 0; cy < rows; cy++) for (var cx = 0; cx < cols; cx++) { var c = grid[cy][cx]; if (!c.on) continue; o.fillStyle = "rgb(" + c.r + "," + c.g + "," + c.b + ")"; o.fillRect(cx * B, cy * B, B, B); }
+        return out;
+      }
       function catSide(g, fr) {
         var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", O = "#2b2838", am = "#f5b731", pk = "#ff8fb0", st = "#616d88", f = fr ? 2 : -2;
         limb(g, 7, 32, 7, 11, 6, B, O); g.strokeStyle = W; g.lineCap = "round"; g.lineWidth = 4; g.beginPath(); g.moveTo(7, 13); g.lineTo(7, 11); g.stroke();
@@ -2512,19 +2535,20 @@
       function shellyFront(g) { var R = "#ff5a44", Rd = "#d63626", O = "#8a1e12", gem = "#ffd23f";[30, 40, 50].forEach(function (lx) { limb(g, lx, 46, lx - 6, 54, 2.6, Rd, O); limb(g, 96 - lx, 46, 96 - lx + 6, 54, 2.6, Rd, O); }); pth(g, function (c) { c.moveTo(20, 34); c.lineTo(8, 26); c.lineTo(12, 36); c.lineTo(6, 42); c.lineTo(20, 42); }, R, O); pth(g, function (c) { c.moveTo(76, 34); c.lineTo(88, 26); c.lineTo(84, 36); c.lineTo(90, 42); c.lineTo(76, 42); }, R, O); ell(g, 48, 36, 24, 15, R, O); ell(g, 48, 42, 17, 7, Rd, null); stalkEye(g, 42, 26, 40, 14); stalkEye(g, 54, 26, 56, 14); pth(g, function (c) { c.moveTo(48, 28); c.lineTo(44, 35); c.lineTo(52, 35); }, gem, O); smile(g, 48, 38, 5); }
       function finnFront(g) { var C = "#37c0ff", fin = "#8fe0ff", bel = "#cdeeff", O = "#12608a"; pth(g, function (c) { c.moveTo(48, 44); c.lineTo(40, 54); c.lineTo(56, 54); }, fin, O); pth(g, function (c) { c.moveTo(28, 30); c.lineTo(12, 22); c.lineTo(22, 36); }, fin, O); pth(g, function (c) { c.moveTo(68, 30); c.lineTo(84, 22); c.lineTo(74, 36); }, fin, O); ell(g, 48, 32, 21, 20, C, O); ell(g, 48, 40, 14, 9, bel, null); ell(g, 48, 20, 7, 4, fin, null); frontEyes(g, 40, 56, 28, 3.4, null); g.strokeStyle = O; g.lineWidth = 1.3; g.beginPath(); g.arc(48, 40, 3, .1 * Math.PI, .9 * Math.PI); g.stroke(); }
       function mangoFront(g) { var br = "#8a5a2a", brd = "#6a3f1e", face = "#d3a869", O = "#3a2410"; limb(g, 40, 44, 40, 52, 5, brd, O); limb(g, 56, 44, 56, 52, 5, brd, O); ell(g, 48, 40, 17, 12, br, O); ell(g, 48, 44, 11, 8, face, null); limb(g, 32, 34, 26, 46, 4.5, br, O); limb(g, 64, 34, 70, 46, 4.5, br, O); ell(g, 30, 26, 7, 7, br, O); ell(g, 66, 26, 7, 7, br, O); ell(g, 30, 26, 4, 4, face, null); ell(g, 66, 26, 4, 4, face, null); ell(g, 48, 26, 18, 17, br, O); ell(g, 48, 32, 13, 11, face, null); frontEyes(g, 42, 54, 26, 3.2, null); ell(g, 48, 36, 5, 3.5, face, null); g.fillStyle = "#3a2410"; ell(g, 46, 35, 1, 1, "#3a2410", null); ell(g, 50, 35, 1, 1, "#3a2410", null); smile(g, 48, 37, 3); }
-      function sideSet(fn) { var a = []; for (var fr = 0; fr < 2; fr++) { var cv = document.createElement("canvas"); cv.width = HA_W; cv.height = HA_H; var oc = cv.getContext("2d"); fn(oc, fr); outlineFix(oc, HA_W, HA_H); a.push(cv); } return a; }
-      function frontOne(fn) { var cv = document.createElement("canvas"); cv.width = HA_FW; cv.height = HA_FH; var oc = cv.getContext("2d"); fn(oc); outlineFix(oc, HA_FW, HA_FH); return cv; }
-      HERO_ART.unicorn = { front: frontOne(uniFront), side: sideSet(uniSide) };
-      HERO_ART.cat = { front: frontOne(catFront), side: sideSet(catSide) };
-      HERO_ART.fox = { front: frontOne(foxFront), side: sideSet(foxSide) };
-      HERO_ART.robo = { front: frontOne(roboFront), side: sideSet(roboSide) };
-      HERO_ART.comet = { front: frontOne(cometFront), side: sideSet(cometSide) };
-      HERO_ART.nova = { front: frontOne(novaFront), side: sideSet(novaSide) };
-      HERO_ART.draco = { front: frontOne(dracoFront), side: sideSet(dracoSide) };
-      HERO_ART.orbit = { front: frontOne(orbitFront), side: sideSet(orbitSide) };
-      HERO_ART.shelly = { front: frontOne(shellyFront), side: sideSet(shellySide) };
-      HERO_ART.finn = { front: frontOne(finnFront), side: sideSet(finnSide) };
-      HERO_ART.mango = { front: frontOne(mangoFront), side: sideSet(mangoSide) };
+      function sideSet(fn, B) { var a = []; for (var fr = 0; fr < 2; fr++) { var cv = document.createElement("canvas"); cv.width = HA_W; cv.height = HA_H; var oc = cv.getContext("2d"); fn(oc, fr); outlineFix(oc, HA_W, HA_H); a.push(B ? pixelize(cv, B) : cv); } return a; }
+      function frontOne(fn, B) { var cv = document.createElement("canvas"); cv.width = HA_FW; cv.height = HA_FH; var oc = cv.getContext("2d"); fn(oc); outlineFix(oc, HA_FW, HA_FH); return B ? pixelize(cv, B) : cv; }
+      var PXS = 3, PXF = 3;   // block size for chunky-pixel heroes (side / front)
+      HERO_ART.unicorn = { front: frontOne(uniFront), side: sideSet(uniSide) };   // unicorn: hand-drawn pixel art, kept as-is
+      HERO_ART.cat = { front: frontOne(catFront, PXF), side: sideSet(catSide, PXS) };
+      HERO_ART.fox = { front: frontOne(foxFront, PXF), side: sideSet(foxSide, PXS) };
+      HERO_ART.robo = { front: frontOne(roboFront, PXF), side: sideSet(roboSide, PXS) };
+      HERO_ART.comet = { front: frontOne(cometFront, PXF), side: sideSet(cometSide, PXS) };
+      HERO_ART.nova = { front: frontOne(novaFront, PXF), side: sideSet(novaSide, PXS) };
+      HERO_ART.draco = { front: frontOne(dracoFront, PXF), side: sideSet(dracoSide, PXS) };
+      HERO_ART.orbit = { front: frontOne(orbitFront, PXF), side: sideSet(orbitSide, PXS) };
+      HERO_ART.shelly = { front: frontOne(shellyFront, PXF), side: sideSet(shellySide, PXS) };
+      HERO_ART.finn = { front: frontOne(finnFront, PXF), side: sideSet(finnSide, PXS) };
+      HERO_ART.mango = { front: frontOne(mangoFront, PXF), side: sideSet(mangoSide, PXS) };
     }
     // draw a hero into an on-screen box; uses the 32-bit sprite if we have one, else the classic bitmap
     function heroDraw(g, type, dx, dy, dw, dh, frame, front) {
@@ -3164,6 +3188,7 @@
       forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: pick(G.cf.trapPool), done: false, sprung: false }); springTrap(G.traps.length - 1); },
       forceTrapType: function (t) { if (!G) return; G.traps.push({ x: G.hero.wx, type: t, done: false, sprung: false }); springTrap(G.traps.length - 1); },
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
+      drawHero: function (cv, type, front) { Adv.drawHero(cv, type, front); },
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
       get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
