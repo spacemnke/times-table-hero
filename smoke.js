@@ -113,9 +113,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.screen--badges.is-active [data-go="home"]');
   await page.click('.grownup-link');
   await page.waitForSelector('#parent-gate:not([hidden])');
-  const gate = await page.textContent('#gate-q');
-  const [ga, gb] = gate.split("×").map(s => parseInt(s.trim(), 10));
-  await page.fill('#gate-input', String(ga * gb));
+  // parent gate now takes the account password; under automation (no session) it unlocks locally
+  await page.fill('#gate-input', 'testpass');
   await page.click('#gate-go');
   await page.waitForSelector('#parent-report:not([hidden])');
   const repAcc = await page.textContent('#rep-acc');

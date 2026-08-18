@@ -106,6 +106,14 @@ body {
 .cloud-intro__emoji { font-size: 42px; line-height: 1; }
 .cloud-intro__text { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); max-width: 34ch; margin: 10px auto 0; }
 .cloud-err { color: var(--bad, #ff5c6c); font-weight: 800; font-size: 13.5px; text-align: center; margin: 12px 0 0; }
+.cloud-msg { color: var(--good, #23c069); font-weight: 800; font-size: 13px; text-align: center; margin: 12px 0 0; }
+.link-btn { display: block; margin: 14px auto 0; background: none; border: none; color: var(--brand); font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; text-decoration: underline; }
+.kids-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
+.kid-added { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow-sm); }
+.kid-added__av { font-size: 26px; }
+.kid-added__name { font-weight: 800; font-size: 16px; }
+.gate__input--pw { width: 240px; max-width: 82%; font-size: 20px; letter-spacing: .08em; }
+.screen--signin .btn-primary, .screen--signup .btn-primary, .screen--kids .btn-primary, .screen--kids .btn-secondary { margin-top: 16px; }
 
 /* ===================== landing / front door (8-bit) ===================== *
  * Commits to a bright daytime-arcade look; every colour is explicit so the

@@ -111,22 +111,61 @@
       <div class="profiles-grid" id="profiles-grid"></div>
     </section>
 
-    <!-- ============ CLOUD SIGN IN / SAVE ONLINE ============ -->
-    <section class="screen screen--cloud" data-screen="cloud">
+    <!-- ============ SIGN IN (parent) ============ -->
+    <section class="screen screen--signin" data-screen="signin">
       <div class="topbar">
-        <button class="btn-back" id="cl-back" aria-label="Back">‹</button>
-        <h2 class="topbar__title" id="cl-title">Sign in</h2><div class="topbar__spacer"></div>
+        <button class="btn-back" id="si-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title">Sign in</h2><div class="topbar__spacer"></div>
       </div>
       <div class="cloud-intro">
-        <span class="cloud-intro__emoji">☁︎</span>
-        <p class="cloud-intro__text" id="cl-sub">Enter your nickname and secret PIN to load your progress on this device.</p>
+        <span class="cloud-intro__emoji">👋</span>
+        <p class="cloud-intro__text">Sign in with your family account to load your kids and their progress on this device.</p>
       </div>
-      <p class="picker-label">Nickname</p>
-      <input class="name-input" id="cl-name" type="text" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="e.g. Mia" />
-      <p class="picker-label">Secret PIN (4–8 numbers)</p>
-      <input class="name-input" id="cl-pin" type="tel" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="number PIN" />
-      <p class="cloud-err" id="cl-err" hidden></p>
-      <button class="btn-primary" id="cl-go" disabled>Sign in ➜</button>
+      <p class="picker-label">Email</p>
+      <input class="name-input" id="si-email" type="email" autocomplete="email" autocapitalize="off" placeholder="you@example.com" />
+      <p class="picker-label">Password</p>
+      <input class="name-input" id="si-pass" type="password" autocomplete="current-password" placeholder="Your password" />
+      <p class="cloud-err" id="si-err" hidden></p>
+      <p class="cloud-msg" id="si-msg" hidden></p>
+      <button class="btn-primary" id="si-go" disabled>Sign in ➜</button>
+      <button class="link-btn" id="si-forgot" type="button">Forgot password?</button>
+    </section>
+
+    <!-- ============ CREATE FAMILY ACCOUNT (parent) ============ -->
+    <section class="screen screen--signup" data-screen="signup">
+      <div class="topbar">
+        <button class="btn-back" id="su-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title">Create account</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="cloud-intro">
+        <span class="cloud-intro__emoji">🏡</span>
+        <p class="cloud-intro__text">Create a family account. Next you'll add your kids — their progress saves here and follows you to any device.</p>
+      </div>
+      <p class="picker-label">Parent email</p>
+      <input class="name-input" id="su-email" type="email" autocomplete="email" autocapitalize="off" placeholder="you@example.com" />
+      <p class="picker-label">Password (6+ characters)</p>
+      <input class="name-input" id="su-pass" type="password" autocomplete="new-password" placeholder="Choose a password" />
+      <p class="picker-label">Confirm password</p>
+      <input class="name-input" id="su-pass2" type="password" autocomplete="new-password" placeholder="Type it again" />
+      <p class="cloud-err" id="su-err" hidden></p>
+      <button class="btn-primary" id="su-next">Next: add your kids ➜</button>
+    </section>
+
+    <!-- ============ ADD KIDS (signup step 2) ============ -->
+    <section class="screen screen--kids" data-screen="kids">
+      <div class="topbar">
+        <button class="btn-back" id="kids-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title">Add your kids</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="kids-list" id="kids-list"></div>
+      <p class="rep-note" id="kids-count">No kids yet — add at least one.</p>
+      <p class="picker-label">Kid's name</p>
+      <input class="name-input" id="kid-name" type="text" maxlength="16" autocomplete="off" autocapitalize="words" placeholder="e.g. Mia" />
+      <p class="picker-label">Pick a character</p>
+      <div class="avatar-grid" id="kid-avatars"></div>
+      <p class="cloud-err" id="kids-err" hidden></p>
+      <button class="btn-secondary" id="kid-add" disabled>＋ Add this kid</button>
+      <button class="btn-primary" id="kids-done" disabled>Start playing 🎉</button>
     </section>
 
     <!-- ============ NEW PROFILE ============ -->
@@ -414,10 +453,9 @@
       <!-- gate -->
       <div class="gate" id="parent-gate">
         <div class="gate__lock">🔒</div>
-        <p class="gate__label">Grown-up check — solve to continue:</p>
-        <div class="gate__q" id="gate-q">13 × 14</div>
-        <input class="gate__input" id="gate-input" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="?" />
-        <p class="gate__err" id="gate-err" hidden>Not quite — try again.</p>
+        <p class="gate__label">Grown-up check — enter the account password for <b id="gate-email"></b>:</p>
+        <input class="gate__input gate__input--pw" id="gate-input" type="password" autocomplete="current-password" placeholder="Password" />
+        <p class="gate__err" id="gate-err" hidden>Wrong password — try again.</p>
         <button class="btn-primary" id="gate-go">Unlock</button>
       </div>
 

@@ -31,6 +31,8 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
+  // never touch cross-origin requests (Supabase auth/data API) — let them go straight to the network
+  try { if (new URL(req.url).origin !== self.location.origin) return; } catch (err) { return; }
   e.respondWith(
     caches.match(req).then(function (cached) {
       if (cached) return cached;

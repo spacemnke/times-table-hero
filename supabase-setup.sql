@@ -1,94 +1,72 @@
 -- ============================================================================
--- Times Table Hero — cloud save backend (Supabase / Postgres)
+-- Times Table Hero — FAMILY ACCOUNTS backend (Supabase Auth + one kids table)
+-- ============================================================================
+-- Model: a PARENT signs up with email + password (Supabase Auth). Their KIDS
+-- live in one table, each row owned by the parent's auth user id. Row-Level
+-- Security guarantees a parent can only ever see/edit their own kids. The app
+-- talks to Supabase directly with plain fetch (no SDK): Auth endpoints for
+-- sign-up / sign-in / password reset, and PostgREST for the kids table using
+-- the parent's JWT.
 --
--- Nickname + PIN accounts, no email / no personal info. Run this once in the
--- Supabase SQL Editor for a fresh project (SQL Editor -> New query -> Run).
---
--- Notes:
---   * pgcrypto lives in the `extensions` schema on Supabase, so the login
---     functions set search_path = public, extensions (otherwise crypt/gen_salt
---     resolve to "function does not exist").
---   * The accounts table has RLS on and is revoked from anon/authenticated —
---     it can only be reached through these three SECURITY DEFINER functions,
---     each of which checks the PIN. The web app calls them with the public
---     (anon) key, which is safe to ship in a static site.
+-- The old nickname+PIN system (players table, tth_signup/tth_login/tth_save)
+-- is retired — you can drop it at the very bottom once the new flow works.
 -- ============================================================================
 
-create extension if not exists pgcrypto;
-
-create table if not exists public.players (
-  id           uuid primary key default gen_random_uuid(),
-  username_key text unique not null,           -- normalized nickname (lowercased)
-  display_name text not null,                  -- nickname as typed
-  pin_hash     text not null,                  -- bcrypt hash of the PIN
-  progress     jsonb not null default '{}'::jsonb,
-  fails        int  not null default 0,         -- wrong-PIN counter (lockout)
-  locked_until timestamptz,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+-- ---- 1. KIDS TABLE ---------------------------------------------------------
+create table if not exists public.kids (
+  id         uuid primary key default gen_random_uuid(),
+  owner      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name       text not null check (char_length(name) between 1 and 24),
+  avatar     text not null default '🦄',
+  progress   jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
-alter table public.players enable row level security;
-revoke all on public.players from anon, authenticated;
+create index if not exists kids_owner_idx on public.kids (owner);
 
--- normalize a nickname to a uniqueness key
-create or replace function public.tth_key(p_name text)
-returns text language sql immutable as $$
-  select lower(regexp_replace(btrim(p_name), '\s+', ' ', 'g'))
-$$;
+-- ---- 2. ROW-LEVEL SECURITY -------------------------------------------------
+alter table public.kids enable row level security;
 
--- SIGN UP: create an account, returns {ok, id, display_name, updated_at} or {ok:false, error}
-create or replace function public.tth_signup(p_name text, p_pin text)
-returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare v_key text; v_id uuid; v_now timestamptz := now();
-begin
-  p_name := btrim(coalesce(p_name, ''));
-  if char_length(p_name) < 2 or char_length(p_name) > 20 then return jsonb_build_object('ok', false, 'error', 'bad_name'); end if;
-  if p_pin !~ '^[0-9]{4,8}$' then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
-  v_key := public.tth_key(p_name);
-  if exists (select 1 from public.players where username_key = v_key) then return jsonb_build_object('ok', false, 'error', 'name_taken'); end if;
-  insert into public.players (username_key, display_name, pin_hash, updated_at)
-    values (v_key, p_name, crypt(p_pin, gen_salt('bf')), v_now) returning id into v_id;
-  return jsonb_build_object('ok', true, 'id', v_id, 'display_name', p_name, 'updated_at', v_now);
-end $$;
+drop policy if exists "kids_select_own" on public.kids;
+drop policy if exists "kids_insert_own" on public.kids;
+drop policy if exists "kids_update_own" on public.kids;
+drop policy if exists "kids_delete_own" on public.kids;
 
--- LOG IN: verify PIN, returns {ok, id, display_name, progress, updated_at} or {ok:false, error}
--- Locks the account for 5 minutes after 6 wrong PINs.
-create or replace function public.tth_login(p_name text, p_pin text)
-returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare r public.players%rowtype; v_key text;
-begin
-  v_key := public.tth_key(coalesce(p_name, ''));
-  select * into r from public.players where username_key = v_key;
-  if not found then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
-  if r.locked_until is not null and r.locked_until > now() then return jsonb_build_object('ok', false, 'error', 'locked'); end if;
-  if r.pin_hash = crypt(coalesce(p_pin, ''), r.pin_hash) then
-    update public.players set fails = 0, locked_until = null where id = r.id;
-    return jsonb_build_object('ok', true, 'id', r.id, 'display_name', r.display_name, 'progress', r.progress, 'updated_at', r.updated_at);
-  end if;
-  update public.players set
-    fails = case when fails + 1 >= 6 then 0 else fails + 1 end,
-    locked_until = case when fails + 1 >= 6 then now() + interval '5 minutes' else locked_until end
-    where id = r.id;
-  return jsonb_build_object('ok', false, 'error', 'not_found');
-end $$;
+create policy "kids_select_own" on public.kids
+  for select using (owner = auth.uid());
+create policy "kids_insert_own" on public.kids
+  for insert with check (owner = auth.uid());
+create policy "kids_update_own" on public.kids
+  for update using (owner = auth.uid()) with check (owner = auth.uid());
+create policy "kids_delete_own" on public.kids
+  for delete using (owner = auth.uid());
 
--- SAVE: verify PIN, overwrite progress. Returns {ok, updated_at} or {ok:false, error}
-create or replace function public.tth_save(p_name text, p_pin text, p_progress jsonb)
-returns jsonb language plpgsql security definer set search_path = public, extensions as $$
-declare r public.players%rowtype; v_key text; v_now timestamptz := now();
-begin
-  v_key := public.tth_key(coalesce(p_name, ''));
-  select * into r from public.players where username_key = v_key;
-  if not found then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
-  if r.locked_until is not null and r.locked_until > now() then return jsonb_build_object('ok', false, 'error', 'locked'); end if;
-  if r.pin_hash = crypt(coalesce(p_pin, ''), r.pin_hash) then
-    update public.players set progress = coalesce(p_progress, '{}'::jsonb), updated_at = v_now, fails = 0 where id = r.id;
-    return jsonb_build_object('ok', true, 'updated_at', v_now);
-  end if;
-  return jsonb_build_object('ok', false, 'error', 'not_found');
-end $$;
+-- ---- 3. KEEP updated_at FRESH ---------------------------------------------
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
 
-grant execute on function public.tth_signup(text, text) to anon, authenticated;
-grant execute on function public.tth_login(text, text) to anon, authenticated;
-grant execute on function public.tth_save(text, text, jsonb) to anon, authenticated;
+drop trigger if exists kids_touch on public.kids;
+create trigger kids_touch before update on public.kids
+  for each row execute function public.touch_updated_at();
+
+-- ---- 4. (LATER) retire the old nickname+PIN system -------------------------
+-- Once family accounts are working end-to-end, you can clean up the old one:
+--   drop function if exists public.tth_signup(text, text);
+--   drop function if exists public.tth_login(text, text);
+--   drop function if exists public.tth_save(text, text, jsonb);
+--   drop table if exists public.players;
+
+-- ============================================================================
+-- DASHBOARD SETTINGS (do these in the Supabase UI, not SQL):
+--   Authentication → Sign In / Providers → Email:  ENABLED.
+--   Authentication → Providers → Email → "Confirm email":  turn OFF, so a
+--       parent can sign up and add kids in one sitting (password reset still
+--       works either way). Leave ON only if you want mandatory verification.
+--   Authentication → URL Configuration → Site URL:
+--       https://spacemnke.github.io/times-table-hero/
+--       (so the password-reset email link returns to the game).
+-- The public anon key already in the app is safe to ship; RLS does the real
+-- protection. NEVER put the service_role/secret key in the app.
+-- ============================================================================
