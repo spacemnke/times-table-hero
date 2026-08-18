@@ -3430,9 +3430,15 @@
         disc(cx + 1, gy - 15, 7, "#ff5c9e");                                                   // solid candy
         R(cx - 4, gy - 17, 3, 2, "#ffd23f"); R(cx - 1, gy - 19, 3, 2, "#fff"); R(cx + 2, gy - 15, 3, 2, "#ffd23f"); R(cx - 3, gy - 13, 3, 2, "#fff");   // swirl
         R(cx - 24, gy + 2, 4, 3, "#a06bff"); R(cx + 22, gy + 3, 4, 3, "#4fd06a");              // wrapped candies
-      } else if (idx === 3) {                            // OCEAN — cresting wave + coral
-        R(cx - 16, gy - 6, 26, 8, "#2fb6d6"); mound(cx - 4, gy - 6, 7, "#4fd0ee"); R(cx - 10, gy - 12, 10, 3, "#eafcff"); R(cx + 6, gy - 9, 4, 2, "#eafcff");
-        R(cx + 20, gy - 4, 3, 5, "#ff8ab5"); R(cx + 19, gy - 6, 5, 2, "#ff8ab5");              // coral
+      } else if (idx === 3) {                            // OCEAN — a rolling sea with a breaking wave
+        var hy = gy - 6;                                                                       // lift the horizon so it's mostly sea
+        R(0, hy, W, H, "#2f9fd6"); R(0, hy, W, 3, "#57c8e6");                                   // deep water + bright surface band
+        R(8, hy + 9, 12, 2, "#5fd0ee"); R(46, hy + 14, 14, 2, "#5fd0ee"); R(92, hy + 10, 14, 2, "#5fd0ee"); R(26, hy + 19, 10, 2, "#5fd0ee");   // ripples
+        var wx = cx - 4;                                                                        // big breaking wave, curling right
+        mound(wx, hy + 5, 9, "#2f9fd6"); mound(wx, hy + 2, 7, "#3fbfe0");
+        R(wx - 12, hy - 7, 20, 3, "#eafcff"); R(wx - 14, hy - 4, 8, 3, "#ffffff"); R(wx + 5, hy - 9, 9, 3, "#ffffff"); R(wx + 9, hy - 5, 5, 3, "#eafcff");   // foam crest + curl
+        R(12, hy - 1, 7, 2, "#eafcff"); R(76, hy - 1, 9, 2, "#eafcff");                         // foam caps
+        R(cx + 24, hy - 5, 6, 3, "#ffd23f"); R(cx + 29, hy - 7, 3, 6, "#ffd23f"); R(cx + 23, hy - 4, 1, 1, INK);   // leaping fish
       } else if (idx === 4) {                            // SNOW — snowman + falling flakes
         disc(cx, gy - 4, 5, "#fff"); disc(cx, gy - 12, 4, "#fff"); R(cx - 1, gy - 12, 1, 1, INK); R(cx + 1, gy - 12, 1, 1, INK); R(cx, gy - 10, 1, 1, "#ff8f3f");
         R(cx - 5, gy - 15, 4, 2, INK); R(cx - 4, gy - 18, 2, 3, INK);
