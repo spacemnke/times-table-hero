@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787037747" />
+  <link rel="stylesheet" href="css/styles.css?v=1787039873" />
 </head>
 <body>
   <div id="app">
@@ -28,16 +28,77 @@
 
     <!-- ============ LANDING ============ -->
     <section class="screen screen--landing" data-screen="landing">
-      <div class="landing">
-        <div class="landing__badge">8-BIT MATH ADVENTURE</div>
-        <h1 class="landing__title">TIMES<br />TABLE<br />HERO</h1>
-        <div class="landing__hero" aria-hidden="true">🦄</div>
-        <p class="landing__tag">Learn your times tables on a retro quest — run, jump and blast through 8 worlds. Your progress follows you to any device.</p>
-        <div class="landing__worlds" aria-hidden="true">🌸 🏖️ 🍭 🌊 ❄️ 🌴 🌋 🚀</div>
-        <div class="landing__cta">
-          <button class="btn-primary" id="lp-create">Create account ➜</button>
-          <button class="btn-secondary" id="lp-signin">I already have an account</button>
+      <div class="lp">
+        <!-- ===== HERO ===== -->
+        <div class="lp-hero">
+          <canvas class="lp-scene" id="lp-scene" aria-hidden="true"></canvas>
+          <div class="lp-hero__copy">
+            <span class="lp-eyebrow">AN 8-BIT TIMES-TABLE ADVENTURE</span>
+            <h1 class="lp-logo">TIMES TABLE<br /><span>HERO</span></h1>
+            <p class="lp-tag">Gallop through eight pixel worlds. Every glowing gate is a times-table question — nail it to blast straight through. It's <b>×1 to ×12</b> practice that plays like a Saturday-morning platformer.</p>
+            <div class="lp-cta">
+              <button class="lp-btn lp-btn--play" id="lp-create" data-lp="create">▶ CREATE ACCOUNT</button>
+              <button class="lp-btn lp-btn--ghost" id="lp-signin" data-lp="signin">I HAVE AN ACCOUNT</button>
+            </div>
+          </div>
+          <div class="lp-trust">NO ADS · FREE TO PLAY · SAVES ACROSS DEVICES</div>
         </div>
+
+        <!-- ===== WORLDS ===== -->
+        <section class="lp-sec lp-worlds" id="lp-worlds">
+          <div class="lp-kicker">▲ EIGHT WORLDS ▲</div>
+          <h2 class="lp-h2">A whole map to conquer</h2>
+          <p class="lp-sub">Clear one world's gates and the next unlocks — each with its own look and a signature hazard to outrun.</p>
+          <div class="lp-wgrid">
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#7cd04a"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🌳</div><div class="lp-wcard__name">MEADOW</div><div class="lp-wcard__desc">Where every hero begins</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#f2df9e"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🏖️</div><div class="lp-wcard__name">BEACH</div><div class="lp-wcard__desc">Sandy sprints &amp; hidden crabs</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#ffb0d8"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🍬</div><div class="lp-wcard__name">CANDY</div><div class="lp-wcard__desc">Sweet springs, sticky traps</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#57c8ba"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🌊</div><div class="lp-wcard__name">OCEAN</div><div class="lp-wcard__desc">Float, dodge, and dive</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#bcd7f2"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">❄️</div><div class="lp-wcard__name">SNOW</div><div class="lp-wcard__desc">Dodge the falling ice</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#5abf5a"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🌴</div><div class="lp-wcard__name">JUNGLE</div><div class="lp-wcard__desc">Swing across the vines</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#9a5f48"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🌋</div><div class="lp-wcard__name">VOLCANO</div><div class="lp-wcard__desc">Leap the fire-bars</div></div></div>
+            <div class="lp-wcard"><div class="lp-wcard__bar" style="background:#2a1a5a"></div><div class="lp-wcard__body"><div class="lp-wcard__emoji">🚀</div><div class="lp-wcard__name">SPACE</div><div class="lp-wcard__desc">Low-gravity moon jumps</div></div></div>
+          </div>
+        </section>
+
+        <!-- ===== HEROES ===== -->
+        <section class="lp-sec lp-heroes">
+          <div class="lp-kicker">★ PICK YOUR HERO ★</div>
+          <h2 class="lp-h2">Heroes to unlock</h2>
+          <p class="lp-sub">Start as Starlight, then earn shiny coins for heroes with special powers — or discover the secret ones hidden off the beaten path.</p>
+          <div class="lp-hgrid">
+            <div class="lp-hcard lp-hcard--star"><div class="lp-hcard__ava">🦄</div><div class="lp-hcard__name">STARLIGHT</div><div class="lp-hcard__role">The all-rounder</div><span class="lp-tag2 lp-tag2--free">FREE</span></div>
+            <div class="lp-hcard"><div class="lp-hcard__ava">🐱</div><div class="lp-hcard__name">PIXEL</div><div class="lp-hcard__role">Quick paws</div><span class="lp-tag2 lp-tag2--free">FREE</span></div>
+            <div class="lp-hcard"><div class="lp-hcard__ava">🦊</div><div class="lp-hcard__name">RUSTY</div><div class="lp-hcard__role">Sly &amp; speedy</div><span class="lp-tag2 lp-tag2--free">FREE</span></div>
+            <div class="lp-hcard"><div class="lp-hcard__ava">🤖</div><div class="lp-hcard__name">BOLT</div><div class="lp-hcard__role">+1 heart</div><span class="lp-tag2 lp-tag2--power">5 COINS</span></div>
+            <div class="lp-hcard"><div class="lp-hcard__ava">☄️</div><div class="lp-hcard__name">COMET</div><div class="lp-hcard__role">Super jump</div><span class="lp-tag2 lp-tag2--power">12 COINS</span></div>
+            <div class="lp-hcard"><div class="lp-hcard__ava">🌟</div><div class="lp-hcard__name">NOVA</div><div class="lp-hcard__role">Starts super</div><span class="lp-tag2 lp-tag2--power">22 COINS</span></div>
+            <div class="lp-hcard lp-hcard--locked"><span class="lp-lock">🔒</span><div class="lp-hcard__ava">🦀</div><div class="lp-hcard__name">SHELLY</div><div class="lp-hcard__role">Treasure magnet</div><span class="lp-tag2 lp-tag2--secret">SECRET</span></div>
+            <div class="lp-hcard lp-hcard--locked"><span class="lp-lock">🔒</span><div class="lp-hcard__ava">🐵</div><div class="lp-hcard__name">MANGO</div><div class="lp-hcard__role">Super jump</div><span class="lp-tag2 lp-tag2--secret">SECRET</span></div>
+          </div>
+          <p class="lp-note">🔒 SECRET HEROES ARE FOUND ONLY BY DISCOVERING A WORLD'S HIDDEN PATH</p>
+        </section>
+
+        <!-- ===== HOW IT PLAYS ===== -->
+        <section class="lp-sec lp-how">
+          <div class="lp-kicker">◆ HOW IT PLAYS ◆</div>
+          <h2 class="lp-h2">Never feels like homework</h2>
+          <div class="lp-steps">
+            <div class="lp-step"><div class="lp-step__n">1</div><div class="lp-step__ill"><span class="lp-emoji">🦄💨</span></div><div class="lp-step__t">IT RUNS, YOU RIDE</div><div class="lp-step__d">Your hero dashes forward on its own. A tap jumps, a swipe dodges — no fiddly controls to master.</div></div>
+            <div class="lp-step"><div class="lp-step__n">2</div><div class="lp-step__ill"><div class="lp-gate">7&nbsp;×&nbsp;8&nbsp;<span class="lp-gate__q">= ?</span></div></div><div class="lp-step__t">GATES ARE QUESTIONS</div><div class="lp-step__d">A glowing gate appears with a times-table fact. Pick the right answer and smash straight through it.</div></div>
+            <div class="lp-step"><div class="lp-step__n">3</div><div class="lp-step__ill"><span class="lp-emoji">💛🔁</span></div><div class="lp-step__t">A MISS IS NO BIG DEAL</div><div class="lp-step__d">Wrong answers are gentle — a quick retry, one lost heart, never a lecture. Build a streak across all eight worlds.</div></div>
+          </div>
+        </section>
+
+        <!-- ===== FINAL CTA ===== -->
+        <section class="lp-final">
+          <div class="lp-final__grass"></div>
+          <div class="lp-final__inner">
+            <h2 class="lp-h2 lp-h2--light">Ready, hero?</h2>
+            <p class="lp-final__sub">Free to play, works offline, and every gallop makes the times tables stick.</p>
+            <button class="lp-btn lp-btn--play" id="lp-create2" data-lp="create">▶ START THE ADVENTURE</button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -426,6 +487,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787037747"></script>
+  <script src="js/app.js?v=1787039873"></script>
 </body>
 </html>
