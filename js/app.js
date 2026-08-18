@@ -1361,6 +1361,9 @@
     $all(".lp-wcard__scene[data-world]").forEach(function (cv) {
       try { Adv.drawWorld(cv, +cv.getAttribute("data-world")); } catch (e) {}
     });
+    $all(".lp-step__scene[data-how]").forEach(function (cv) {
+      try { Adv.drawHowScene(cv, +cv.getAttribute("data-how")); } catch (e) {}
+    });
   }
   function openLanding() { show("landing"); LandingFX.start(); paintLandingHeroes(); }
   function signOut() {
@@ -3349,6 +3352,7 @@
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
       drawHero: function (cv, type, front) { Adv.drawHero(cv, type, front); },
       drawWorld: function (cv, idx) { Adv.drawWorld(cv, idx); },
+      drawHowScene: function (cv, kind) { Adv.drawHowScene(cv, kind); },
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
       get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
@@ -3447,7 +3451,38 @@
         R(cx - 22, gy - 3, 3, 4, "#a06bff"); R(cx + 20, gy - 4, 3, 5, "#5fd0ff");              // crystals
       }
     }
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld };
+    // Pixel illustration for a "how it plays" step (0 run · 1 gate · 2 miss).
+    function drawHowScene(canvas, kind) {
+      var g = canvas.getContext("2d"); g.imageSmoothingEnabled = false;
+      var W = canvas.width, H = canvas.height, gy = Math.round(H * 0.74), cx = Math.round(W * 0.5);
+      function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+      function disc(ox, oy, r, c) { R(ox - r, oy - r + 1, 2 * r, 2 * r - 2, c); R(ox - r + 1, oy - r, 2 * r - 2, 2 * r, c); }
+      var HROWS = ["011011", "111111", "111111", "011110", "001100"];
+      function heart(x, y, b, c) { for (var ry = 0; ry < HROWS.length; ry++) for (var rx = 0; rx < 6; rx++) if (HROWS[ry].charAt(rx) === "1") R(x + rx * b, y + ry * b, b, b, c); }
+      g.clearRect(0, 0, W, H);
+      if (kind === 0) {                                                   // RUN — hero dashing across a meadow
+        R(0, 0, W, H, "#7fb0ff"); R(0, H * 0.45, W, H, "#a8d0ff"); disc(W - 15, 13, 6, "#fff6c8");
+        R(0, gy, W, H, "#7cd04a"); R(0, gy + 5, W, H, "#c9803f"); R(0, gy + 5, W, 2, "#a8632f");
+        R(cx - 32, gy - 20, 12, 2, "#ffd23f"); R(cx - 36, gy - 14, 16, 2, "#ffffff"); R(cx - 30, gy - 8, 10, 2, "#ffd23f");   // speed lines
+        heroDraw(g, "unicorn", cx - 10, gy - 31, 44, 35, 1, false);
+      } else if (kind === 1) {                                            // GATE — a glowing question gate
+        R(0, 0, W, H, "#4a3f7a"); R(0, H * 0.45, W, H, "#5a4a9a");
+        R(0, gy, W, H, "#352b5e"); R(0, gy + 5, W, H, "#241a4a");
+        g.globalAlpha = 0.45; disc(cx, gy - 20, 22, "#ffd23f"); g.globalAlpha = 1;
+        R(cx - 20, gy - 40, 6, 40, "#ffd23f"); R(cx + 14, gy - 40, 6, 40, "#ffd23f"); R(cx - 20, gy - 42, 40, 6, "#ffd23f");   // posts + lintel
+        R(cx - 20, gy - 40, 6, 40, "#ffd23f"); R(cx - 14, gy - 36, 28, 36, "#241a4a");                                        // doorway
+        g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "bold 12px 'DejaVu Sans Mono',ui-monospace,monospace";
+        g.fillText("7×8", cx, gy - 24); g.fillStyle = "#ffd23f"; g.fillText("=?", cx, gy - 11);
+      } else {                                                            // MISS — one heart lost, quick retry
+        R(0, 0, W, H, "#a8d0ff"); R(0, H * 0.45, W, H, "#cfe6ff");
+        R(0, gy, W, H, "#7cd04a"); R(0, gy + 5, W, H, "#c9803f");
+        heart(cx - 43, gy - 30, 3, "#ff4d6d"); heart(cx - 24, gy - 30, 3, "#ff4d6d"); heart(cx - 5, gy - 30, 3, "#c9c0d6");   // 2 full + 1 empty
+        var ax = cx + 26, ay = gy - 15, r = 8;
+        for (var a = -1.1; a < 4.2; a += 0.42) R(ax + Math.cos(a) * r - 1.5, ay + Math.sin(a) * r - 1.5, 3, 3, "#3fbf5a");     // retry loop
+        R(ax + 4, ay - 11, 4, 2, "#3fbf5a"); R(ax + 7, ay - 9, 2, 4, "#3fbf5a");                                              // arrowhead
+      }
+    }
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene };
   })();
 
   /* ---------------- init / wiring ---------------- */
