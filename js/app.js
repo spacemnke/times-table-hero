@@ -449,6 +449,7 @@
   /* ---------------- navigation ---------------- */
   function show(name) {
     $all(".screen").forEach(function (s) { s.classList.toggle("is-active", s.getAttribute("data-screen") === name); });
+    document.body.classList.toggle("lp-full", name === "landing");   // landing breaks out to full browser width
     window.scrollTo(0, 0);
   }
   document.addEventListener("click", function (e) {
