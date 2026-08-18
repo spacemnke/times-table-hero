@@ -431,15 +431,25 @@
           <div class="rep-cell"><b id="rep-streak">0</b><span>Current streak</span></div>
         </div>
 
+        <div class="rep-mastery" id="rep-mastery"></div>
+        <div class="rep-insight" id="rep-insight"></div>
+
         <h3 class="rep-h">Practice this week</h3>
         <div class="activity" id="rep-activity"></div>
         <p class="rep-note" id="rep-active-note"></p>
+
+        <h3 class="rep-h">Progress over time</h3>
+        <div class="rep-trend" id="rep-trend"></div>
 
         <h3 class="rep-h">Accuracy by table</h3>
         <div class="tablebars" id="rep-tablebars"></div>
 
         <h3 class="rep-h">Trickiest facts <span class="rep-sub">(needs the most work)</span></h3>
         <div class="tricky" id="rep-tricky"></div>
+        <button class="btn-practice" id="rep-practice-weak" hidden>▶ Practice these now</button>
+
+        <h3 class="rep-h">Fluency <span class="rep-sub">(known &amp; automatic?)</span></h3>
+        <div class="fluency" id="rep-fluency"></div>
 
         <h3 class="rep-h">Fact mastery map</h3>
         <p class="rep-note">Each square is a fact. Green = strong, red = needs work, grey = not tried yet.</p>
@@ -473,6 +483,13 @@
             <span class="toggle-row__hint">Forgive one missed day (once a week) so an off day doesn't reset the streak.</span>
           </span>
           <button class="switch" id="freeze-toggle" role="switch" aria-checked="true"><span class="switch__dot"></span></button>
+        </div>
+
+        <div class="toggle-row">
+          <span class="toggle-row__label">Missing-number gates 🔢
+            <span class="toggle-row__hint">Mixes “find the missing number” questions (5 × ? = 25) into the Daily Challenge for deeper understanding.</span>
+          </span>
+          <button class="switch" id="missing-toggle" role="switch" aria-checked="false"><span class="switch__dot"></span></button>
         </div>
 
         <h3 class="rep-h">Players</h3>

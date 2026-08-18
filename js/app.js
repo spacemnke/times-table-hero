@@ -84,6 +84,7 @@
     if (typeof p.settings.dailyGoal !== "number") p.settings.dailyGoal = 20;
     if (!Array.isArray(p.settings.focusTables) || !p.settings.focusTables.length) p.settings.focusTables = allTables();
     if (typeof p.settings.streakFreeze !== "boolean") p.settings.streakFreeze = true;
+    if (typeof p.settings.missingFactor !== "boolean") p.settings.missingFactor = false;
     return p;
   }
   function pKey(id) { return STORE_KEY + "." + (id || activeId); }
@@ -480,6 +481,11 @@
     while (out.length < limit) { out.push({ a: randInt(MAX) + 1, b: randInt(MAX) + 1 }); }
     return shuffle(out);
   }
+  // When "missing-number gates" is on, tag ~40% of a deck's questions to hide a factor (5 × ? = 25).
+  function seedMissing(deck) {
+    if (progress.settings.missingFactor) deck.forEach(function (q, i) { if (i > 0 && Math.random() < 0.4) q.hide = Math.random() < 0.5 ? "a" : "b"; });
+    return deck;
+  }
 
   /* ---------------- recording ---------------- */
   function recordAnswer(a, b, correct, ms) {
@@ -777,6 +783,7 @@
       it.appendChild(el("div", "tricky__pct", Math.round(o.acc * 100) + "% · " + o.n + " tries"));
       tw.appendChild(it);
     });
+    var pw = $("#rep-practice-weak"); if (pw) pw.hidden = !weak.length;
 
     // heatmap 13x13
     var hm = $("#rep-heatmap"); hm.innerHTML = "";
@@ -793,8 +800,11 @@
       }
     }
 
+    renderMastery(); renderInsight(); renderTrend(); renderFluency();
+
     $("#goal-value").textContent = progress.settings.dailyGoal;
     $("#freeze-toggle").setAttribute("aria-checked", progress.settings.streakFreeze !== false ? "true" : "false");
+    var mt = $("#missing-toggle"); if (mt) mt.setAttribute("aria-checked", progress.settings.missingFactor ? "true" : "false");
     renderFocusPicker();
   }
   function renderFocusPicker() {
@@ -814,6 +824,77 @@
     })(i);
   }
   function setFocus(arr) { progress.settings.focusTables = arr.slice(); save(); renderFocusPicker(); renderHome(); }
+
+  /* ---- richer parent insights: mastery, fluency, plain-language, weekly trend ---- */
+  function factLevel(a, b) {
+    var f = getFact(a, b);
+    if (f.n === 0) return "unseen";
+    if (f.n < 2) return "learning";
+    var acc = f.c / f.n, avg = f.ms / f.n;
+    if (acc >= 0.85) return avg <= 3200 ? "fluent" : "solid";   // solid = right but slow
+    if (acc >= 0.6) return "learning";
+    return "weak";
+  }
+  function masteryStats() {
+    var mastered = 0, fluent = 0;
+    for (var r = 1; r <= MAX; r++) for (var c = 1; c <= MAX; c++) { var lv = factLevel(r, c); if (lv === "fluent") { fluent++; mastered++; } else if (lv === "solid") mastered++; }
+    var slow = [];
+    for (var a = 1; a <= MAX; a++) for (var b = a; b <= MAX; b++) { if (factLevel(a, b) === "solid") { var f = getFact(a, b); slow.push({ a: a, b: b, avg: f.ms / f.n }); } }
+    slow.sort(function (x, y) { return y.avg - x.avg; });
+    var full = [];
+    for (var t = 1; t <= MAX; t++) { var ok = true; for (var k = 1; k <= MAX; k++) { var l = factLevel(t, k); if (l !== "fluent" && l !== "solid") { ok = false; break; } } if (ok) full.push(t); }
+    return { mastered: mastered, fluent: fluent, slow: slow, full: full, total: MAX * MAX };
+  }
+  function listJoin(arr) { if (!arr.length) return ""; if (arr.length === 1) return arr[0]; if (arr.length === 2) return arr[0] + " and " + arr[1]; return arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1]; }
+  function tableStats() { var out = []; for (var t = 1; t <= MAX; t++) { var n = 0, c = 0; for (var b = 1; b <= MAX; b++) { var f = getFact(t, b); n += f.n; c += f.c; } out.push({ t: t, n: n, acc: n ? c / n : null }); } return out; }
+  function trickiestFact() { var best = null; for (var x = 1; x <= MAX; x++) for (var y = x; y <= MAX; y++) { var f = getFact(x, y); if (f.n >= 3) { var a = f.c / f.n; if (!best || a < best.acc) best = { a: x, b: y, acc: a, n: f.n }; } } return best; }
+  function weekAgg(startOff) { var q = 0, c = 0; for (var o = startOff; o < startOff + 7; o++) { var d = progress.days[dayKey(o)]; if (d) { q += d.q || 0; c += d.c || 0; } } return { q: q, c: c, acc: q ? c / q : null }; }
+
+  function renderMastery() {
+    var box = $("#rep-mastery"); if (!box) return;
+    var m = masteryStats(), pct = Math.round(m.mastered / m.total * 100);
+    var tables = m.full.length ? m.full.map(function (t) { return t + "s"; }).join(", ") : "none yet — keep going!";
+    box.innerHTML =
+      '<div class="mst-head"><span class="mst-big">' + m.mastered + '</span><span class="mst-of">of ' + m.total + ' facts<br>mastered</span></div>' +
+      '<div class="mst-bar"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="mst-tags"><span class="mst-tag mst-tag--fast">⚡ ' + m.fluent + ' fast &amp; fluent</span>' +
+      '<span class="mst-tag mst-tag--full">✅ Tables aced: ' + tables + '</span></div>';
+  }
+  function renderInsight() {
+    var box = $("#rep-insight"); if (!box) return;
+    var who = activeProfile(), name = who ? who.name : "Your child";
+    if (progress.totalQ < 15) { box.innerHTML = '<span class="insight-i">💡</span><p>Keep playing! After a few more rounds, ' + name + "'s clear strengths and tricky spots will show up right here.</p>"; return; }
+    var ts = tableStats().filter(function (o) { return o.n >= 5 && o.acc != null; });
+    ts.sort(function (x, y) { return y.acc - x.acc; });
+    var strong = ts.slice(0, 2).filter(function (o) { return o.acc >= 0.8; }).map(function (o) { return o.t + "s"; });
+    var weakT = ts.length ? ts[ts.length - 1] : null, trick = trickiestFact();
+    var s = strong.length ? (name + " is strongest at the " + listJoin(strong) + ".") : (name + " is building a solid base.");
+    if (weakT && weakT.acc < 0.8) { s += " The " + weakT.t + "s need the most work"; if (trick) s += " — " + trick.a + " × " + trick.b + " is the trickiest so far (" + Math.round(trick.acc * 100) + "% over " + trick.n + " tries)"; s += "."; }
+    else if (trick && trick.acc < 0.72) { s += " Trickiest fact right now: " + trick.a + " × " + trick.b + " (" + Math.round(trick.acc * 100) + "%)."; }
+    else { s += " No real weak spots right now — lovely work! 🎉"; }
+    box.innerHTML = '<span class="insight-i">💡</span><p>' + s + '</p>';
+  }
+  function renderFluency() {
+    var box = $("#rep-fluency"); if (!box) return;
+    var m = masteryStats();
+    if (!m.slow.length) { box.innerHTML = '<p class="rep-note">Nothing stuck in the slow lane — recall speed looks great! ⚡</p>'; return; }
+    box.innerHTML = '<p class="rep-note">Known, but still slow to recall — a little speed practice locks these in:</p><div class="fluency-list">' +
+      m.slow.slice(0, 10).map(function (o) { return '<span class="fchip">' + o.a + ' × ' + o.b + '</span>'; }).join("") + '</div>';
+  }
+  function renderTrend() {
+    var box = $("#rep-trend"); if (!box) return;
+    var tw = weekAgg(0), lw = weekAgg(7);
+    if (tw.q + lw.q === 0 && weekAgg(14).q + weekAgg(21).q === 0) { box.innerHTML = '<p class="rep-note">Practice across a couple of weeks and the trend shows up here.</p>'; return; }
+    function delta(a, b, suffix) { if (b == null) return ""; var d = Math.round(a - b); var cls = d > 0 ? "up" : d < 0 ? "down" : "flat", arrow = d > 0 ? "▲" : d < 0 ? "▼" : "•"; return '<span class="tr-delta tr-' + cls + '">' + arrow + " " + Math.abs(d) + suffix + " vs last wk</span>"; }
+    var accNow = tw.acc == null ? "—" : Math.round(tw.acc * 100) + "%";
+    var html = '<div class="tr-compare">';
+    html += '<div class="tr-c"><b>' + tw.q + '</b><span>questions this week</span>' + (lw.q ? delta(tw.q, lw.q, "") : "") + '</div>';
+    html += '<div class="tr-c"><b>' + accNow + '</b><span>accuracy this week</span>' + (lw.acc != null && tw.acc != null ? delta(tw.acc * 100, lw.acc * 100, "%") : "") + '</div>';
+    html += '</div><div class="tr-bars">';
+    for (var w = 3; w >= 0; w--) { var ag = weekAgg(w * 7), h = ag.acc == null ? 0 : Math.round(ag.acc * 100), lbl = w === 0 ? "now" : w + "w"; html += '<div class="tr-col"><div class="tr-bar' + (ag.q ? "" : " tr-empty") + '" style="height:' + Math.max(4, h * 0.6) + 'px"></div><span class="tr-p">' + (ag.q ? h + "%" : "—") + '</span><span class="tr-l">' + lbl + '</span></div>'; }
+    html += '</div>';
+    box.innerHTML = html;
+  }
 
   /* ---------------- profiles UI ---------------- */
   function updatePlayerSwitch() {
@@ -1197,7 +1278,7 @@
         hero: { wx: HEROX, y: GROUND, vy: 0, ground: true, hold: false, dbl: false, coyote: 0, inv: 0, power: power === "star" ? 6 : 0, run: 0 },
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
-        deck: buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12)), deckI: 0,
+        deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
         grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
@@ -1328,11 +1409,11 @@
       if (k === "enter") { if (G.input !== "") submit(parseInt(G.input, 10)); return; }
       if (G.input.length >= 3) return; if (G.input === "" && k === "0") return;
       G.input += k; mdisp();
-      if (parseInt(G.input, 10) === G.question.a * G.question.b) submit(G.question.a * G.question.b);
+      if (parseInt(G.input, 10) === qAns(G.question)) submit(qAns(G.question));
     }
     function addCoins(n) { G.coins += n; progress.coins = (progress.coins || 0) + n; }
     function submit(v) { if (G.state === "trapped") { escapeSubmit(v); return; }
-      var q = G.question, ans = q.a * q.b, ms = Date.now() - G.qStart, correct = v === ans, box = $("#adv-mabox");
+      var q = G.question, ans = qAns(q), ms = Date.now() - G.qStart, correct = v === ans, box = $("#adv-mabox");
       var justMet = recordAnswer(q.a, q.b, correct, ms); if (justMet) G.goalMet = true;
       if (correct) {
         box.className = "good"; aGood(); haptic(12);
@@ -1353,7 +1434,7 @@
         // gentle coaching: a directional nudge first, then reveal the skip-count if they miss again — you stay at the gate to retry
         G.gateTries = (G.gateTries || 0) + 1;
         var heB = $("#adv-mhint");
-        if (heB && G.hearts > 0) { var reveal = G.gateTries >= 2; heB.textContent = reveal ? skipCountReveal(q.a, q.b) : mathHint(q.a, q.b, v); heB.className = "adv8-hint" + (reveal ? " reveal" : ""); }
+        if (heB && G.hearts > 0) { var reveal = G.gateTries >= 2; heB.textContent = gateHint(q, v, reveal); heB.className = "adv8-hint" + (reveal ? " reveal" : ""); }
         G.input = ""; mdisp(); save();
         if (G.hearts <= 0) setTimeout(function () { if (!G) return; mathHide(); G.state = "fail"; openOv("adv-failOv"); }, 420);
       }
@@ -1397,6 +1478,17 @@
     function groundAt(wx) { for (var i = 0; i < G.grounds.length; i++) { var s = G.grounds[i]; if (wx >= s[0] && wx <= s[1]) return true; } return false; }
     function platTop(p) { var ha = p.mv ? p.hAbove + Math.sin(G.t * 2 * Math.PI / p.period + p.phase) * p.amp : p.hAbove; return GROUND - ha; }
     function nextQ() { var d = G.deck; if (!d.length) return { a: 2, b: 2 }; var q = d[G.deckI % d.length]; G.deckI++; return q; }
+    // missing-number support: a question may hide a factor ("5 × ? = 25"); the typed answer is that factor
+    function qShown(q) { if (q.hide === "a") return "? × " + q.b + " = " + (q.a * q.b); if (q.hide === "b") return q.a + " × ? = " + (q.a * q.b); return q.a + " × " + q.b; }
+    function qAns(q) { return q.hide === "a" ? q.a : q.hide === "b" ? q.b : q.a * q.b; }
+    function gateHint(q, guess, reveal) {
+      if (q.hide) {
+        var target = qAns(q), shown = q.hide === "a" ? q.b : q.a, prod = q.a * q.b;
+        if (reveal) return "count by " + shown + "s to " + prod + ": " + countByStr(shown, target) + " → that's " + target;
+        return guess > target ? "A little too high — try a smaller number ⬇" : "A little too low — try a bigger number ⬆";
+      }
+      return reveal ? skipCountReveal(q.a, q.b) : mathHint(q.a, q.b, guess);
+    }
 
     function hideAllOv() { ["adv-mapOv", "adv-winOv", "adv-failOv"].forEach(function (id) { $("#" + id).classList.add("hidden"); }); }
     function openOv(id) { hideAllOv(); $("#" + id).classList.remove("hidden"); hudShow(false); mathHide(); }
@@ -1485,7 +1577,7 @@
       haptic([10, 25, 10]);
     }
     function respawn() { var h = G.hero; h.wx = G.lastCP; h.y = GROUND; h.vy = 0; h.inv = 1; h.ground = true; }
-    function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); G.gateTries = 0; var heN = $("#adv-mhint"); if (heN) { heN.textContent = ""; heN.className = "adv8-hint"; } mdisp(); $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mathShow(); hint(""); }
+    function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); G.gateTries = 0; var heN = $("#adv-mhint"); if (heN) { heN.textContent = ""; heN.className = "adv8-hint"; } mdisp(); $("#adv-mq").textContent = qShown(G.question); mathShow(); hint(""); }
     // SKIP HOP: you reached the skip platform above a portal — pass that math problem for free (no coins/combo; the reward is the leap itself)
     function skipGate(gi) {
       if (gi == null || gi !== G.nextGate) return;
@@ -3073,6 +3165,17 @@
       save();
       $("#freeze-toggle").setAttribute("aria-checked", progress.settings.streakFreeze ? "true" : "false");
       renderHome();
+    });
+    $("#missing-toggle").addEventListener("click", function () {
+      sTap();
+      progress.settings.missingFactor = !progress.settings.missingFactor;
+      save();
+      $("#missing-toggle").setAttribute("aria-checked", progress.settings.missingFactor ? "true" : "false");
+    });
+    $("#rep-practice-weak").addEventListener("click", function () {
+      sTap(); ac();
+      var wk = weakFacts(15), tbls = []; wk.forEach(function (q) { if (tbls.indexOf(q.a) < 0) tbls.push(q.a); });
+      Adv.startArena({ tables: tbls.length ? tbls : focusTables(), len: 12, mode: "mix" });
     });
     $("#reset-progress").addEventListener("click", function () {
       var who = activeProfile(); var nm = who ? who.name : "this player";

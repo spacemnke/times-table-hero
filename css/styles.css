@@ -584,6 +584,37 @@ body {
 
 .btn-reset { margin-top: 20px; color: var(--bad); }
 
+/* ---- richer parent report: mastery, insight, trend, fluency ---- */
+.rep-mastery { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; padding: 16px 18px; margin-top: 16px; }
+.mst-head { display: flex; align-items: center; gap: 12px; }
+.mst-big { font-size: 44px; font-weight: 900; line-height: .9; text-shadow: 2px 2px 0 rgba(0,0,0,.25); }
+.mst-of { font-size: 13px; font-weight: 800; line-height: 1.15; }
+.mst-bar { height: 12px; background: rgba(255,255,255,.28); border: 2px solid rgba(0,0,0,.25); margin: 12px 0 10px; }
+.mst-bar span { display: block; height: 100%; background: #ffd23f; transition: width .5s ease; }
+.mst-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.mst-tag { font-size: 11px; font-weight: 800; background: rgba(0,0,0,.2); padding: 5px 9px; border-radius: 8px; }
+.rep-insight { display: flex; gap: 10px; align-items: flex-start; background: var(--card); border: 3px solid var(--amber); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow-sm); margin-top: 12px; }
+.rep-insight .insight-i { font-size: 20px; line-height: 1.2; }
+.rep-insight p { margin: 0; font-weight: 700; font-size: 14px; line-height: 1.45; color: var(--ink); }
+.rep-trend { background: var(--card); padding: 14px; box-shadow: var(--shadow-sm); }
+.tr-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.tr-c { text-align: center; }
+.tr-c b { display: block; font-size: 24px; font-weight: 900; color: var(--brand); }
+.tr-c > span { display: block; font-size: 11px; color: var(--ink-soft); font-weight: 700; }
+.tr-delta { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 800; }
+.tr-up { color: var(--good); } .tr-down { color: var(--bad); } .tr-flat { color: var(--ink-soft); }
+.tr-bars { display: flex; align-items: flex-end; justify-content: space-around; gap: 10px; height: 96px; border-top: 2px solid var(--line); padding-top: 10px; }
+.tr-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; height: 100%; }
+.tr-bar { width: 30px; background: linear-gradient(180deg, var(--brand-2), var(--brand)); min-height: 4px; }
+.tr-bar.tr-empty { background: var(--line); }
+.tr-p { font-size: 10px; font-weight: 800; color: var(--ink); }
+.tr-l { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+.fluency-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.fchip { background: var(--card); border: 2.5px solid var(--amber); color: var(--ink); border-radius: 10px; padding: 7px 10px; font-weight: 800; font-size: 14px; }
+.btn-practice { display: block; width: 100%; margin: 12px 0 4px; padding: 13px; cursor: pointer; font-family: inherit;
+  background: linear-gradient(140deg, var(--lime), #16a34a); color: #fff; font-weight: 900; font-size: 15px; }
+.btn-practice:active { transform: scale(.98); }
+
 /* ---------------- sound ---------------- */
 .sound-toggle { position: fixed; right: calc(env(safe-area-inset-right,0px) + 12px); bottom: calc(var(--safe-bottom) + 12px);
   width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--card); box-shadow: var(--shadow-sm);
@@ -621,13 +652,14 @@ body {
 .daily-card, .pcard, .tile, .num-btn, .chip, .seg__btn, .btn-primary, .btn-secondary, .key, .answer,
 .answer-box, .table-row, .results__stat, .hero-stat, .badge, .rep-cell, .gate, .activity, .tricky__item,
 .goal-setter, .focus-block, .toggle-row, .mini-btn, .step, .btn-back, .player-switch, .av-btn, .name-input,
-.gate__input, .pm-row, .pm-btn, .cta, .streak-pill, .sound-toggle, .pcard--add, .pcard--signin {
+.gate__input, .pm-row, .pm-btn, .cta, .streak-pill, .sound-toggle, .pcard--add, .pcard--signin,
+.rep-mastery, .rep-trend, .btn-practice {
   border: 3px solid #ffffff; border-radius: var(--radius);
 }
 .num-btn, .tile, .av-btn, .mini-btn, .step, .chip, .seg__btn, .key, .answer, .btn-back { border-color: #e6ecff; }
 /* progress tracks: thin dark-bordered pixel bars */
 .goalbar, .quiz-progress, .tbar__track, .timerbar { border: 2px solid #0b0e24; border-radius: 0; }
-.goalbar__fill, .quiz-progress__bar, .tbar__fill, .timerbar__fill, .act-bar { border-radius: 0; }
+.goalbar__fill, .quiz-progress__bar, .tbar__fill, .timerbar__fill, .act-bar, .tr-bar { border-radius: 0; }
 /* headings — gold arcade with hard shadow */
 .topbar__title, .results__title, .rep-h, .cta__title, .dash-rank { color: #ffd23f; text-shadow: 2px 2px 0 #000; letter-spacing: .02em; font-weight: 800; }
 .cta__title { color: #fff; }
