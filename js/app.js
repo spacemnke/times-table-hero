@@ -2418,35 +2418,48 @@
         for (var cy = 0; cy < rows; cy++) for (var cx = 0; cx < cols; cx++) { var c = grid[cy][cx]; if (!c.on) continue; o.fillStyle = "rgb(" + c.r + "," + c.g + "," + c.b + ")"; o.fillRect(cx * B, cy * B, B, B); }
         return out;
       }
+      // ---- shared chunky-pixel kit — same grid the unicorn uses, so every hero is one 8-bit set ----
+      var INKC = "#241a4a", SU = 2.7;
+      function sideKit(g, fr) {
+        function px(rx, ry, w, h, col) { g.fillStyle = col; g.fillRect(Math.round((rx + 3.5) * SU) + 1, Math.round((ry + 3.1) * SU) + 1, Math.max(1, Math.round(w * SU)), Math.max(1, Math.round(h * SU))); }
+        function ob(rx, ry, w, h) { px(rx - 0.45, ry - 0.45, w + 0.9, h + 0.9, INKC); }
+        function leg(rx, alt, col, paw) { var up = (fr === 0) ? alt : (1 - alt), h = 4.4 - up * 2.2; ob(rx, 11, 2, h); px(rx, 11, 2, h, col); px(rx, 11 + h - 1.1, 2, 1.4, paw || col); }
+        function eyeP(rx, ry) { px(rx, ry, 1.5, 1.7, INKC); px(rx + 0.4, ry + 0.2, 0.6, 0.6, "#fff"); }
+        function mouth(rx, ry, w) { px(rx, ry, w, 0.8, INKC); px(rx - 0.5, ry - 0.7, 1, 0.9, INKC); px(rx + w - 0.5, ry - 0.7, 1, 0.9, INKC); }
+        return { px: px, ob: ob, leg: leg, eyeP: eyeP, mouth: mouth };
+      }
+      function frontKit(g) {
+        function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+        function ob(x, y, w, h) { R(x - 2, y - 2, w + 4, h + 4, INKC); }
+        function eyes2(lx, rx, y) { R(lx, y, 5, 6, INKC); R(rx, y, 5, 6, INKC); R(lx + 1, y + 1, 2, 2, "#fff"); R(rx + 1, y + 1, 2, 2, "#fff"); }
+        function mouthF(cx, y, w) { R(cx - w / 2, y, w, 2, INKC); R(cx - w / 2 - 2, y - 2, 3, 2, INKC); R(cx + w / 2 - 1, y - 2, 3, 2, INKC); }
+        return { R: R, ob: ob, eyes2: eyes2, mouthF: mouthF };
+      }
       function catSide(g, fr) {
-        var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", O = "#2b2838", am = "#f5b731", pk = "#ff8fb0", st = "#616d88", f = fr ? 2 : -2;
-        limb(g, 7, 32, 7, 11, 6, B, O); g.strokeStyle = W; g.lineCap = "round"; g.lineWidth = 4; g.beginPath(); g.moveTo(7, 13); g.lineTo(7, 11); g.stroke();
-        limb(g, 20, 42, 20, 51, 5, D, O); limb(g, 36 + f, 42, 36 + f, 51, 5, D, O);
-        ell(g, 29, 34, 17, 13, B, O); clipEll(g, 29, 34, 16.4, 12.4, function () { g.fillStyle = D; g.beginPath(); g.ellipse(29, 42, 18, 9, 0, 0, 7); g.fill(); g.fillStyle = W; g.beginPath(); g.ellipse(28, 40, 11, 7, 0, 0, 7); g.fill(); });
-        limb(g, 25, 42, 25, 51, 5, B, O); limb(g, 41 - f, 42, 41 - f, 51, 5, B, O);
-        ell(g, 46, 22, 14, 13, B, O);
-        pth(g, function (c) { c.moveTo(38, 13); c.lineTo(36, 2); c.lineTo(47, 12); }, B, O); pth(g, function (c) { c.moveTo(50, 11); c.lineTo(57, 3); c.lineTo(54, 15); }, B, O);
-        pth(g, function (c) { c.moveTo(40, 10); c.lineTo(39, 4); c.lineTo(45, 11); }, pk); pth(g, function (c) { c.moveTo(51, 10); c.lineTo(55, 5); c.lineTo(53, 13); }, pk);
-        clipEll(g, 46, 22, 13.4, 12.4, function () { g.strokeStyle = st; g.lineWidth = 2;[38, 44, 50].forEach(function (sx) { g.beginPath(); g.moveTo(sx, 10); g.lineTo(sx + 2, 15); g.stroke(); }); });
-        ell(g, 55, 25, 6, 4.6, W, O); ell(g, 52, 25, 1, 2.4, "#20242e", null); ell(g, 58, 25, 1, 2.4, "#20242e", null);
-        pth(g, function (c) { c.moveTo(54.5, 23.5); c.lineTo(57.5, 23.5); c.lineTo(56, 25.5); }, pk);
-        g.strokeStyle = O; g.lineWidth = 1; g.beginPath(); g.moveTo(56, 25.5); g.lineTo(56, 27.5); g.stroke();
-        g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = .8;[24, 27].forEach(function (wy) { g.beginPath(); g.moveTo(57, wy); g.lineTo(63, wy - 1); g.stroke(); });
-        eye(g, 50, 21, 2.6, am);
+        var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", am = "#f5b731", pk = "#ff8fb0", st = "#616d88";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        for (var t = 0; t < 5; t++) px(-1.4 - (t < 2 ? t * 0.3 : (4 - t) * 0.3), 9.4 - t * 1.4, 2, 1.6, t % 2 ? D : B);   // curling tail
+        K.leg(3, 0, B, W); K.leg(5.4, 1, B, W);                                     // back legs
+        ob(2, 6.4, 11, 5.4); px(2, 6.4, 11, 5.4, B); px(2, 10.2, 11, 1.6, D); px(1.4, 7.2, 1.6, 3.4, B);   // body + belly shade
+        px(4, 7.2, 1.6, 1, st); px(7, 6.8, 1.6, 1, st); px(9.6, 7.2, 1.6, 1, st);   // back stripes
+        K.leg(9, 1, B, W); K.leg(11.4, 0, B, W);                                     // front legs
+        ob(10.4, 2.6, 6.2, 5.6); px(10.4, 2.6, 6.2, 5.6, B);                          // head
+        px(10.2, 1.2, 1.9, 2, B); px(10.6, 1.7, 1, 1, pk); px(14.9, 1.2, 1.9, 2, B); px(15.3, 1.7, 1, 1, pk);   // ears
+        px(14.6, 5.4, 2.6, 2.4, W); px(15.7, 5.7, 1, 0.9, pk);                        // muzzle + nose
+        px(11.2, 3.4, 1.6, 1, st); px(11.6, 5, 1.4, 1, st);                           // face stripes
+        K.eyeP(13.1, 3.9); px(12.9, 3.7, 1.9, 0.5, am);                               // amber-lidded eye
       }
       function foxSide(g, fr) {
-        var B = "#e8722a", D = "#c1531a", W = "#fde6cf", O = "#2a1608", sk = "#3a2418", f = fr ? 2 : -2;
-        pth(g, function (c) { c.moveTo(20, 32); c.bezierCurveTo(0, 32, -1, 9, 15, 11); c.bezierCurveTo(8, 20, 8, 38, 22, 36); }, B, O); ell(g, 10, 14, 6.5, 6.5, W, O);
-        limb(g, 21, 42, 21, 50, 5, B, O); limb(g, 36 + f, 42, 36 + f, 50, 5, B, O); g.fillStyle = sk;[21, 36 + f].forEach(function (lx) { rrf(g, lx - 2.5, 48, 5, 4, 1.5, sk, O, 1.3); });
-        ell(g, 30, 34, 17, 13, B, O); clipEll(g, 30, 34, 16.4, 12.4, function () { g.fillStyle = D; g.beginPath(); g.ellipse(31, 41, 18, 9, 0, 0, 7); g.fill(); g.fillStyle = W; g.beginPath(); g.ellipse(28, 40, 11, 8, 0, 0, 7); g.fill(); });
-        limb(g, 26, 42, 26, 50, 5, B, O); limb(g, 41 - f, 42, 41 - f, 50, 5, B, O); g.fillStyle = sk;[26, 41 - f].forEach(function (lx) { rrf(g, lx - 2.5, 48, 5, 4, 1.5, sk, O, 1.3); });
-        ell(g, 47, 23, 13, 12, B, O);
-        pth(g, function (c) { c.moveTo(40, 14); c.lineTo(35, 1); c.lineTo(50, 13); }, B, O); pth(g, function (c) { c.moveTo(52, 12); c.lineTo(59, 2); c.lineTo(55, 16); }, B, O);
-        pth(g, function (c) { c.moveTo(42, 12); c.lineTo(39, 3); c.lineTo(48, 12); }, sk); pth(g, function (c) { c.moveTo(53, 11); c.lineTo(57, 4); c.lineTo(54.5, 15); }, sk);
-        pth(g, function (c) { c.moveTo(40, 25); c.lineTo(34, 33); c.lineTo(46, 29); }, W, O);
-        pth(g, function (c) { c.moveTo(51, 19); c.bezierCurveTo(64, 21, 63, 29, 53, 28); c.bezierCurveTo(48, 26, 48, 21, 51, 19); }, W, O);
-        ell(g, 62, 25, 2.4, 2, "#20140c", null);
-        eye(g, 50, 21, 2.6, "#6a3a12");
+        var B = "#e8722a", D = "#c1531a", W = "#fde6cf", sk = "#3a2418";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        for (var t = 0; t < 5; t++) px(-2 - t * 0.5, 7.6 + t * 0.7, 2.6, 2.2, t > 3 ? W : B);   // bushy tail, white tip
+        K.leg(3, 0, B, sk); K.leg(5.4, 1, B, sk);                                    // back legs (dark socks)
+        ob(2, 6.4, 11, 5.4); px(2, 6.4, 11, 5.4, B); px(2, 9.8, 11, 2, W); px(1.4, 7.2, 1.6, 3, B);   // body + white belly
+        K.leg(9, 1, B, sk); K.leg(11.4, 0, B, sk);                                    // front legs
+        ob(10.4, 2.8, 6.4, 5.2); px(10.4, 2.8, 6.4, 5.2, B);                          // head
+        px(10, 1, 2, 2.2, B); px(10.4, 1.4, 1.1, 1.1, sk); px(15, 1, 2, 2.2, B); px(15.4, 1.4, 1.1, 1.1, sk);   // pointed ears
+        px(14.4, 5.2, 3, 2.6, W); px(16.4, 5.9, 1.1, 1, sk);                          // white snout + nose
+        K.eyeP(12.7, 4);
       }
       // Pixel-art unicorn ported from the landing hero (rainbow mane & tail, gold spiral horn, star flank).
       function uniSide(g, fr) {
@@ -2470,32 +2483,27 @@
         g.fillStyle = GOLD; g.fillRect(sx0 - 2, sy0 + 1, 6, 1); g.fillRect(sx0 + 1, sy0 - 2, 1, 6); g.fillStyle = GHI; g.fillRect(sx0, sy0, 2, 2);
       }
       function catFront(g) {
-        var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", O = "#2b2838", am = "#f5b731", pk = "#ff8fb0", st = "#616d88";
-        limb(g, 44, 52, 44, 42, 5, B, O);
-        rrf(g, 30, 40, 32, 14, 8, B, O); clipEll(g, 46, 47, 15, 7, function () { g.fillStyle = W; g.beginPath(); g.ellipse(46, 50, 10, 7, 0, 0, 7); g.fill(); });
-        [38, 54].forEach(function (px) { rrf(g, px - 4, 49, 8, 6, 3, W, O, 1.3); });
-        pth(g, function (c) { c.moveTo(34, 26); c.lineTo(30, 8); c.lineTo(48, 24); }, B, O); pth(g, function (c) { c.moveTo(58, 26); c.lineTo(62, 8); c.lineTo(44, 24); }, B, O);
-        pth(g, function (c) { c.moveTo(37, 24); c.lineTo(34, 12); c.lineTo(46, 24); }, pk); pth(g, function (c) { c.moveTo(55, 24); c.lineTo(58, 12); c.lineTo(46, 24); }, pk);
-        ell(g, 46, 28, 20, 18, B, O);
-        clipEll(g, 46, 28, 19, 17, function () { g.strokeStyle = st; g.lineWidth = 2;[42, 46, 50].forEach(function (sx) { g.beginPath(); g.moveTo(sx, 11); g.lineTo(sx, 18); g.stroke(); }); g.beginPath(); g.moveTo(30, 28); g.lineTo(37, 29); g.moveTo(62, 28); g.lineTo(55, 29); g.stroke(); });
-        ell(g, 46, 36, 10, 7, W, O); pth(g, function (c) { c.moveTo(43, 34); c.lineTo(49, 34); c.lineTo(46, 37); }, pk);
-        g.strokeStyle = O; g.lineWidth = 1; g.beginPath(); g.moveTo(46, 37); g.lineTo(46, 39); g.moveTo(46, 39); g.arc(43, 39, 3, 0, Math.PI * .7); g.moveTo(46, 39); g.arc(49, 39, 3, Math.PI * .3, Math.PI, true); g.stroke();
-        g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = .8;[[-1, 0], [-1, 3], [1, 0], [1, 3]].forEach(function (w) { g.beginPath(); g.moveTo(46 + w[0] * 8, 36 + w[1]); g.lineTo(46 + w[0] * 20, 35 + w[1]); g.stroke(); });
-        frontEyes(g, 39, 53, 29, 3.2, am);
+        var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", am = "#f5b731", pk = "#ff8fb0", st = "#616d88";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(30, 49, 8, 9); ob(42, 49, 8, 9); R(30, 49, 8, 9, B); R(42, 49, 8, 9, B); R(30, 54, 8, 4, W); R(42, 54, 8, 4, W);   // legs + paws
+        ob(29, 40, 22, 12); R(29, 40, 22, 12, B); R(33, 46, 14, 6, W);                // body + belly
+        ob(26, 22, 28, 22); R(26, 22, 28, 22, B);                                     // head
+        R(26, 12, 8, 11, B); R(28, 15, 4, 6, pk); R(46, 12, 8, 11, B); R(48, 15, 4, 6, pk);   // ears
+        R(34, 25, 3, 2, st); R(43, 25, 3, 2, st); R(38, 24, 4, 2, st);                // forehead stripes
+        R(31, 30, 6, 6, am); R(43, 30, 6, 6, am); R(33, 31, 3, 4, INKC); R(44, 31, 3, 4, INKC); R(34, 32, 1, 1, "#fff"); R(45, 32, 1, 1, "#fff");   // amber eyes
+        R(34, 37, 12, 7, W); R(38, 39, 4, 3, pk); R(39, 42, 2, 3, INKC);              // muzzle + nose
+        R(20, 37, 8, 1, "#dfe6f0"); R(20, 40, 8, 1, "#dfe6f0"); R(52, 37, 8, 1, "#dfe6f0"); R(52, 40, 8, 1, "#dfe6f0");   // whiskers
       }
       function foxFront(g) {
-        var B = "#e8722a", D = "#c1531a", W = "#fde6cf", O = "#2a1608", sk = "#3a2418";
-        rrf(g, 30, 40, 32, 14, 8, B, O); clipEll(g, 46, 47, 15, 7, function () { g.fillStyle = W; g.beginPath(); g.ellipse(46, 50, 11, 7, 0, 0, 7); g.fill(); });
-        pth(g, function (c) { c.moveTo(6, 52); c.bezierCurveTo(2, 40, 14, 36, 22, 44); }, B, O); ell(g, 10, 44, 5, 5, W, O);
-        g.fillStyle = sk;[38, 54].forEach(function (px) { rrf(g, px - 4, 49, 8, 6, 3, sk, O, 1.3); });
-        pth(g, function (c) { c.moveTo(32, 24); c.lineTo(24, 2); c.lineTo(48, 22); }, B, O); pth(g, function (c) { c.moveTo(60, 24); c.lineTo(68, 2); c.lineTo(44, 22); }, B, O);
-        pth(g, function (c) { c.moveTo(35, 22); c.lineTo(29, 6); c.lineTo(47, 22); }, sk); pth(g, function (c) { c.moveTo(57, 22); c.lineTo(63, 6); c.lineTo(45, 22); }, sk);
-        ell(g, 46, 28, 19, 17, B, O);
-        pth(g, function (c) { c.moveTo(30, 28); c.lineTo(24, 40); c.lineTo(40, 34); }, W, O); pth(g, function (c) { c.moveTo(62, 28); c.lineTo(68, 40); c.lineTo(52, 34); }, W, O);
-        pth(g, function (c) { c.moveTo(40, 33); c.bezierCurveTo(41, 41, 51, 41, 52, 33); c.bezierCurveTo(49, 37, 43, 37, 40, 33); }, W, O);
-        ell(g, 46, 35, 2.6, 2.1, "#20140c", null);
-        g.strokeStyle = O; g.lineWidth = 1; g.beginPath(); g.moveTo(46, 37); g.lineTo(46, 38.5); g.moveTo(46, 38.5); g.arc(43.5, 38.5, 2.5, 0, Math.PI * .7); g.moveTo(46, 38.5); g.arc(48.5, 38.5, 2.5, Math.PI * .3, Math.PI, true); g.stroke();
-        frontEyes(g, 39, 53, 28, 3.2, "#6a3a12");
+        var B = "#e8722a", D = "#c1531a", W = "#fde6cf", sk = "#3a2418";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(30, 49, 8, 9); ob(42, 49, 8, 9); R(30, 49, 8, 9, B); R(42, 49, 8, 9, B); R(30, 55, 8, 3, sk); R(42, 55, 8, 3, sk);   // legs + dark socks
+        ob(29, 40, 22, 12); R(29, 40, 22, 12, B); R(33, 46, 14, 6, W);                // body + white chest
+        R(24, 10, 9, 13, B); R(26, 13, 5, 7, sk); R(47, 10, 9, 13, B); R(49, 13, 5, 7, sk);   // big pointed ears
+        ob(27, 24, 26, 20); R(27, 24, 26, 20, B);                                     // head (upper orange)
+        R(30, 34, 20, 10, W);                                                         // white lower face / cheeks
+        R(31, 30, 5, 5, INKC); R(44, 30, 5, 5, INKC); R(32, 31, 2, 2, "#fff"); R(45, 31, 2, 2, "#fff");   // eyes
+        R(36, 38, 8, 5, D); R(38, 40, 4, 3, INKC);                                    // muzzle + nose
       }
       // Pixel-art front-facing unicorn to match the running side sprite.
       function uniFront(g) {
@@ -2518,37 +2526,185 @@
       function starP(g, cx, cy, r, fill, out, ow) { g.beginPath(); for (var i = 0; i < 10; i++) { var a = Math.PI / 5 * i - Math.PI / 2, rr2 = i % 2 ? r * .44 : r; g[i ? "lineTo" : "moveTo"](cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2); } g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (out) { g.strokeStyle = out; g.lineWidth = ow || 1.6; g.lineJoin = "round"; g.stroke(); } }
       function smile(g, sx0, sy0, w) { g.strokeStyle = "#201828"; g.lineWidth = 1.2; g.beginPath(); g.arc(sx0, sy0, w, .15 * Math.PI, .85 * Math.PI); g.stroke(); }
       function stalkEye(g, bx, by, ex, ey) { limb(g, bx, by, ex, ey, 2, "#ff6a52", "#8a1e12"); ell(g, ex, ey - 2, 3, 3.4, "#fff", "#8a1e12", 1.2); g.fillStyle = "#201828"; ell(g, ex, ey - 1, 1.3, 1.6, "#201828", null); }
-      function roboSide(g, fr) { var M = "#c6d0de", Ms = "#8a94a8", vi = "#37e0ff", rd = "#ff5c6c", O = "#2a3550", f = fr ? 2 : -2; rrf(g, 19, 42, 7, 11, 2, Ms, O); rrf(g, 36 + f, 42, 7, 11, 2, Ms, O); rrf(g, 17, 50, 11, 4, 1.5, "#5a6478", O, 1.3); rrf(g, 34 + f, 50, 11, 4, 1.5, "#5a6478", O, 1.3); rrf(g, 17, 25, 27, 21, 5, M, O); g.fillStyle = Ms; rrf(g, 19, 38, 23, 7, 3, Ms, null); ell(g, 31, 35, 3.4, 3.4, vi, O, 1.2); rrf(g, 40, 28, 6, 13, 2.5, Ms, O); rrf(g, 25, 7, 25, 19, 5, M, O); rrf(g, 30, 12, 17, 8, 3, "#10304a", O); g.fillStyle = vi; rrf(g, 33, 13.5, 5, 5, 1.5, vi, null); rrf(g, 41, 13.5, 5, 5, 1.5, vi, null); limb(g, 40, 7, 40, 2, 1.5, "#8a94a8", O); ell(g, 40, 1, 2.4, 2.4, rd, O, 1); }
-      function cometSide(g, fr) { var core = "#eef6ff", cy = "#5fd0ff", O = "#1c3a5a", f = fr ? 2 : -2; for (var t = 0; t < 4; t++) { pth(g, (function (t) { return function (c) { c.moveTo(8, 28); c.lineTo(-2 - t * 3, 20 - t * 2 + f); c.lineTo(-4 - t * 4, 30 + f); c.lineTo(-2 - t * 3, 40 + t * 2 + f); }; })(t), t % 2 ? "#ffb020" : "#ff5c6c", null); } ell(g, 30, 30, 19, 18, core, O); ell(g, 30, 32, 13, 12, cy, null); frontEyes(g, 25, 37, 27, 3, null); smile(g, 31, 34, 4); starP(g, 44, 14, 4, "#fff", O, 1); }
-      function novaSide(g, fr) { var s = "#ffe14a", O = "#c98f10", f = fr ? 3 : -3; limb(g, 24, 44, 24, 52, 4, s, O); limb(g, 38 + f, 44, 38 + f, 52, 4, s, O); starP(g, 31, 28, 20, s, O, 2); g.fillStyle = "#fff6c8"; starP(g, 27, 23, 7, "#fff6c8", null); limb(g, 14, 32, 6, 30, 3.5, s, O); limb(g, 48, 32, 56, 30, 3.5, s, O); frontEyes(g, 25, 37, 28, 3, null); smile(g, 31, 33, 4); }
-      function dracoSide(g, fr) { var G = "#3fae4a", Gd = "#2f8f3a", bel = "#a8e86a", O = "#1c6b2e", sp = "#ffd23f", f = fr ? 2 : -2; pth(g, function (c) { c.moveTo(16, 32); c.bezierCurveTo(2, 30, 2, 44, 10, 50); c.bezierCurveTo(8, 42, 10, 36, 18, 36); }, G, O); pth(g, function (c) { c.moveTo(8, 49); c.lineTo(4, 52); c.lineTo(11, 52); }, sp, O); limb(g, 20, 42, 20, 51, 5, Gd, O); limb(g, 36 + f, 42, 36 + f, 51, 5, Gd, O); pth(g, function (c) { c.moveTo(24, 24); c.lineTo(14, 14); c.lineTo(30, 28); }, Gd, O); ell(g, 29, 34, 17, 13, G, O); ell(g, 28, 38, 11, 7, bel, null); limb(g, 25, 42, 25, 51, 5, G, O); limb(g, 40 - f, 42, 40 - f, 51, 5, G, O); ell(g, 48, 24, 13, 12, G, O); ell(g, 58, 27, 5, 4.2, G, O); g.fillStyle = "#2a1830"; ell(g, 60, 27, 1, 1.4, "#2a1830", null); pth(g, function (c) { c.moveTo(44, 13); c.lineTo(47, 5); c.lineTo(51, 14); }, sp, O); pth(g, function (c) { c.moveTo(52, 13); c.lineTo(56, 7); c.lineTo(55, 16); }, sp, O); pth(g, function (c) { c.moveTo(40, 22); c.lineTo(36, 14); c.lineTo(45, 20); }, bel, O); eye(g, 51, 22, 2.4, "#ff5c6c"); }
-      function orbitSide(g, fr) { var pl = "#8a6bff", pd = "#5a3fd0", ring = "#ffd23f", O = "#3a2580"; g.strokeStyle = O; g.lineWidth = 6; g.beginPath(); g.ellipse(31, 30, 25, 9, -0.25, 0, 7); g.stroke(); g.strokeStyle = ring; g.lineWidth = 3; g.beginPath(); g.ellipse(31, 30, 25, 9, -0.25, 0, 7); g.stroke(); ell(g, 31, 30, 16, 16, pl, O); g.save(); g.beginPath(); g.ellipse(31, 30, 15.4, 15.4, 0, 0, 7); g.clip(); g.fillStyle = pd; ell(g, 31, 40, 17, 9, pd, null); ell(g, 24, 26, 4, 4, "#a98fff", null); ell(g, 38, 34, 3, 3, "#a98fff", null); g.restore(); g.strokeStyle = ring; g.lineWidth = 3; g.beginPath(); g.ellipse(31, 30, 25, 9, -0.25, -0.4, 2.6); g.stroke(); frontEyes(g, 26, 36, 29, 3, null); smile(g, 31, 35, 4); }
-      function roboFront(g) { var M = "#c6d0de", Ms = "#8a94a8", vi = "#37e0ff", rd = "#ff5c6c", O = "#2a3550"; rrf(g, 34, 48, 14, 6, 2, "#5a6478", O, 1.3); rrf(g, 32, 40, 32, 12, 4, Ms, O); rrf(g, 30, 24, 36, 20, 5, M, O); ell(g, 48, 40, 4, 4, vi, O, 1.2); rrf(g, 24, 30, 8, 14, 3, Ms, O); rrf(g, 64, 30, 8, 14, 3, Ms, O); rrf(g, 32, 6, 32, 22, 6, M, O); rrf(g, 37, 12, 22, 10, 3, "#10304a", O); g.fillStyle = vi; rrf(g, 40, 14, 6, 6, 1.5, vi, null); rrf(g, 50, 14, 6, 6, 1.5, vi, null); limb(g, 48, 6, 48, -1, 1.6, "#8a94a8", O); ell(g, 48, -3, 2.6, 2.6, rd, O, 1); }
-      function cometFront(g) { var core = "#eef6ff", cy = "#5fd0ff", O = "#1c3a5a";[[46, 6, "#ff5c6c"], [34, 12, "#ffb020"], [58, 12, "#ffb020"], [40, 4, "#ffd23f"], [52, 4, "#ffd23f"]].forEach(function (fk) { starP(g, fk[0], fk[1], 4, fk[2], O, 1); }); ell(g, 48, 30, 21, 20, core, O); ell(g, 48, 32, 14, 13, cy, null); frontEyes(g, 41, 55, 30, 3.4, null); smile(g, 48, 36, 5); }
-      function novaFront(g) { var s = "#ffe14a", O = "#c98f10"; starP(g, 48, 30, 24, s, O, 2.2); g.fillStyle = "#fff6c8"; starP(g, 42, 24, 8, "#fff6c8", null); frontEyes(g, 41, 55, 30, 3.6, null); smile(g, 48, 36, 5.5); }
-      function dracoFront(g) { var G = "#3fae4a", Gd = "#2f8f3a", bel = "#a8e86a", O = "#1c6b2e", sp = "#ffd23f"; pth(g, function (c) { c.moveTo(20, 40); c.bezierCurveTo(4, 30, 10, 52, 26, 48); }, Gd, O); pth(g, function (c) { c.moveTo(76, 40); c.bezierCurveTo(92, 30, 86, 52, 70, 48); }, Gd, O); rrf(g, 32, 40, 32, 12, 7, G, O); ell(g, 48, 47, 11, 7, bel, null); ell(g, 48, 28, 20, 18, G, O); ell(g, 48, 36, 13, 9, bel, null); pth(g, function (c) { c.moveTo(34, 16); c.lineTo(30, 2); c.lineTo(44, 16); }, sp, O); pth(g, function (c) { c.moveTo(62, 16); c.lineTo(66, 2); c.lineTo(52, 16); }, sp, O); g.fillStyle = "#2a1830"; ell(g, 43, 38, 1.2, 1.6, "#2a1830", null); ell(g, 53, 38, 1.2, 1.6, "#2a1830", null); frontEyes(g, 40, 56, 28, 3.4, "#ff5c6c"); }
-      function orbitFront(g) { var pl = "#8a6bff", pd = "#5a3fd0", ring = "#ffd23f", O = "#3a2580"; g.strokeStyle = O; g.lineWidth = 7; g.beginPath(); g.ellipse(48, 32, 30, 10, 0, 0, 7); g.stroke(); g.strokeStyle = ring; g.lineWidth = 3.5; g.beginPath(); g.ellipse(48, 32, 30, 10, 0, 0, 7); g.stroke(); ell(g, 48, 30, 19, 19, pl, O); g.save(); g.beginPath(); g.ellipse(48, 30, 18.4, 18.4, 0, 0, 7); g.clip(); g.fillStyle = pd; ell(g, 48, 42, 20, 10, pd, null); ell(g, 40, 24, 5, 5, "#a98fff", null); ell(g, 56, 34, 3.5, 3.5, "#a98fff", null); g.restore(); g.strokeStyle = ring; g.lineWidth = 3.5; g.beginPath(); g.ellipse(48, 32, 30, 10, 0, -0.5, 3.1); g.stroke(); frontEyes(g, 41, 55, 29, 3.4, null); smile(g, 48, 36, 5); }
+      function roboSide(g, fr) {
+        var M = "#c6d0de", Ms = "#8a94a8", vi = "#37e0ff", rd = "#ff5c6c", ft = "#5a6478";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        function foot(rx, lift) { var h = 4 - lift; ob(rx, 11, 2.6, h); px(rx, 11, 2.6, h, Ms); px(rx - 0.4, 11 + h - 1.2, 3.4, 1.4, ft); }
+        foot(5, fr ? 1.4 : 0); foot(9, fr ? 0 : 1.4);
+        ob(3, 5.6, 9.6, 6); px(3, 5.6, 9.6, 6, M); px(3, 9.4, 9.6, 2.2, Ms);        // torso
+        px(4.4, 6.9, 6, 2.6, ft); px(5, 7.4, 1.5, 1.5, vi);                          // chest panel + light
+        px(12.8, 6.4, 2.2, 3.4, Ms); px(12.8, 8.8, 2.6, 1.4, Ms);                    // arm
+        ob(8.6, 2.2, 6.4, 5); px(8.6, 2.2, 6.4, 5, M);                               // head
+        px(9.4, 3.2, 5, 2.6, "#10304a"); px(10, 3.7, 1.6, 1.6, vi); px(12.4, 3.7, 1.6, 1.6, vi);   // visor + eyes
+        px(11.4, 0.2, 0.8, 2, Ms); px(11, -1, 1.6, 1.3, rd);                         // antenna + red bulb
+      }
+      function cometSide(g, fr) {
+        var core = "#eef6ff", cy = "#5fd0ff", fl = ["#ff5c6c", "#ffb020", "#ffd23f"];
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        for (var t = 0; t < 6; t++) { var wob = (fr ? 1 : -1) * (t % 2 ? 0.4 : -0.4); px(5.4 - t * 1.15, 6 - Math.abs(t - 2.5) * 0.3 + wob, 1.9, 3.2 - Math.abs(t - 2.5) * 0.35, fl[t % 3]); }   // flaming tail
+        ob(6.4, 3.6, 8.6, 8.8); px(6.4, 3.6, 8.6, 8.8, core); px(7.8, 4.9, 6, 6.2, cy);  // icy head
+        K.eyeP(8.4, 6.8); K.eyeP(11.4, 6.8); K.mouth(9.2, 10.2, 2.4);
+        px(14.4, 1.8, 1, 1, "#fff"); px(13.9, 2.2, 2, 0.6, "#fff"); px(14.4, 1.1, 0.6, 2.2, "#fff");  // sparkle
+      }
+      function novaSide(g, fr) {
+        var s = "#ffe14a", hi = "#fff6c8";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        function blk(rx, ry, w, h) { ob(rx, ry, w, h); px(rx, ry, w, h, s); }
+        var la = fr ? -0.6 : 0.6;
+        blk(2.4, 6.4, 3, 2); blk(11.6, 6.4, 3, 2);           // arm points
+        blk(5 + la, 10.4, 2, 3); blk(9.2 - la, 10.4, 2, 3);  // leg points
+        blk(7.4, 2.2, 2.2, 3);                               // top point
+        blk(5.4, 4.8, 6.2, 5.6);                             // core
+        px(6, 5.2, 2, 2, hi);                                // shine
+        K.eyeP(6.6, 6.6); K.eyeP(9.2, 6.6); K.mouth(7.4, 9, 2.4);
+      }
+      function dracoSide(g, fr) {
+        var G = "#3fae4a", Gd = "#2f8f3a", bel = "#a8e86a", sp = "#ffd23f";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        for (var t = 0; t < 4; t++) px(-1.4 - t * 0.7, 9.6 - t * 0.5, 2, 1.8, Gd);   // tail
+        px(-3.4, 8.6, 1.5, 1.5, sp);                                                  // tail spike
+        K.leg(3.4, 0, Gd, Gd); K.leg(5.8, 1, Gd, Gd);                                 // back legs
+        ob(2, 6, 11, 5.6); px(2, 6, 11, 5.6, G); px(2.4, 9.4, 8, 2, bel);             // body + belly
+        px(5, 3.9, 3.6, 2.6, Gd); px(5.4, 3, 2.6, 1.2, Gd);                           // wing
+        K.leg(9, 1, Gd, Gd); K.leg(11.2, 0, Gd, Gd);                                  // front legs
+        ob(10.4, 2.6, 6.2, 5.4); px(10.4, 2.6, 6.2, 5.4, G);                          // head
+        px(11, 1, 1.4, 1.6, sp); px(13, 0.6, 1.4, 1.8, sp);                           // horns
+        px(14.6, 5.2, 2.6, 2.2, bel); px(16.4, 5.8, 1, 0.9, INKC);                    // snout + nostril
+        K.eyeP(12.4, 3.8);
+      }
+      function orbitSide(g, fr) {
+        var pl = "#8a6bff", pd = "#5a3fd0", ring = "#ffd23f", rgd = "#e0a91e", spot = "#b7a3ff";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        ob(4.2, 3.6, 9.4, 9.4); px(4.2, 3.6, 9.4, 9.4, pl); px(4.2, 9.4, 9.4, 3.6, pd);   // planet
+        px(6, 5.2, 2, 2, spot); px(10, 8, 1.6, 1.6, spot);                                 // craters
+        var ry = fr ? 8.8 : 9.2;
+        px(1, ry - 0.4, 3.6, 1.5, ring); px(13, ry - 0.4, 3.6, 1.5, ring);                 // ring wings
+        px(4.2, ry, 9.4, 1.3, rgd);                                                        // ring across front
+        K.eyeP(6.4, 6.4); K.eyeP(9.6, 6.4); K.mouth(7.4, 8.6, 2.6);
+      }
+      function roboFront(g) {
+        var M = "#c6d0de", Ms = "#8a94a8", vi = "#37e0ff", rd = "#ff5c6c", ft = "#5a6478";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(30, 50, 8, 8); ob(42, 50, 8, 8); R(30, 50, 8, 8, Ms); R(42, 50, 8, 8, Ms); R(29, 55, 10, 3, ft); R(41, 55, 10, 3, ft);   // legs + feet
+        ob(20, 40, 7, 11); ob(53, 40, 7, 11); R(20, 40, 7, 11, Ms); R(53, 40, 7, 11, Ms);            // arms
+        ob(28, 37, 24, 15); R(28, 37, 24, 15, M); R(32, 42, 16, 6, ft); R(34, 43, 4, 4, vi);          // torso + panel
+        ob(28, 18, 24, 18); R(28, 18, 24, 18, M); R(32, 22, 16, 9, "#10304a");                        // head + visor
+        R(34, 24, 5, 5, vi); R(41, 24, 5, 5, vi);                                                     // eyes
+        R(38, 8, 3, 8, Ms); R(35, 3, 8, 6, rd);                                                       // antenna + bulb
+      }
+      function cometFront(g) {
+        var core = "#eef6ff", cy = "#5fd0ff", fl = ["#ff5c6c", "#ffb020", "#ffd23f"];
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        [[24, 16], [33, 8], [45, 8], [54, 16]].forEach(function (p, i) { R(p[0], p[1], 7, 11, fl[i % 3]); });   // flame crown
+        ob(26, 20, 28, 28); R(26, 20, 28, 28, core); R(30, 24, 20, 20, cy);                          // icy head
+        K.eyes2(33, 44, 29); K.mouthF(40, 39, 9);
+        R(56, 24, 2, 2, "#fff"); R(55, 25, 4, 1, "#fff"); R(56.5, 22.5, 1, 5, "#fff");                // sparkle
+      }
+      function novaFront(g) {
+        var s = "#ffe14a", hi = "#fff6c8";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        function blk(x, y, w, h) { ob(x, y, w, h); R(x, y, w, h, s); }
+        blk(34, 6, 11, 10);                                       // top point
+        blk(12, 26, 12, 9); blk(56, 26, 12, 9);                   // arm points
+        blk(24, 46, 10, 10); blk(46, 46, 10, 10);                 // leg points
+        blk(27, 22, 26, 24);                                      // core
+        R(31, 25, 6, 6, hi);                                      // shine
+        K.eyes2(33, 44, 30); K.mouthF(40, 40, 8);
+      }
+      function dracoFront(g) {
+        var G = "#3fae4a", Gd = "#2f8f3a", bel = "#a8e86a", sp = "#ffd23f";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(32, 48, 7, 10); ob(41, 48, 7, 10); R(32, 48, 7, 10, Gd); R(41, 48, 7, 10, Gd);            // legs
+        ob(16, 34, 11, 12); ob(53, 34, 11, 12); R(16, 34, 11, 12, Gd); R(53, 34, 11, 12, Gd);        // wings
+        ob(28, 36, 24, 15); R(28, 36, 24, 15, G); R(33, 40, 14, 9, bel);                             // body + belly
+        ob(28, 18, 24, 20); R(28, 18, 24, 20, G);                                                    // head
+        R(29, 8, 6, 9, sp); R(45, 8, 6, 9, sp);                                                      // horns
+        K.eyes2(32, 43, 24);
+        R(34, 34, 12, 5, bel); R(36, 35, 2, 2, INKC); R(42, 35, 2, 2, INKC);                         // snout + nostrils
+      }
+      function orbitFront(g) {
+        var pl = "#8a6bff", pd = "#5a3fd0", ring = "#ffd23f", rgd = "#e0a91e", spot = "#b7a3ff";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(24, 18, 32, 32); R(24, 18, 32, 32, pl); R(24, 37, 32, 13, pd);                            // planet
+        R(28, 24, 6, 6, spot); R(46, 40, 5, 5, spot);                                                // craters
+        R(11, 39, 15, 4, ring); R(54, 39, 15, 4, ring); R(24, 40, 32, 3, rgd);                       // ring
+        K.eyes2(31, 44, 28); K.mouthF(40, 40, 9);
+      }
       // ---- secret heroes ----
-      function shellySide(g, fr) { var R = "#ff5a44", Rd = "#d63626", O = "#8a1e12", gem = "#ffd23f", f = fr ? 1.6 : -1.6;[20, 28, 36].forEach(function (lx) { limb(g, lx + f, 42, lx - 4, 52, 2.4, Rd, O); });[30, 38, 46].forEach(function (lx) { limb(g, lx - f, 42, lx + 4, 52, 2.4, Rd, O); }); pth(g, function (c) { c.moveTo(12, 34); c.lineTo(4, 28); c.lineTo(6, 36); c.lineTo(2, 40); c.lineTo(12, 40); }, R, O); pth(g, function (c) { c.moveTo(52, 34); c.lineTo(60, 28); c.lineTo(58, 36); c.lineTo(62, 40); c.lineTo(52, 40); }, R, O); ell(g, 32, 36, 20, 12, R, O); ell(g, 32, 40, 15, 6, Rd, null); stalkEye(g, 27, 26, 25, 16); stalkEye(g, 37, 26, 39, 16); pth(g, function (c) { c.moveTo(32, 30); c.lineTo(29, 35); c.lineTo(35, 35); }, gem, O); smile(g, 32, 38, 4); }
-      function finnSide(g, fr) { var C = "#37c0ff", fin = "#8fe0ff", bel = "#cdeeff", O = "#12608a", f = fr ? 3 : -3; pth(g, function (c) { c.moveTo(18, 30); c.lineTo(4, 20 + f); c.lineTo(6, 30); c.lineTo(4, 40 - f); }, fin, O); ell(g, 34, 32, 18, 13, C, O); ell(g, 33, 37, 12, 6, bel, null); pth(g, function (c) { c.moveTo(30, 20); c.lineTo(38, 12); c.lineTo(40, 21); }, fin, O); pth(g, function (c) { c.moveTo(34, 43); c.lineTo(30, 50); c.lineTo(40, 45); }, fin, O); ell(g, 32, 34, 4, 4, "#0a3550", null); eye(g, 44, 29, 3, null); g.strokeStyle = O; g.lineWidth = 1.2; g.beginPath(); g.arc(48, 34, 2.2, 0, Math.PI * .8); g.stroke(); }
-      function mangoSide(g, fr) { var br = "#8a5a2a", brd = "#6a3f1e", face = "#d3a869", O = "#3a2410", f = fr ? 2 : -2; pth(g, function (c) { c.moveTo(16, 34); c.bezierCurveTo(2, 32, 4, 16, 16, 16); c.bezierCurveTo(10, 22, 10, 32, 20, 32); }, brd, O); limb(g, 20, 42, 20, 51, 5, brd, O); limb(g, 36 + f, 42, 36 + f, 51, 5, brd, O); ell(g, 29, 34, 17, 13, br, O); ell(g, 28, 38, 10, 7, face, null); limb(g, 25, 42, 25, 51, 5, br, O); limb(g, 40 - f, 42, 40 - f, 51, 5, br, O); limb(g, 42, 30, 50, 40, 4, br, O); ell(g, 48, 20, 13, 12, br, O); ell(g, 50, 23, 9, 9, face, null); ell(g, 41, 15, 4, 4, br, O); ell(g, 55, 15, 4, 4, br, O); eye(g, 47, 21, 2.4, null); ell(g, 52, 25, 3.5, 2.6, face, null); g.fillStyle = "#3a2410"; ell(g, 50, 24, .8, .8, "#3a2410", null); ell(g, 54, 24, .8, .8, "#3a2410", null); smile(g, 52, 26, 2.5); }
-      function shellyFront(g) { var R = "#ff5a44", Rd = "#d63626", O = "#8a1e12", gem = "#ffd23f";[30, 40, 50].forEach(function (lx) { limb(g, lx, 46, lx - 6, 54, 2.6, Rd, O); limb(g, 96 - lx, 46, 96 - lx + 6, 54, 2.6, Rd, O); }); pth(g, function (c) { c.moveTo(20, 34); c.lineTo(8, 26); c.lineTo(12, 36); c.lineTo(6, 42); c.lineTo(20, 42); }, R, O); pth(g, function (c) { c.moveTo(76, 34); c.lineTo(88, 26); c.lineTo(84, 36); c.lineTo(90, 42); c.lineTo(76, 42); }, R, O); ell(g, 48, 36, 24, 15, R, O); ell(g, 48, 42, 17, 7, Rd, null); stalkEye(g, 42, 26, 40, 14); stalkEye(g, 54, 26, 56, 14); pth(g, function (c) { c.moveTo(48, 28); c.lineTo(44, 35); c.lineTo(52, 35); }, gem, O); smile(g, 48, 38, 5); }
-      function finnFront(g) { var C = "#37c0ff", fin = "#8fe0ff", bel = "#cdeeff", O = "#12608a"; pth(g, function (c) { c.moveTo(48, 44); c.lineTo(40, 54); c.lineTo(56, 54); }, fin, O); pth(g, function (c) { c.moveTo(28, 30); c.lineTo(12, 22); c.lineTo(22, 36); }, fin, O); pth(g, function (c) { c.moveTo(68, 30); c.lineTo(84, 22); c.lineTo(74, 36); }, fin, O); ell(g, 48, 32, 21, 20, C, O); ell(g, 48, 40, 14, 9, bel, null); ell(g, 48, 20, 7, 4, fin, null); frontEyes(g, 40, 56, 28, 3.4, null); g.strokeStyle = O; g.lineWidth = 1.3; g.beginPath(); g.arc(48, 40, 3, .1 * Math.PI, .9 * Math.PI); g.stroke(); }
-      function mangoFront(g) { var br = "#8a5a2a", brd = "#6a3f1e", face = "#d3a869", O = "#3a2410"; limb(g, 40, 44, 40, 52, 5, brd, O); limb(g, 56, 44, 56, 52, 5, brd, O); ell(g, 48, 40, 17, 12, br, O); ell(g, 48, 44, 11, 8, face, null); limb(g, 32, 34, 26, 46, 4.5, br, O); limb(g, 64, 34, 70, 46, 4.5, br, O); ell(g, 30, 26, 7, 7, br, O); ell(g, 66, 26, 7, 7, br, O); ell(g, 30, 26, 4, 4, face, null); ell(g, 66, 26, 4, 4, face, null); ell(g, 48, 26, 18, 17, br, O); ell(g, 48, 32, 13, 11, face, null); frontEyes(g, 42, 54, 26, 3.2, null); ell(g, 48, 36, 5, 3.5, face, null); g.fillStyle = "#3a2410"; ell(g, 46, 35, 1, 1, "#3a2410", null); ell(g, 50, 35, 1, 1, "#3a2410", null); smile(g, 48, 37, 3); }
+      function shellySide(g, fr) {
+        var Rc = "#ff5a44", Rd = "#d63626", gem = "#ffd23f";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob, lf = fr ? 0.7 : -0.7;
+        [3.4, 6.2, 9].forEach(function (lx, i) { px(lx + (i % 2 ? lf : -lf), 11, 1.4, 3, Rd); });   // legs
+        ob(2.4, 6.6, 10.4, 4.8); px(2.4, 6.6, 10.4, 4.8, Rc); px(2.4, 9.6, 10.4, 1.8, Rd);          // shell
+        px(12.8, 6.8, 2.4, 2.8, Rc); px(14.4, 6.2, 1.8, 1.6, Rc); px(14.4, 8.4, 1.8, 1.4, Rc);      // claw
+        px(5.2, 4.2, 1, 2.6, Rd); px(4.4, 2.8, 2.2, 2.2, "#fff"); px(4.9, 3.2, 1.1, 1.2, INKC);     // stalk eye L
+        px(9, 4.2, 1, 2.6, Rd); px(8.2, 2.8, 2.2, 2.2, "#fff"); px(8.7, 3.2, 1.1, 1.2, INKC);       // stalk eye R
+        px(6.6, 7, 1.6, 1.4, gem); K.mouth(6.4, 9, 2.6);                                            // gem + smile
+      }
+      function finnSide(g, fr) {
+        var C = "#37c0ff", fin = "#8fe0ff", bel = "#cdeeff";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob, tw = fr ? 0.6 : -0.6;
+        px(0.8, 5.2 + tw, 2, 2.2, fin); px(0, 4.2 + tw, 1.6, 4.4, fin); px(0.8, 8.2 + tw, 2, 2.2, fin);   // tail fin
+        ob(3, 5.6, 10, 6); px(3, 5.6, 10, 6, C); px(3.4, 9, 8.2, 2.2, bel);          // body
+        px(6, 3.6, 3, 1.8, fin); px(6, 11.4, 3, 1.4, fin);                            // dorsal + bottom fin
+        K.eyeP(10, 6.6); K.mouth(9.4, 9.4, 2);
+      }
+      function mangoSide(g, fr) {
+        var br = "#8a5a2a", brd = "#6a3f1e", face = "#d3a869";
+        var K = sideKit(g, fr), px = K.px, ob = K.ob;
+        for (var t = 0; t < 4; t++) px(-1.4 - t * 0.5, 8 - t * 0.8, 1.8, 1.8, brd);   // curling tail
+        K.leg(3.4, 0, brd, brd); K.leg(5.8, 1, brd, brd);                             // back legs
+        ob(2, 6.2, 10.5, 5.4); px(2, 6.2, 10.5, 5.4, br); px(2.6, 7.6, 6, 3, face);   // body + tummy
+        K.leg(9, 1, br, br); K.leg(11.2, 0, br, br);                                  // front limbs
+        ob(9.8, 2.6, 6.6, 5.6); px(9.8, 2.6, 6.6, 5.6, br);                           // head
+        px(9.2, 3.4, 1.6, 2, br); px(15.6, 3.4, 1.6, 2, br);                          // ears
+        px(11.2, 4.2, 4.8, 4, face);                                                  // face patch
+        K.eyeP(11.9, 4.6); K.eyeP(13.8, 4.6);
+        px(12.2, 6.4, 2.6, 1.4, "#c79a5e"); K.mouth(12.4, 7.4, 1.8);                  // muzzle
+      }
+      function shellyFront(g) {
+        var Rc = "#ff5a44", Rd = "#d63626", gem = "#ffd23f";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        [26, 32, 56, 62].forEach(function (x) { R(x, 46, 4, 9, Rd); }); R(24, 50, 6, 4, Rd); R(50, 50, 6, 4, Rd);   // legs
+        ob(12, 34, 12, 10); R(12, 34, 12, 10, Rc); R(9, 31, 7, 6, Rc);                // claw L
+        ob(56, 34, 12, 10); R(56, 34, 12, 10, Rc); R(64, 31, 7, 6, Rc);               // claw R
+        ob(28, 30, 24, 16); R(28, 30, 24, 16, Rc); R(28, 40, 24, 6, Rd);              // shell
+        R(34, 16, 3, 8, Rd); R(43, 16, 3, 8, Rd); R(31, 9, 8, 8, "#fff"); R(41, 9, 8, 8, "#fff"); R(33, 11, 4, 4, INKC); R(43, 11, 4, 4, INKC);   // stalk eyes
+        R(36, 33, 8, 5, gem); K.mouthF(40, 42, 9);                                     // gem + smile
+      }
+      function finnFront(g) {
+        var C = "#37c0ff", fin = "#8fe0ff", bel = "#cdeeff";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        R(10, 30, 12, 10, fin); R(58, 30, 12, 10, fin);                               // side fins
+        ob(26, 20, 28, 28); R(26, 20, 28, 28, C); R(30, 40, 20, 8, bel);              // body
+        R(34, 12, 12, 6, fin);                                                        // top fin
+        K.eyes2(31, 44, 28); K.mouthF(40, 40, 8);
+      }
+      function mangoFront(g) {
+        var br = "#8a5a2a", brd = "#6a3f1e", face = "#d3a869";
+        var K = frontKit(g), R = K.R, ob = K.ob;
+        ob(32, 48, 7, 9); ob(41, 48, 7, 9); R(32, 48, 7, 9, brd); R(41, 48, 7, 9, brd);            // legs
+        ob(20, 34, 8, 12); ob(52, 34, 8, 12); R(20, 34, 8, 12, br); R(52, 34, 8, 12, br);          // arms
+        ob(30, 38, 20, 12); R(30, 38, 20, 12, br); R(34, 41, 12, 8, face);                         // body + tummy
+        R(22, 20, 8, 8, br); R(50, 20, 8, 8, br); R(24, 22, 4, 4, face); R(52, 22, 4, 4, face);    // ears
+        ob(28, 18, 24, 20); R(28, 18, 24, 20, br); R(33, 24, 14, 13, face);                        // head + face patch
+        K.eyes2(33, 42, 26);
+        R(36, 33, 8, 4, "#c79a5e"); R(38, 34, 1, 1, INKC); R(41, 34, 1, 1, INKC); K.mouthF(40, 37, 6);   // muzzle
+      }
       function sideSet(fn, B) { var a = []; for (var fr = 0; fr < 2; fr++) { var cv = document.createElement("canvas"); cv.width = HA_W; cv.height = HA_H; var oc = cv.getContext("2d"); fn(oc, fr); outlineFix(oc, HA_W, HA_H); a.push(B ? pixelize(cv, B) : cv); } return a; }
       function frontOne(fn, B) { var cv = document.createElement("canvas"); cv.width = HA_FW; cv.height = HA_FH; var oc = cv.getContext("2d"); fn(oc); outlineFix(oc, HA_FW, HA_FH); return B ? pixelize(cv, B) : cv; }
       var PXS = 3, PXF = 3;   // block size for chunky-pixel heroes (side / front)
       HERO_ART.unicorn = { front: frontOne(uniFront), side: sideSet(uniSide) };   // unicorn: hand-drawn pixel art, kept as-is
-      HERO_ART.cat = { front: frontOne(catFront, PXF), side: sideSet(catSide, PXS) };
-      HERO_ART.fox = { front: frontOne(foxFront, PXF), side: sideSet(foxSide, PXS) };
-      HERO_ART.robo = { front: frontOne(roboFront, PXF), side: sideSet(roboSide, PXS) };
-      HERO_ART.comet = { front: frontOne(cometFront, PXF), side: sideSet(cometSide, PXS) };
-      HERO_ART.nova = { front: frontOne(novaFront, PXF), side: sideSet(novaSide, PXS) };
-      HERO_ART.draco = { front: frontOne(dracoFront, PXF), side: sideSet(dracoSide, PXS) };
-      HERO_ART.orbit = { front: frontOne(orbitFront, PXF), side: sideSet(orbitSide, PXS) };
-      HERO_ART.shelly = { front: frontOne(shellyFront, PXF), side: sideSet(shellySide, PXS) };
-      HERO_ART.finn = { front: frontOne(finnFront, PXF), side: sideSet(finnSide, PXS) };
-      HERO_ART.mango = { front: frontOne(mangoFront, PXF), side: sideSet(mangoSide, PXS) };
+      HERO_ART.cat = { front: frontOne(catFront), side: sideSet(catSide) };
+      HERO_ART.fox = { front: frontOne(foxFront), side: sideSet(foxSide) };
+      HERO_ART.robo = { front: frontOne(roboFront), side: sideSet(roboSide) };
+      HERO_ART.comet = { front: frontOne(cometFront), side: sideSet(cometSide) };
+      HERO_ART.nova = { front: frontOne(novaFront), side: sideSet(novaSide) };
+      HERO_ART.draco = { front: frontOne(dracoFront), side: sideSet(dracoSide) };
+      HERO_ART.orbit = { front: frontOne(orbitFront), side: sideSet(orbitSide) };
+      HERO_ART.shelly = { front: frontOne(shellyFront), side: sideSet(shellySide) };
+      HERO_ART.finn = { front: frontOne(finnFront), side: sideSet(finnSide) };
+      HERO_ART.mango = { front: frontOne(mangoFront), side: sideSet(mangoSide) };
     }
     // draw a hero into an on-screen box; uses the 32-bit sprite if we have one, else the classic bitmap
     function heroDraw(g, type, dx, dy, dw, dh, frame, front) {
