@@ -188,9 +188,8 @@ body.lp-full #app { max-width: none; padding: 0; }
 .lp-worlds { background: var(--lp-cream); border-top: 5px solid var(--lp-ink); border-bottom: 5px solid var(--lp-ink); }
 .lp-wgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .lp-wcard { background: var(--lp-paper); border: 4px solid var(--lp-ink); box-shadow: 5px 5px 0 var(--lp-shadow); overflow: hidden; }
-.lp-wcard__bar { height: 10px; }
-.lp-wcard__body { padding: 14px 10px 16px; text-align: center; }
-.lp-wcard__emoji { font-size: 36px; line-height: 1; filter: drop-shadow(0 3px 0 rgba(26,19,48,.18)); }
+.lp-wcard__scene { display: block; width: 100%; height: auto; image-rendering: pixelated; border-bottom: 4px solid var(--lp-ink); }
+.lp-wcard__body { padding: 12px 10px 14px; text-align: center; }
 .lp-wcard__name { font-family: var(--lp-mono); font-weight: 700; font-size: 11px; margin: 10px 0 6px; color: var(--lp-ink); }
 .lp-wcard__desc { font-size: 13px; font-weight: 600; color: var(--lp-ink-soft); line-height: 1.3; }
 
