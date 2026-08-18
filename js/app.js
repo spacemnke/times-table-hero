@@ -1358,6 +1358,9 @@
     $all(".lp-hcard__ava[data-hero]").forEach(function (cv) {
       try { Adv.drawHero(cv, cv.getAttribute("data-hero"), true); } catch (e) {}
     });
+    $all(".lp-wcard__scene[data-world]").forEach(function (cv) {
+      try { Adv.drawWorld(cv, +cv.getAttribute("data-world")); } catch (e) {}
+    });
   }
   function openLanding() { show("landing"); LandingFX.start(); paintLandingHeroes(); }
   function signOut() {
@@ -3345,6 +3348,7 @@
       forceTrapType: function (t) { if (!G) return; G.traps.push({ x: G.hero.wx, type: t, done: false, sprung: false }); springTrap(G.traps.length - 1); },
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
       drawHero: function (cv, type, front) { Adv.drawHero(cv, type, front); },
+      drawWorld: function (cv, idx) { Adv.drawWorld(cv, idx); },
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
       get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
@@ -3393,7 +3397,57 @@
       var pad = Math.round(canvas.width * 0.06), bw = canvas.width - pad * 2, bh = canvas.height - pad * 2;
       heroDraw(g, type, pad, pad, bw, bh, 0, front !== false);
     }
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero };
+    // Little pixel "level preview" for a world card on the landing — built from that world's own theme palette.
+    function drawWorld(canvas, idx) {
+      var th = THEMES[idx % THEMES.length], INK = "#241a4a";
+      var g = canvas.getContext("2d"); g.imageSmoothingEnabled = false;
+      var W = canvas.width, H = canvas.height, gy = Math.round(H * 0.64);
+      function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+      function disc(cx, cy, r, c) { R(cx - r, cy - r + 1, 2 * r, 2 * r - 2, c); R(cx - r + 1, cy - r, 2 * r - 2, 2 * r, c); }
+      function mound(cx, base, rad, c) { for (var i = 0; i < rad; i++) R(cx - (rad - i), base - i * 2, 2 * (rad - i), 3, c); }
+      g.clearRect(0, 0, W, H);
+      R(0, 0, W, H, th.sky); R(0, Math.round(H * 0.4), W, H, th.sky2);                         // sky
+      if (th.night) { for (var s = 0; s < 22; s++) R((s * 43) % W, (s * 29) % gy, 1, 1, "#fff"); disc(W - 20, 15, 6, "#e7ecff"); R(W - 24, 11, 6, 8, th.sky); }   // stars + crescent moon
+      else { disc(W - 20, 15, 7, "#ffe884"); disc(W - 20, 15, 4, "#fff6c8"); }                  // sun
+      mound(Math.round(W * 0.28), gy + 2, 8, th.mtn); mound(Math.round(W * 0.62), gy + 2, 10, th.mtn); mound(Math.round(W * 0.46), gy + 2, 7, th.mtnS);   // hills
+      if (th.water) { R(0, gy, W, 4, th.water); }
+      R(0, gy, W, H - gy, th.grass); R(0, gy + 5, W, H, th.dirt); R(0, gy + 5, W, 2, th.dirtL);  // ground
+      var cx = Math.round(W * 0.5);
+      if (idx === 0) {                                   // MEADOW — leafy tree + flowers
+        R(cx - 2, gy - 15, 5, 15, "#a8632f"); mound(cx, gy - 12, 8, th.h2); mound(cx, gy - 16, 6, th.h1);
+        R(cx - 22, gy + 2, 2, 2, "#ff5c8a"); R(cx + 20, gy + 3, 2, 2, "#ffe14a"); R(cx - 30, gy + 4, 2, 2, "#fff");
+      } else if (idx === 1) {                            // BEACH — striped parasol on the sand
+        var ux = cx + 6; R(ux - 1, gy - 15, 2, 15, "#8a5a2a");                                 // pole
+        for (var u = 0; u < 5; u++) { var uw = 5 + u * 4; R(ux - uw / 2, gy - 20 + u, uw, 1.4, u % 2 ? "#fff" : "#ff5c6c"); }   // dome, widening down
+        R(ux - 2, gy - 16, 4, 1, "#ff5c6c"); R(ux, gy - 22, 1, 2, "#8a5a2a");                  // tip
+        R(cx - 22, gy + 4, 5, 3, "#38b6ff"); R(cx - 20, gy + 3, 2, 2, "#ffe14a");              // little beach ball
+      } else if (idx === 2) {                            // CANDY — lollipop swirl
+        R(cx, gy - 11, 2, 11, "#fff");                                                         // stick
+        disc(cx + 1, gy - 15, 7, "#ff5c9e");                                                   // solid candy
+        R(cx - 4, gy - 17, 3, 2, "#ffd23f"); R(cx - 1, gy - 19, 3, 2, "#fff"); R(cx + 2, gy - 15, 3, 2, "#ffd23f"); R(cx - 3, gy - 13, 3, 2, "#fff");   // swirl
+        R(cx - 24, gy + 2, 4, 3, "#a06bff"); R(cx + 22, gy + 3, 4, 3, "#4fd06a");              // wrapped candies
+      } else if (idx === 3) {                            // OCEAN — cresting wave + coral
+        R(cx - 16, gy - 6, 26, 8, "#2fb6d6"); mound(cx - 4, gy - 6, 7, "#4fd0ee"); R(cx - 10, gy - 12, 10, 3, "#eafcff"); R(cx + 6, gy - 9, 4, 2, "#eafcff");
+        R(cx + 20, gy - 4, 3, 5, "#ff8ab5"); R(cx + 19, gy - 6, 5, 2, "#ff8ab5");              // coral
+      } else if (idx === 4) {                            // SNOW — snowman + falling flakes
+        disc(cx, gy - 4, 5, "#fff"); disc(cx, gy - 12, 4, "#fff"); R(cx - 1, gy - 12, 1, 1, INK); R(cx + 1, gy - 12, 1, 1, INK); R(cx, gy - 10, 1, 1, "#ff8f3f");
+        R(cx - 5, gy - 15, 4, 2, INK); R(cx - 4, gy - 18, 2, 3, INK);
+        for (var fk = 0; fk < 8; fk++) R((fk * 37 + 6) % W, (fk * 23) % (gy - 4), 2, 2, "#ffffff");
+      } else if (idx === 5) {                            // JUNGLE — palm tree
+        for (var tr = 0; tr < 6; tr++) R(cx - 2 + tr, gy - 3 - tr * 2.4, 3, 3, "#7a5a2a");
+        var pt = cx + 3, py = gy - 17; R(pt - 12, py, 12, 2, "#4aa84a"); R(pt, py - 2, 12, 2, "#357a35"); R(pt - 9, py - 5, 9, 2, "#5abf5a"); R(pt + 1, py - 6, 9, 2, "#4aa84a");
+        R(cx - 24, gy + 2, 2, 3, "#ffb020");
+      } else if (idx === 6) {                            // VOLCANO — erupting cone
+        for (var v = 0; v < 9; v++) R(cx - 11 + v * 1.5, gy - v * 1.8, Math.max(2, 22 - v * 3), 3, v > 6 ? "#8a5a4a" : "#6b4235");
+        R(cx - 4, gy - 16, 8, 3, "#ff5a2a"); R(cx - 3, gy - 19, 2, 3, "#ffb020"); R(cx + 2, gy - 20, 2, 4, "#ff5c6c");
+        R(cx - 2, gy - 24, 4, 3, "#c9b8c0"); R(cx + 3, gy - 27, 3, 3, "#e0d4da");              // smoke
+      } else {                                           // SPACE — rocket + crystals
+        R(cx - 2, gy - 18, 5, 12, "#e7ecff"); R(cx - 2, gy - 20, 5, 3, "#ff5c6c"); R(cx - 4, gy - 8, 2, 3, "#8a94a8"); R(cx + 3, gy - 8, 2, 3, "#8a94a8");
+        R(cx - 1, gy - 14, 3, 3, "#37e0ff"); R(cx - 1, gy - 5, 3, 3, "#ffb020"); R(cx, gy - 2, 1, 2, "#ffe14a");
+        R(cx - 22, gy - 3, 3, 4, "#a06bff"); R(cx + 20, gy - 4, 3, 5, "#5fd0ff");              // crystals
+      }
+    }
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld };
   })();
 
   /* ---------------- init / wiring ---------------- */
