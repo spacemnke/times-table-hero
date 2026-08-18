@@ -9,7 +9,18 @@ const DB = { users: {}, kids: [], seq: 0, t: 0 };
 const now = () => new Date(1700000000000 + (DB.t += 1000)).toISOString();
 const tokFor = uid => ({ access_token: "tok_" + uid, refresh_token: "ref_" + uid, expires_in: 3600, token_type: "bearer", user: { id: uid, email: uidEmail(uid) } });
 const uidEmail = uid => { for (const e in DB.users) if (DB.users[e].id === uid) return e; return null; };
-function handleAuth(url, body) {
+function handleAuth(method, url, body, headers) {
+  if (/\/auth\/v1\/user/.test(url)) {
+    const uid = ((headers["authorization"] || "").replace("Bearer ", "").replace("tok_", ""));
+    if (!uid || !uidEmail(uid)) return { status: 401, json: {} };
+    const email = uidEmail(uid), u = DB.users[email];
+    if (method === "GET") return { status: 200, json: { id: uid, email: u.email } };
+    if (method === "PUT") {
+      if (body.password) u.password = body.password;
+      if (body.email) { const ne = body.email.toLowerCase(); if (ne !== email) { delete DB.users[email]; u.email = ne; DB.users[ne] = u; } }
+      return { status: 200, json: { id: uid, email: u.email } };
+    }
+  }
   if (/\/auth\/v1\/signup/.test(url)) {
     const email = (body.email || "").toLowerCase();
     if (DB.users[email]) return { status: 400, json: { msg: "User already registered" } };
@@ -50,7 +61,7 @@ async function device(browser) {
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errs.push("console: " + m.text()); });
   page.on("pageerror", e => errs.push("pageerror: " + e.message));
   page._errs = errs;
-  await page.route(/\/auth\/v1\//, async route => { const b = JSON.parse(route.request().postData() || "{}"); const r = handleAuth(route.request().url(), b); await route.fulfill({ status: r.status, contentType: "application/json", body: JSON.stringify(r.json) }); });
+  await page.route(/\/auth\/v1\//, async route => { const req = route.request(); const b = req.postData() ? JSON.parse(req.postData()) : {}; const r = handleAuth(req.method(), req.url(), b, req.headers()); await route.fulfill({ status: r.status, contentType: "application/json", body: JSON.stringify(r.json) }); });
   await page.route(/\/rest\/v1\/kids/, async route => { const req = route.request(); const b = req.postData() ? JSON.parse(req.postData()) : {}; const r = handleKids(req.method(), req.url(), req.headers(), b); await route.fulfill({ status: r.status, contentType: "application/json", body: r.json == null ? "" : JSON.stringify(r.json) }); });
   return page;
 }
@@ -137,7 +148,32 @@ async function device(browser) {
   await C.waitForSelector("#su-err:not([hidden])", { timeout: 4000 });
   console.log("✓ Device C: duplicate email rejected:", JSON.stringify((await C.textContent("#su-err")).trim()));
 
-  const allErr = [...A._errs, ...B._errs, ...C._errs];
+  // ============ CHANGE PASSWORD + EMAIL (Device A, already unlocked Grown-ups) ============
+  await A.click("#manage-account");
+  await A.waitForSelector(".screen--account.is-active");
+  await A.fill("#ac-newpass", "newpass9"); await A.fill("#ac-newpass2", "newpass9"); await A.click("#ac-pass-go");
+  await A.waitForSelector("#ac-msg:not([hidden])", { timeout: 4000 });
+  if (DB.users["parent@home.com"].password !== "newpass9") throw new Error("change-password did not update the account");
+  console.log("✓ Device A: changed password →", JSON.stringify((await A.textContent("#ac-msg")).trim()));
+  await A.fill("#ac-email", "newparent@home.com"); await A.click("#ac-email-go");
+  await A.waitForSelector("#ac-msg:not([hidden])", { timeout: 4000 });
+  if (!DB.users["newparent@home.com"]) throw new Error("change-email did not update the account");
+  console.log("✓ Device A: changed email → account now", Object.keys(DB.users).filter(e => /newparent/.test(e))[0]);
+
+  // ============ PASSWORD RESET via the email link (fresh device D) ============
+  const uid = DB.users["newparent@home.com"].id;
+  const D = await device(browser);
+  await D.goto(`http://localhost:${PORT}/index.html#access_token=tok_${uid}&refresh_token=ref_${uid}&expires_in=3600&type=recovery`, { waitUntil: "networkidle" });
+  await D.waitForSelector(".screen--reset.is-active", { timeout: 5000 });
+  console.log("✓ Device D: recovery link opened the set-new-password screen");
+  await D.fill("#rp-pass", "resetpw1"); await D.fill("#rp-pass2", "resetpw1"); await D.click("#rp-go");
+  await D.waitForSelector(".screen--profiles.is-active, .screen--home.is-active", { timeout: 6000 });
+  if (DB.users["newparent@home.com"].password !== "resetpw1") throw new Error("reset did not update the password");
+  const dKids = (await D.$$eval(".profiles-grid .pcard__name", els => els.map(e => e.textContent))).filter(n => n !== "Add a kid");
+  console.log("✓ Device D: new password set → signed in, kids present:", JSON.stringify(dKids));
+  if (dKids.length !== 2) throw new Error("after reset, Device D should see the account's 2 kids");
+
+  const allErr = [...A._errs, ...B._errs, ...C._errs, ...D._errs];
   await browser.close(); server.kill();
   if (allErr.length) { console.log("\n✗ JS errors:\n" + allErr.join("\n")); process.exit(1); }
   console.log("\nFAMILY AUTH TESTS PASSED ✅");
