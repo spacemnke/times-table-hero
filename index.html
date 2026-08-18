@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787055789" />
+  <link rel="stylesheet" href="css/styles.css?v=1787056388" />
 </head>
 <body>
   <div id="app">
@@ -166,6 +166,38 @@
       <p class="cloud-err" id="kids-err" hidden></p>
       <button class="btn-secondary" id="kid-add" disabled>＋ Add this kid</button>
       <button class="btn-primary" id="kids-done" disabled>Start playing 🎉</button>
+    </section>
+
+    <!-- ============ RESET PASSWORD (from email link) ============ -->
+    <section class="screen screen--reset" data-screen="reset">
+      <div class="cloud-intro">
+        <span class="cloud-intro__emoji">🔑</span>
+        <p class="cloud-intro__text">Set a new password for your family account.</p>
+      </div>
+      <p class="picker-label">New password (6+ characters)</p>
+      <input class="name-input" id="rp-pass" type="password" autocomplete="new-password" placeholder="New password" />
+      <p class="picker-label">Confirm new password</p>
+      <input class="name-input" id="rp-pass2" type="password" autocomplete="new-password" placeholder="Type it again" />
+      <p class="cloud-err" id="rp-err" hidden></p>
+      <button class="btn-primary" id="rp-go" disabled>Set password &amp; sign in ➜</button>
+    </section>
+
+    <!-- ============ ACCOUNT SETTINGS (from Grown-ups) ============ -->
+    <section class="screen screen--account" data-screen="account">
+      <div class="topbar">
+        <button class="btn-back" id="ac-back" aria-label="Back">‹</button>
+        <h2 class="topbar__title">Account</h2><div class="topbar__spacer"></div>
+      </div>
+      <p class="cloud-msg" id="ac-msg" hidden></p>
+      <p class="cloud-err" id="ac-err" hidden></p>
+      <p class="picker-label">Account email</p>
+      <input class="name-input" id="ac-email" type="email" autocomplete="email" autocapitalize="off" placeholder="you@example.com" />
+      <button class="btn-secondary" id="ac-email-go">Update email</button>
+      <p class="picker-label" style="margin-top:20px">New password (6+ characters)</p>
+      <input class="name-input" id="ac-newpass" type="password" autocomplete="new-password" placeholder="New password" />
+      <p class="picker-label">Confirm new password</p>
+      <input class="name-input" id="ac-newpass2" type="password" autocomplete="new-password" placeholder="Type it again" />
+      <button class="btn-secondary" id="ac-pass-go">Change password</button>
     </section>
 
     <!-- ============ NEW PROFILE ============ -->
@@ -535,6 +567,7 @@
         <button class="chip chip--sm" id="players-add">＋ Add player</button>
 
         <h3 class="rep-h">Account</h3>
+        <button class="btn-secondary" id="manage-account">⚙︎ Change email or password</button>
         <button class="btn-secondary" id="signout-btn">↩︎ Sign out</button>
         <p class="rep-note">Signs the current player out and returns to the sign-in screen. Players saved online can sign back in anytime with their nickname &amp; PIN.</p>
 
@@ -547,6 +580,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787055789"></script>
+  <script src="js/app.js?v=1787056388"></script>
 </body>
 </html>

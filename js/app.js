@@ -95,6 +95,33 @@
         });
       },
       recover: function (email) { return post("/auth/v1/recover", { email: email }).then(function (r) { return { ok: r.status >= 200 && r.status < 300, error: authErr(r.body, r.status) }; }); },
+      // a password-reset link opens the app with tokens in the URL hash — adopt them as a session
+      consumeHash: function () {
+        try {
+          var h = location.hash || ""; if (h.indexOf("access_token=") < 0) return null;
+          var p = {}; h.replace(/^#/, "").split("&").forEach(function (kv) { var i = kv.indexOf("="); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1)); });
+          if (!p.access_token) return null;
+          setFromToken({ access_token: p.access_token, refresh_token: p.refresh_token, expires_in: parseInt(p.expires_in, 10) || 3600, user: null });
+          try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+          return p.type || "session";
+        } catch (e) { return null; }
+      },
+      fetchUser: function () {
+        return token().then(function (tok) {
+          if (!tok) return { ok: false };
+          return fetch(CLOUD_URL + "/auth/v1/user", { headers: hdr(tok) }).then(function (r) {
+            return r.text().then(function (t) { var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {} if (j && j.id && sess) { sess.uid = j.id; sess.email = j.email; saveSess(sess); } return { ok: r.ok, user: j }; });
+          }, function () { return { ok: false, error: "offline" }; });
+        });
+      },
+      updateUser: function (fields) {
+        return token().then(function (tok) {
+          if (!tok) return { ok: false, error: "no_session" };
+          return fetch(CLOUD_URL + "/auth/v1/user", { method: "PUT", headers: hdr(tok), body: JSON.stringify(fields) }).then(function (r) {
+            return r.text().then(function (t) { var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {} if (r.ok && j && j.email && sess) { sess.email = j.email; saveSess(sess); } return { ok: r.status >= 200 && r.status < 300, status: r.status, body: j, error: authErr(j, r.status) }; });
+          }, function () { return { ok: false, error: "offline" }; });
+        });
+      },
       refresh: refresh, token: token,
       logout: function () { saveSess(null); },
       listKids: function () { return rest("kids?select=*&order=created_at.asc", "GET"); },
@@ -1168,6 +1195,52 @@
     if (!reg.profiles.length) return;
     if (reg.profiles.length === 1) { setActive(reg.profiles[0].id); renderHome(); show("home"); }
     else { renderProfiles(); show("profiles"); }
+  }
+
+  // ----- RESET PASSWORD (arrived via the email link) -----
+  function openReset() {
+    $("#rp-pass").value = ""; $("#rp-pass2").value = ""; $("#rp-err").hidden = true; $("#rp-go").disabled = true;
+    show("reset"); setTimeout(function () { $("#rp-pass").focus(); }, 250);
+  }
+  function rpValidate() { $("#rp-go").disabled = !($("#rp-pass").value.length >= 6 && $("#rp-pass").value === $("#rp-pass2").value); }
+  function rpSubmit() {
+    var pw = $("#rp-pass").value; if (pw.length < 6) return;
+    if (pw !== $("#rp-pass2").value) { $("#rp-err").textContent = "Passwords don't match."; $("#rp-err").hidden = false; return; }
+    $("#rp-err").hidden = true; var b = $("#rp-go"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+    Auth.updateUser({ password: pw }).then(function (res) {
+      b.textContent = lbl; rpValidate();
+      if (res && res.ok) { reg.profiles = []; activeId = null; reg.activeId = null; profilesSave(); pullAllKids(function () { afterSignedIn(); }); }
+      else { $("#rp-err").textContent = res && res.error === "offline" ? "No connection — try again." : "Couldn't set the password — the reset link may have expired. Request a new one from the sign-in screen."; $("#rp-err").hidden = false; }
+    });
+  }
+
+  // ----- ACCOUNT (change email / password) from the Grown-ups area -----
+  function acErr(m) { $("#ac-err").textContent = m; $("#ac-err").hidden = false; $("#ac-msg").hidden = true; }
+  function acMsg(m) { $("#ac-msg").textContent = m; $("#ac-msg").hidden = false; $("#ac-err").hidden = true; }
+  function openAccount() {
+    $("#ac-email").value = Auth.email() || "";
+    $("#ac-newpass").value = ""; $("#ac-newpass2").value = "";
+    $("#ac-msg").hidden = true; $("#ac-err").hidden = true;
+    show("account");
+  }
+  function acEmailSave() {
+    var email = $("#ac-email").value.trim(); if (!validEmail(email)) { acErr("That doesn't look like a valid email."); return; }
+    var b = $("#ac-email-go"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+    Auth.updateUser({ email: email }).then(function (res) {
+      b.textContent = lbl; b.disabled = false;
+      if (res && res.ok) acMsg("Email change requested — check " + email + " (and your current inbox) to confirm.");
+      else acErr(res && res.error === "offline" ? "No connection — try again." : "Couldn't update the email — try again.");
+    });
+  }
+  function acPassSave() {
+    var pw = $("#ac-newpass").value; if (pw.length < 6) { acErr("Password must be at least 6 characters."); return; }
+    if (pw !== $("#ac-newpass2").value) { acErr("Passwords don't match."); return; }
+    var b = $("#ac-pass-go"), lbl = b.textContent; b.disabled = true; b.textContent = "…";
+    Auth.updateUser({ password: pw }).then(function (res) {
+      b.textContent = lbl; b.disabled = false;
+      if (res && res.ok) { $("#ac-newpass").value = ""; $("#ac-newpass2").value = ""; acMsg("Password changed. ✓"); }
+      else acErr(res && res.error === "offline" ? "No connection — try again." : "Couldn't change the password — try again.");
+    });
   }
   /* ---- landing hero scene: STARLIGHT gallops through a living pixel world ----
      Self-contained canvas engine. Runs only while the landing screen is active
@@ -3334,6 +3407,18 @@
     $("#kid-add").addEventListener("click", function () { sTap(); kidAddClick(); });
     $("#kids-done").addEventListener("click", function () { sTap(); kidsDone(); });
 
+    // reset password (arrived via email link)
+    $("#rp-pass").addEventListener("input", rpValidate);
+    $("#rp-pass2").addEventListener("input", rpValidate);
+    $("#rp-pass2").addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("#rp-go").disabled) rpSubmit(); });
+    $("#rp-go").addEventListener("click", function () { sTap(); rpSubmit(); });
+
+    // account settings (change email / password)
+    $("#manage-account").addEventListener("click", function () { sTap(); openAccount(); });
+    $("#ac-back").addEventListener("click", function () { sTap(); show("parent"); });
+    $("#ac-email-go").addEventListener("click", function () { sTap(); acEmailSave(); });
+    $("#ac-pass-go").addEventListener("click", function () { sTap(); acPassSave(); });
+
     // sound
     var st = $("#sound-toggle"); st.textContent = soundOn ? "🔊" : "🔈";
     st.addEventListener("click", function () { soundOn = !soundOn; saveSound(); st.textContent = soundOn ? "🔊" : "🔈"; if (soundOn) { ac(); sTap(); if (window.__adv && window.__adv.resumeMusic) window.__adv.resumeMusic(); } else { musicStop(); } });
@@ -3343,6 +3428,9 @@
   }
   function boot() {
     reg = profilesLoad();
+    // A password-reset email link opens the app with a recovery token in the URL → set a new password.
+    var hashType = Auth.consumeHash();
+    if (hashType === "recovery") { Auth.fetchUser().then(function () { openReset(); }); return; }
     // Signed-in families get the arcade splash first; brand-new visitors go straight to the landing.
     // (Splash is skipped under automation unless ?splash is present.)
     var useSplash = Auth.signedIn() && (!navigator.webdriver || /splash/.test(location.search));

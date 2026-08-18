@@ -113,7 +113,9 @@ body {
 .kid-added__av { font-size: 26px; }
 .kid-added__name { font-weight: 800; font-size: 16px; }
 .gate__input--pw { width: 240px; max-width: 82%; font-size: 20px; letter-spacing: .08em; }
-.screen--signin .btn-primary, .screen--signup .btn-primary, .screen--kids .btn-primary, .screen--kids .btn-secondary { margin-top: 16px; }
+.screen--signin .btn-primary, .screen--signup .btn-primary, .screen--kids .btn-primary, .screen--kids .btn-secondary,
+.screen--reset .btn-primary, .screen--account .btn-secondary { margin-top: 16px; }
+#manage-account { display: block; width: 100%; margin-bottom: 10px; }
 
 /* ===================== landing / front door (8-bit) ===================== *
  * Commits to a bright daytime-arcade look; every colour is explicit so the
