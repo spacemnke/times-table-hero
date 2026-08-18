@@ -504,6 +504,17 @@
     return justMet;
   }
 
+  /* ---- gentle wrong-answer coaching: nudge toward the answer, never just hand it over ---- */
+  function countByStr(step, times) { var s = []; for (var i = 1; i <= times; i++) s.push(step * i); return s.join(", "); }
+  function skipCountReveal(a, b) { var lo = Math.min(a, b), hi = Math.max(a, b); return a + " × " + b + " → count by " + lo + "s: " + countByStr(lo, hi) + " = " + (a * b); }
+  function mathHint(a, b, guess) {
+    var ans = a * b, lo = Math.min(a, b);
+    if (guess === a * (b - 1) || guess === (a - 1) * b) return "So close — one too few! Add another " + lo + " ⬆";
+    if (guess === a * (b + 1) || guess === (a + 1) * b) return "Almost — one too many! Take a " + lo + " away ⬇";
+    if (guess > ans) return "A little too high — count back down ⬇";
+    return "A little too low — count up a bit ⬆";
+  }
+
   /* ---------------- PLAY engine ---------------- */
   function startPlay(opts) {
     // opts: {tables, len, mode, isDaily, questions, practice}
@@ -599,8 +610,8 @@
       sGood(); haptic(12);
     } else {
       p.combo = 0;
-      fb.textContent = q.a + " × " + q.b + " = " + answer;
-      fb.className = "feedback bad";
+      fb.textContent = p.mode === "type" ? skipCountReveal(q.a, q.b) : (q.a + " × " + q.b + " = " + answer);
+      fb.className = p.mode === "type" ? "feedback bad reveal" : "feedback bad";
       if (p.mode === "type") { $("#answer-box").classList.add("bad"); $("#answer-display").textContent = String(answer); $("#answer-display").classList.remove("placeholder"); }
       else if (btn) { btn.classList.add("is-wrong"); $all(".answer", $("#play-answers")).forEach(function (b) { if (parseInt(b.textContent, 10) === answer) b.classList.add("is-correct"); }); }
       sBad(); haptic([12, 40, 12]);
@@ -611,7 +622,7 @@
       p.i++;
       if (p.i >= p.total) finishPlay();
       else renderQuestion();
-    }, correct ? 620 : 1250);
+    }, correct ? 620 : 1900);
   }
   function finishPlay() {
     var p = state.play;
@@ -1076,6 +1087,20 @@
     return { start: start };
   })();
   function openLanding() { show("landing"); LandingFX.start(); }
+  function signOut() {
+    var p = activeProfile();
+    if (!p) { openLanding(); return; }
+    var linked = !!(p.cloud && p.cloud.name), nm = p.name || "this player";
+    var msg = linked
+      ? "Sign out " + nm + "?\n\nProgress is saved online — sign back in anytime with the nickname and PIN."
+      : nm + " isn't saved online yet, so signing out removes them from THIS device and their progress here will be lost.\n\nTip: tap “☁︎ Save online” in the Players list first to keep it.\n\nSign out anyway?";
+    if (!window.confirm(msg)) return;
+    if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
+    deleteProfile(p.id);                 // removes the local profile + its cached progress (cloud copy is untouched)
+    state.parentUnlocked = false;
+    if (reg.profiles.length) { renderProfiles(); show("profiles"); } // siblings remain → let them pick
+    else { updatePlayerSwitch(); openLanding(); }                    // nobody left → back to the front door
+  }
 
   /* ---------------- ADVENTURE — 8-bit Quest Land (daily quest) ---------------- */
   var Adv = (function () {
@@ -1311,6 +1336,7 @@
       var justMet = recordAnswer(q.a, q.b, correct, ms); if (justMet) G.goalMet = true;
       if (correct) {
         box.className = "good"; aGood(); haptic(12);
+        var heG = $("#adv-mhint"); if (heG) { heG.textContent = ""; heG.className = "adv8-hint"; }
         G.gates[G.nextGate].solved = true; G.correct++; G.combo++;
         var spd = ms < 1500 ? 8 : ms < 3000 ? 5 : ms < 5000 ? 2 : 0;
         var gained = Math.round((10 + spd) * (1 + Math.min(G.combo, 6) * .08));
@@ -1323,7 +1349,12 @@
           hint(G.nextGate >= G.gates.length ? "DASH TO THE CASTLE!" : "NICE! KEEP GOING");
         }, 380);
       } else {
-        G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; box.className = "bad"; aBad(); haptic([10, 40, 10]); G.shakeT = .35; G.input = ""; mdisp(); save();
+        G.wrong++; G.combo = 0; G.meter = 0; G.hearts--; box.className = "bad"; aBad(); haptic([10, 40, 10]); G.shakeT = .35;
+        // gentle coaching: a directional nudge first, then reveal the skip-count if they miss again — you stay at the gate to retry
+        G.gateTries = (G.gateTries || 0) + 1;
+        var heB = $("#adv-mhint");
+        if (heB && G.hearts > 0) { var reveal = G.gateTries >= 2; heB.textContent = reveal ? skipCountReveal(q.a, q.b) : mathHint(q.a, q.b, v); heB.className = "adv8-hint" + (reveal ? " reveal" : ""); }
+        G.input = ""; mdisp(); save();
         if (G.hearts <= 0) setTimeout(function () { if (!G) return; mathHide(); G.state = "fail"; openOv("adv-failOv"); }, 420);
       }
     }
@@ -1336,6 +1367,7 @@
       G.state = "trapped"; G.question = bonusQ(); G.input = ""; G.qStart = Date.now();
       aHurt(); haptic([20, 40, 20]); G.shakeT = .4; musicDanger();
       $("#adv-sheet").classList.add("escape"); setSheetTag("◆ " + (TRAP_LABEL[tr.type] || "TRAPPED!") + " — SOLVE TO ESCAPE ◆");
+      G.gateTries = 0; var heS = $("#adv-mhint"); if (heS) { heS.textContent = ""; heS.className = "adv8-hint"; }
       $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mdisp(); mathShow(); hint("");
     }
     function endEscape() { $("#adv-sheet").classList.remove("escape"); setSheetTag("◆ GATE — SOLVE TO PASS ◆"); mathHide(); }
@@ -1349,7 +1381,9 @@
         addCoins(3); coinBurst(G.hero.wx, G.hero.y - 50);
         setTimeout(function () { if (!running || !G) return; box.className = ""; endEscape(); G.state = "run"; G.hero.inv = 1.6; G.hero.wx += 46; G.dash = .4; G.input = ""; hint("PHEW! KEEP GOING"); }, 360);
       } else {
-        G.wrong++; G.hearts--; box.className = "bad"; aBad(); haptic([12, 50, 12]); G.shakeT = .4; G.input = ""; mdisp(); save();
+        G.wrong++; G.hearts--; box.className = "bad"; aBad(); haptic([12, 50, 12]); G.shakeT = .4;
+        var heX = $("#adv-mhint"); if (heX) { heX.textContent = mathHint(q.a, q.b, v); heX.className = "adv8-hint"; }
+        G.input = ""; mdisp(); save();
         setTimeout(function () {
           if (!G) return; box.className = ""; endEscape();
           if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } else restartLevel();
@@ -1451,7 +1485,7 @@
       haptic([10, 25, 10]);
     }
     function respawn() { var h = G.hero; h.wx = G.lastCP; h.y = GROUND; h.vy = 0; h.inv = 1; h.ground = true; }
-    function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); mdisp(); $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mathShow(); hint(""); }
+    function arrive() { G.state = "gate"; G.question = nextQ(); G.input = ""; G.qStart = Date.now(); G.gateTries = 0; var heN = $("#adv-mhint"); if (heN) { heN.textContent = ""; heN.className = "adv8-hint"; } mdisp(); $("#adv-mq").textContent = G.question.a + " × " + G.question.b; mathShow(); hint(""); }
     // SKIP HOP: you reached the skip platform above a portal — pass that math problem for free (no coins/combo; the reward is the leap itself)
     function skipGate(gi) {
       if (gi == null || gi !== G.nextGate) return;
@@ -3046,6 +3080,7 @@
         progress = freshProgress(); save(); showReport(); renderHome();
       }
     });
+    $("#signout-btn").addEventListener("click", function () { sTap(); signOut(); });
 
     // profiles
     $("#player-switch").addEventListener("click", function () { sTap(); renderProfiles(); show("profiles"); });

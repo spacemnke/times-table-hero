@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787039873" />
+  <link rel="stylesheet" href="css/styles.css?v=1787049433" />
 </head>
 <body>
   <div id="app">
@@ -323,6 +323,7 @@
             <div class="adv8-tag">◆ GATE — SOLVE TO PASS ◆</div>
             <div id="adv-mq">7 × 8</div>
             <div id="adv-mabox"><span id="adv-mdisp" class="ph">?</span></div>
+            <div id="adv-mhint" class="adv8-hint" aria-live="polite"></div>
             <div class="adv8-kpad" id="adv-kpad">
               <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
               <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
@@ -478,6 +479,10 @@
         <div class="players-manage" id="players-manage"></div>
         <button class="chip chip--sm" id="players-add">＋ Add player</button>
 
+        <h3 class="rep-h">Account</h3>
+        <button class="btn-secondary" id="signout-btn">↩︎ Sign out</button>
+        <p class="rep-note">Signs the current player out and returns to the sign-in screen. Players saved online can sign back in anytime with their nickname &amp; PIN.</p>
+
         <button class="btn-secondary btn-reset" id="reset-progress">Reset this player's progress</button>
       </div>
     </section>
@@ -487,6 +492,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787039873"></script>
+  <script src="js/app.js?v=1787049433"></script>
 </body>
 </html>
