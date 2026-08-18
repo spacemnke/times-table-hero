@@ -1353,7 +1353,13 @@
     }
     return { start: start };
   })();
-  function openLanding() { show("landing"); LandingFX.start(); }
+  function paintLandingHeroes() {
+    if (!Adv || !Adv.drawHero) return;
+    $all(".lp-hcard__ava[data-hero]").forEach(function (cv) {
+      try { Adv.drawHero(cv, cv.getAttribute("data-hero"), true); } catch (e) {}
+    });
+  }
+  function openLanding() { show("landing"); LandingFX.start(); paintLandingHeroes(); }
   function signOut() {
     if (!window.confirm("Sign out of this family account on this device?\n\nYour kids' progress stays saved online — sign back in anytime with your email and password.")) return;
     if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
@@ -2383,6 +2389,11 @@
       function clipEll(g, x, y, rx, ry, fn) { g.save(); g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.clip(); fn(); g.restore(); }
       function eye(g, x, y, r, iris) { ell(g, x, y, r + 0.6, r + 1, "#fff", null); if (iris) ell(g, x, y + 0.4, r * 0.8, r * 0.95, iris, null); ell(g, x, y + 0.6, r * 0.5, r * 0.7, "#201828", null); g.fillStyle = "#fff"; g.beginPath(); g.arc(x + r * 0.4, y - r * 0.3, r * 0.32, 0, 7); g.fill(); }
       function frontEyes(g, lx, rx, y, r, iris) { eye(g, lx, y, r, iris); eye(g, rx, y, r, iris); }
+      // ---- chunky pixel toolkit (matches the unicorn's landing-style art) ----
+      var PINK2 = "#ff9ecb", INKP = "#241a4a";
+      function PXR(g) { return function (x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }; }
+      function pOB(R, x, y, w, h) { R(x - 2, y - 2, w + 4, h + 4, INKP); }
+      function pEyes(R, lx, rx, y) { R(lx, y, 4, 5, INKP); R(rx, y, 4, 5, INKP); R(lx + 1, y + 1, 1, 1, "#fff"); R(rx + 1, y + 1, 1, 1, "#fff"); }
       function outlineFix(oc, w, h) { var d = oc.getImageData(0, 0, w, h), p = d.data; for (var i = 0; i < p.length; i += 4) { if (p[i + 3] > 0 && p[i + 3] < 160) p[i + 3] = 255; } oc.putImageData(d, 0, 0); }
       function catSide(g, fr) {
         var B = "#9aa4b6", D = "#727e98", W = "#eef2f8", O = "#2b2838", am = "#f5b731", pk = "#ff8fb0", st = "#616d88", f = fr ? 2 : -2;
@@ -3195,7 +3206,13 @@
       placeHero: function (wx, y) { if (!G) return; G.hero.wx = wx; if (y != null) { G.hero.y = y; G.hero.ground = false; G.hero.vy = -10; } G.cam = wx - HEROX; }
     };
 
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena };
+    function drawHero(canvas, type, front) {
+      if (!HERO_ART[type]) buildHeroArt();
+      var g = canvas.getContext("2d"); g.clearRect(0, 0, canvas.width, canvas.height); g.imageSmoothingEnabled = false;
+      var pad = Math.round(canvas.width * 0.06), bw = canvas.width - pad * 2, bh = canvas.height - pad * 2;
+      heroDraw(g, type, pad, pad, bw, bh, 0, front !== false);
+    }
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero };
   })();
 
   /* ---------------- init / wiring ---------------- */
