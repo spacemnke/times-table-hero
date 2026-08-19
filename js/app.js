@@ -1423,7 +1423,15 @@
       try { Adv.drawHowScene(cv, +cv.getAttribute("data-how")); } catch (e) {}
     });
   }
-  function openLanding() { show("landing"); LandingFX.start(); paintLandingHeroes(); }
+  function openLanding() {
+    show("landing"); LandingFX.start(); paintLandingHeroes();
+    var si = Auth.signedIn();
+    var out = $("#lp-cta-out"), inn = $("#lp-cta-in"), note = $("#lp-signedin"), fin = $("#lp-create2");
+    if (out) out.hidden = si;
+    if (inn) inn.hidden = !si;
+    if (note) { note.hidden = !si; if (si) { var em = $("#lp-user-email"); if (em) em.textContent = Auth.email() || "your account"; } }
+    if (fin) fin.textContent = si ? "▶ PLAY" : "▶ START THE ADVENTURE";   // bottom CTA follows the same state
+  }
   function signOut() {
     if (!window.confirm("Sign out of this family account on this device?\n\nYour kids' progress stays saved online — sign back in anytime with your email and password.")) return;
     if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
@@ -3745,11 +3753,13 @@
 
     // landing (front door) — buttons wired by data-lp so the hero + final CTA both work
     if (!Auth.enabled) { $all("[data-lp]").forEach(function (b) { b.style.display = "none"; }); }
-    $all('[data-lp="create"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openSignup(); }); });
+    $all('[data-lp="create"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); if (Auth.signedIn()) enterApp(); else openSignup(); }); });   // "create/start" plays when already signed in
     $all('[data-lp="signin"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); openSignin(); }); });
+    $all('[data-lp="play"]').forEach(function (b) { b.addEventListener("click", function () { sTap(); enterApp(); }); });
+    var lso = $("#lp-signout"); if (lso) lso.addEventListener("click", function () { sTap(); signOut(); });
 
     // sign in
-    $("#si-back").addEventListener("click", function () { sTap(); show("landing"); LandingFX.start(); });
+    $("#si-back").addEventListener("click", function () { sTap(); openLanding(); });
     $("#si-email").addEventListener("input", siValidate);
     $("#si-pass").addEventListener("input", siValidate);
     $("#si-email").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#si-pass").focus(); } });
@@ -3758,7 +3768,7 @@
     $("#si-forgot").addEventListener("click", function (e) { e.preventDefault(); sTap(); siForgot(); });
 
     // sign up (parent creds)
-    $("#su-back").addEventListener("click", function () { sTap(); show("landing"); LandingFX.start(); });
+    $("#su-back").addEventListener("click", function () { sTap(); openLanding(); });
     ["su-email", "su-pass", "su-pass2"].forEach(function (id) { $("#" + id).addEventListener("input", suValidate); });
     $("#su-pass2").addEventListener("keydown", function (e) { if (e.key === "Enter" && !$("#su-next").disabled) suSubmit(); });
     $("#su-next").addEventListener("click", function () { sTap(); suSubmit(); });
@@ -3794,20 +3804,17 @@
     // A password-reset email link opens the app with a recovery token in the URL → set a new password.
     var hashType = Auth.consumeHash();
     if (hashType === "recovery") { Auth.fetchUser().then(function () { openReset(); }); return; }
-    // Signed-in families get the arcade splash first; brand-new visitors go straight to the landing.
-    // (Splash is skipped under automation unless ?splash is present.)
-    var useSplash = Auth.signedIn() && (!navigator.webdriver || /splash/.test(location.search));
-    if (useSplash) Splash.start(bootReal);
-    else bootReal();
+    // Automated gameplay tests seed local kids without a session → drop straight into the app.
+    if (navigator.webdriver && reg.profiles.length && !Auth.signedIn() && !/landing/.test(location.search)) { enterApp(); return; }
+    // Everyone else starts on the landing — it shows a signed-in "Play" state or a signed-out sign-up state.
+    openLanding();
+    if (Auth.signedIn() && reg.profiles.length) pullAllKids();   // warm the cache so Play is instant for returning families
   }
-  function bootReal() {
-    if (!Auth.signedIn()) {
-      // automated gameplay tests seed local kids without a session → run offline/local
-      if (navigator.webdriver && reg.profiles.length) { if (reg.activeId) activeId = reg.activeId; afterSignedIn(); return; }
-      openLanding(); return;                                    // real not-signed-in visitor → family front door
-    }
-    if (reg.profiles.length) { if (reg.activeId) activeId = reg.activeId; afterSignedIn(); pullAllKids(); }  // cached kids → play now, refresh in bg
-    else { pullAllKids(function () { afterSignedIn(); }); }     // signed in on a fresh device → fetch the kids
+  // Enter the app proper (from the landing "Play" button, or the automation bypass).
+  function enterApp() {
+    if (reg.profiles.length) { if (reg.activeId) activeId = reg.activeId; afterSignedIn(); if (Auth.signedIn()) pullAllKids(); }  // cached kids → play now, refresh in bg
+    else if (Auth.signedIn()) { pullAllKids(function () { afterSignedIn(); }); }   // signed in on a fresh device → fetch the kids
+    else { afterSignedIn(); }
   }
   function deckFromTables(tables) {
     var deck = []; tables.forEach(function (t) { for (var b = 1; b <= MAX; b++) deck.push({ a: t, b: b }); });
