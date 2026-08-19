@@ -214,7 +214,7 @@ body.lp-full #app { max-width: none; padding: 0; }
 
 /* ---- how it plays ---- */
 .lp-how { background: var(--lp-paper); }
-.lp-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px; align-items: start; }
+.lp-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px; align-items: start; margin-top: 30px; }
 .lp-step { background: #fff; border: 4px solid var(--lp-ink); box-shadow: 5px 5px 0 var(--lp-shadow); padding: 24px 20px 20px; text-align: center; position: relative; }
 .lp-step__n { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 38px; height: 38px; display: grid; place-items: center; font-family: var(--lp-mono); font-weight: 700; font-size: 14px; color: #fff; background: var(--lp-pink); border: 4px solid var(--lp-ink); border-radius: 50%; }
 .lp-step__ill { margin: 10px auto 14px; display: flex; align-items: center; justify-content: center; }
@@ -368,11 +368,23 @@ body[data-screen="home"] #app { max-width: 1000px; }
 .hub .grownup-link { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 4px; }
 .hub .grownup-link canvas { width: 13px; height: 15px; }
 
-/* desktop: the hub spreads into two columns and uses the width */
-@media (min-width: 720px) {
-  .hub-grid { flex-direction: row; align-items: flex-start; }
-  .hub-col { flex: 1; }
-  .hub-col--a { flex: 1.05; }
+/* desktop: two balanced columns — info on the left, quest cards on the right
+   as equal vertical cards that stretch to match the left column's height */
+@media (min-width: 820px) {
+  body[data-screen="home"] #app { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; }
+  .hub { width: 100%; margin: auto 0; }
+  .hub-grid { display: block; }
+  .hub-col--a { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
+  .hub-col--a .hub-hero { grid-column: 1 / -1; }
+  .hub-col--b { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .hub-col--b .cta { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px 16px; min-height: 158px; }
+  .hub-col--b .cta__text { flex: none; align-items: center; }
+  .hub-col--b .cta__title { font-size: 22px; }
+  .hub-col--b .cta__sub { font-size: 12px; }
+  .hub-col--b .cta__go { display: none; }
+  .hub-col--b .cta__icon { width: 58px; height: 58px; }
+  .hub-col--b .cta__icon canvas { height: 36px; }
+  .hub-col--b .cta__tag { left: 50%; transform: translateX(-50%); }
 }
 
 /* ============ GROWN-UPS report — desktop-fluid masonry ============ */

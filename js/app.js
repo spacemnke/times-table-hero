@@ -1498,7 +1498,10 @@
     function resize() {
       var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight;
       LH = 760; LW = Math.round(760 * w / h); GROUND = Math.round(LH * 0.70); HEROX = Math.round(LW * 0.20);
-      PIXH = 440; PIXW = Math.max(160, Math.round(PIXH * w / h)); sx = PIXH / LH;   // higher backing res = less blocky
+      // Backing res tracks the display so a phone and a big desktop share the same on-screen pixel density
+      // (a phone at ~780px tall lands on ~440, matching the old fixed value; bigger screens render sharper).
+      // visibleWorldUnits = aspect * LH is independent of PIXH, so gameplay is unaffected.
+      PIXH = Math.max(440, Math.min(900, Math.round(h / 1.8))); PIXW = Math.max(160, Math.round(PIXH * w / h)); sx = PIXH / LH;
       cv.width = PIXW; cv.height = PIXH;
       x.setTransform(1, 0, 0, 1, 0, 0); x.imageSmoothingEnabled = false;
       if (G && G.hero && G.hero.ground) G.hero.y = GROUND;
@@ -3562,7 +3565,7 @@
     function P(bx, by, bw, bh, c) { x.fillStyle = c; x.fillRect(bx | 0, by | 0, Math.max(1, bw | 0), Math.max(1, bh | 0)); }
     function size() {
       var w = window.innerWidth || 360, h = window.innerHeight || 640;
-      H = 400; W = Math.max(200, Math.round(H * w / h));
+      H = Math.max(400, Math.min(900, Math.round(h / 1.8))); W = Math.max(200, Math.round(H * w / h));   // track display density (sharper on big screens)
       cv.width = W; cv.height = H; x.imageSmoothingEnabled = false;
       stars = []; for (var i = 0; i < 70; i++) stars.push({ x: (i * 61 + 13) % W, y: (i * 37 + 7) % Math.round(H * 0.78), p: (i % 5) * 0.7, s: i % 7 === 0 ? 2 : 1 });
     }
