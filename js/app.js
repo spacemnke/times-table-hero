@@ -1075,19 +1075,61 @@
     $("#ps-name").textContent = p ? p.name : "Player";
     drawHubAvatar();
   }
+  // A cosy pixel bedroom behind each player card — night window, poster, string lights, a rug,
+  // all washed in that player's accent colour. The hero sprite is drawn on top (separate canvas).
+  function drawHeroRoom(cv, accent, idx) {
+    var g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
+    var W = cv.width, H = cv.height, floorY = Math.round(H * 0.70);
+    function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+    function hexA(h, a) { var n = parseInt(h.slice(1), 16); return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")"; }
+    R(0, 0, W, H, "#241d3a");                                                       // wall
+    g.fillStyle = "rgba(255,255,255,.045)"; for (var yy = 9; yy < floorY; yy += 12) g.fillRect(0, yy, W, 1);
+    for (var row = 0, yb = 0; yb < floorY; yb += 12, row++) for (var xb = (row % 2 ? 11 : 0); xb < W; xb += 22) g.fillRect(xb, yb, 1, 12);
+    var wash = g.createLinearGradient(0, 0, 0, floorY); wash.addColorStop(0, hexA(accent, .16)); wash.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = wash; g.fillRect(0, 0, W, floorY);
+    var wx = Math.round(W * 0.09), wy = Math.round(H * 0.15), ww = Math.round(W * 0.28), wh = Math.round(H * 0.34);   // night window
+    R(wx - 3, wy - 3, ww + 6, wh + 6, "#3a2c1e"); R(wx, wy, ww, wh, "#0d1130");
+    for (var s = 0; s < 12; s++) R(wx + (s * 17 + 3) % ww, wy + (s * 11 + 2) % wh, 1, 1, "#cdd6ff");
+    R(wx + ww * 0.6, wy + wh * 0.2, 8, 8, "#eef0ff"); R(wx + ww * 0.58, wy + wh * 0.18, 4, 4, "#0d1130");            // crescent moon
+    R(wx + ww / 2 - 1, wy, 2, wh, "#3a2c1e"); R(wx, wy + wh / 2 - 1, ww, 2, "#3a2c1e");
+    var px = Math.round(W * 0.66), py = Math.round(H * 0.15), pw = Math.round(W * 0.2), ph = Math.round(H * 0.26);   // framed poster
+    R(px - 2, py - 2, pw + 4, ph + 4, "#3a2c1e"); R(px, py, pw, ph, hexA(accent, .8)); R(px + pw * 0.28, py + ph * 0.3, pw * 0.44, ph * 0.4, "rgba(255,255,255,.5)");
+    var LC = ["#ff6a7a", "#ffd23f", "#4aa8ff", "#3ad44a"]; for (var L = 0; L < 7; L++) R(4 + L * (W - 8) / 6, 5 + (L % 2 ? 3 : 0), 2, 2, LC[L % 4]);   // string lights
+    R(0, floorY, W, H - floorY, "#3a2a1c"); R(0, floorY, W, 2, "#5a4530");           // wood floor
+    for (var fx = 0; fx < W; fx += 20) R(fx, floorY, 1, H - floorY, "#2c2016");
+    // arcade cabinet (left floor)
+    var acx = 5, acy = floorY - 20, acw = 24, ach = H - acy - 3;
+    R(acx, acy, acw, ach, "#17122b"); R(acx + 1, acy + 1, acw - 2, 1, "#2e2550");
+    R(acx + 3, acy + 4, acw - 6, 9, "#05060f"); R(acx + 4, acy + 5, acw - 8, 7, hexA(accent, .85));   // screen
+    R(acx + 5, acy + 6, 3, 2, "rgba(255,255,255,.7)");
+    R(acx + 3, acy + 15, acw - 6, 3, "#241c40"); R(acx + 5, acy + 16, 2, 1, "#ff6a7a"); R(acx + 8, acy + 16, 2, 1, "#3ad44a"); // controls
+    R(acx - 1, acy, 1, ach, hexA(accent, .5));
+    // shelf + trophy (right floor)
+    var shx = W - 30, shy = floorY - 6;
+    R(shx, shy, 24, 2, "#5a4530");                                                    // shelf
+    R(shx + 9, shy - 9, 5, 3, "#ffd23f"); R(shx + 10, shy - 6, 3, 4, "#ffd23f"); R(shx + 8, shy - 2, 7, 2, "#e0b52e"); // trophy
+    R(shx + 2, shy - 6, 3, 6, "#ff6a7a"); R(shx + 18, shy - 5, 3, 5, "#4aa8ff");       // little books
+    g.fillStyle = accent; g.globalAlpha = .5; g.beginPath(); g.ellipse(W / 2, H * 0.87, W * 0.34, H * 0.1, 0, 0, 7); g.fill();
+    g.globalAlpha = .85; g.beginPath(); g.ellipse(W / 2, H * 0.87, W * 0.23, H * 0.066, 0, 0, 7); g.fill(); g.globalAlpha = 1;   // rug
+    var warm = g.createRadialGradient(W * 0.83, H * 0.58, 2, W * 0.83, H * 0.58, W * 0.45); warm.addColorStop(0, "rgba(255,200,120,.25)"); warm.addColorStop(1, "rgba(255,200,120,0)"); g.fillStyle = warm; g.fillRect(0, 0, W, H);
+    var vg = g.createRadialGradient(W / 2, H * 0.5, H * 0.28, W / 2, H * 0.5, H * 0.8); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.52)"); g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  }
   function renderProfiles() {
     var grid = $("#profiles-grid"); grid.innerHTML = "";
-    reg.profiles.forEach(function (p) {
+    var ACC = ["#ffd23f", "#a06bff", "#37e0ff", "#3ad44a", "#ff7ac0", "#ff9f40"];
+    reg.profiles.forEach(function (p, idx) {
       // read that profile's streak + chosen hero without disturbing the active one
-      var streak = profileStreak(p.id), hero = profileHero(p.id);
-      var card = el("button", "pcard");
+      var streak = profileStreak(p.id), hero = profileHero(p.id), accent = ACC[idx % ACC.length];
+      var card = el("button", "pcard"); card.style.setProperty("--pc", accent);
+      card.appendChild(el("span", "pcard__tag", "P" + (idx + 1)));
       var stage = el("span", "pcard__stage");
+      var room = document.createElement("canvas"); room.width = 172; room.height = 118; room.className = "pcard__room";
       var cv = document.createElement("canvas"); cv.width = 84; cv.height = 62; cv.className = "pcard__hero";
-      stage.appendChild(cv); card.appendChild(stage);
+      stage.appendChild(room); stage.appendChild(cv); card.appendChild(stage);
       card.appendChild(el("span", "pcard__name", p.name));
       card.appendChild(el("span", "pcard__meta", streak > 0 ? "🔥 " + streak + " day streak" : "Ready to play!"));
       card.addEventListener("click", function () { sTap(); setActive(p.id); renderHome(); show("home"); });
       grid.appendChild(card);
+      try { drawHeroRoom(room, accent, idx); } catch (e) {}
       try { window.__adv && window.__adv.drawHero && window.__adv.drawHero(cv, hero, true); } catch (e) {}
     });
     var add = el("button", "pcard pcard--add");
