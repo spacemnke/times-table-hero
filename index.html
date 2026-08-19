@@ -235,6 +235,11 @@
           </button>
         </header>
 
+        <button class="hub-map" data-go="adventure" aria-label="Open the quest map">
+          <canvas id="hub-questmap" aria-hidden="true"></canvas>
+          <span class="hub-map__lab"><b id="hub-worldlab">WORLD 1 · MEADOW</b><span>TAP TO OPEN THE MAP ›</span></span>
+        </button>
+
         <div class="hub-grid">
           <div class="hub-col hub-col--a">
             <div class="hub-hero">
@@ -254,11 +259,6 @@
                 <span class="coinpill"><canvas data-pix="coin" data-s="2" aria-hidden="true"></canvas><b id="hub-coins">0</b></span>
                 <span class="coinpill"><canvas data-pix="gem" data-s="2" aria-hidden="true"></canvas><b id="hub-gems">0</b></span>
               </div>
-            </div>
-
-            <div class="mapcard">
-              <div class="mapcard__lab"><span>QUEST MAP</span><button class="mapcard__go" data-go="adventure" id="hub-worldlab">WORLD 1 ›</button></div>
-              <div class="worlds" id="hub-worlds"></div>
             </div>
 
             <div class="daily-card">

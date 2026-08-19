@@ -525,9 +525,17 @@
     $("#daily-msg").textContent = msg;
     $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · " + focusLabel();
     var bs = $("#badge-sub"); if (bs && typeof BADGES !== "undefined") { var earned = BADGES.filter(function (b) { try { return b.test(); } catch (e) { return false; } }).length; bs.textContent = earned + " of " + BADGES.length + " earned"; }
-    renderHubRibbon();
+    paintQuestMap();
     drawHubAvatar();
     Pix.paint($(".screen--home"));
+  }
+  function paintQuestMap() {
+    var lab = $("#hub-worldlab"); if (lab) { var cur = clamp(progress.worldsUnlocked || 1, 1, 8); lab.textContent = "WORLD " + cur + " · " + HUB_WORLDS[cur - 1][0]; }
+    var cv = $("#hub-questmap"); if (!cv || !window.__adv || !window.__adv.drawQuestMap) return;
+    var wrap = cv.parentElement, dpr = Math.min(2, window.devicePixelRatio || 1);
+    var w = wrap.clientWidth || 340, h = wrap.clientHeight || 150;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    try { window.__adv.drawQuestMap(cv); } catch (e) {}
   }
   var HUB_WORLDS = [["MEADOW", "#7cd04a"], ["BEACH", "#f0d78a"], ["CANDY", "#ffb0d8"], ["OCEAN", "#38b6ff"], ["SNOW", "#dfeeff"], ["JUNGLE", "#5abf5a"], ["VOLCANO", "#ff7a3f"], ["SPACE", "#5a4a9a"]];
   function renderHubRibbon() {
@@ -3434,6 +3442,7 @@
       drawHero: function (cv, type, front) { Adv.drawHero(cv, type, front); },
       drawWorld: function (cv, idx) { Adv.drawWorld(cv, idx); },
       drawHowScene: function (cv, kind) { Adv.drawHowScene(cv, kind); },
+      drawQuestMap: function (cv) { Adv.drawQuestMap(cv); },
       get trapsX() { return G ? G.traps.map(function (t) { return Math.round(t.x); }) : []; },
       get gemsX() { return G ? G.gemsA.map(function (g) { return Math.round(g.x); }) : []; },
       get fishX() { return G ? G.fish.map(function (f) { return Math.round(f.x); }) : []; },
@@ -3569,7 +3578,45 @@
         R(ax + 4, ay - 11, 4, 2, "#3fbf5a"); R(ax + 7, ay - 9, 2, 4, "#3fbf5a");                                              // arrowhead
       }
     }
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene };
+    // Compact "Quest Land" map banner for the home hub — the in-game map's look, one serpentine across.
+    function drawQuestMap(canvas) {
+      var mg = canvas.getContext("2d"); mg.imageSmoothingEnabled = false;
+      var W = canvas.width, H = canvas.height, un = Math.max(1, (progress && progress.worldsUnlocked) || 1);
+      var R = Math.max(13, Math.round(Math.min(H * 0.28, W / 20))), k = R / 12;
+      var topM = H * 0.10, botM = H * 0.30, x0 = W * 0.06, usableW = W * 0.88;
+      var cy = (topM + (H - botM)) / 2, ampY = Math.min((H - topM - botM) * 0.5, H * 0.5 - R - 6);
+      var nodes = []; for (var j = 0; j < MAXLEVELS; j++) { var tj = MAXLEVELS > 1 ? j / (MAXLEVELS - 1) : 0; nodes.push({ x: Math.round(x0 + tj * usableW), y: Math.round(cy + Math.sin(j * 0.82 + 0.5) * ampY), n: j + 1, theme: THEMES[j % THEMES.length] }); }
+      var wg = mg.createLinearGradient(0, 0, 0, H); wg.addColorStop(0, "#3a8fd8"); wg.addColorStop(1, "#1f5fa8"); mg.fillStyle = wg; mg.fillRect(0, 0, W, H);
+      mg.fillStyle = "rgba(255,255,255,.12)"; for (var s = 0; s < Math.round(W * H / 1400); s++) mg.fillRect((s * 61) % W, (s * 43) % H, s % 4 ? 2 : 3, 1);
+      var pts = []; nodes.forEach(function (p, i) { pts.push([p.x, p.y]); if (i < nodes.length - 1) pts.push([(p.x + nodes[i + 1].x) / 2, (p.y + nodes[i + 1].y) / 2]); });
+      function blobs(r, col, dy) { mg.fillStyle = col; pts.forEach(function (pt) { mg.beginPath(); mg.arc(pt[0], pt[1] + (dy || 0), r, 0, 7); mg.fill(); }); }
+      blobs(26 * k, "#e2c184"); blobs(24 * k, "#c9a865", 2 * k); blobs(22 * k, "#2f8f3a", 3 * k); blobs(21 * k, "#49ba52"); blobs(14 * k, "#5fce62", -3 * k);
+      function road(w, col) { mg.strokeStyle = col; mg.lineWidth = w; mg.lineCap = "round"; mg.lineJoin = "round"; mg.beginPath(); nodes.forEach(function (p, i) { i ? mg.lineTo(p.x, p.y) : mg.moveTo(p.x, p.y); }); mg.stroke(); }
+      road(9 * k, "#7a4e26"); road(5 * k, "#d2a45f");
+      function rrect(bx, by, w, h, r) { mg.beginPath(); mg.moveTo(bx + r, by); mg.arcTo(bx + w, by, bx + w, by + h, r); mg.arcTo(bx + w, by + h, bx, by + h, r); mg.arcTo(bx, by + h, bx, by, r); mg.arcTo(bx, by, bx + w, by, r); mg.closePath(); }
+      var savedX = x; x = mg; var labels = [];
+      nodes.forEach(function (p) {
+        var open = p.n <= un, done = p.n < un, here = p.n === Math.min(un, MAXLEVELS), gs = R * 0.58;
+        mg.save(); rrect(p.x - R, p.y - R, R * 2, R * 2, R * 0.34); mg.clip();
+        mg.fillStyle = p.theme.sky; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2);
+        mg.fillStyle = p.theme.sky2 || p.theme.sky; mg.fillRect(p.x - R, p.y, R * 2, R);
+        mg.fillStyle = p.theme.grass; mg.fillRect(p.x - R, p.y + R - gs, R * 2, gs);
+        pxProp(p.theme.prop, p.x, p.y + R - gs, Math.round(R * 1.4), p.theme);
+        if (!open) { mg.fillStyle = "rgba(14,18,34,.6)"; mg.fillRect(p.x - R, p.y - R, R * 2, R * 2); }
+        mg.restore();
+        rrect(p.x - R, p.y - R, R * 2, R * 2, R * 0.34); mg.lineWidth = here ? 3 : 2; mg.strokeStyle = here ? "#ff4fa3" : open ? "#ffffff" : "#59648c"; mg.stroke();
+        var br = R * 0.5, bx = p.x + R - br * 0.5, by = p.y - R + br * 0.5;
+        mg.beginPath(); mg.arc(bx, by, br, 0, 7); mg.fillStyle = here ? "#ff4fa3" : done ? "#3ad44a" : open ? "#ffd23f" : "#39447a"; mg.fill(); mg.lineWidth = 1.4; mg.strokeStyle = "#101828"; mg.stroke();
+        mg.fillStyle = open ? "#101828" : "#cfd6ff"; mg.font = "900 " + Math.round(R * 0.66) + "px monospace"; mg.textAlign = "center"; mg.textBaseline = "middle"; mg.fillText(p.n, bx, by + 1);
+        if (!open) { mg.fillStyle = "#ffd23f"; mg.fillRect(p.x - R * 0.3, p.y - R * 0.06, R * 0.6, R * 0.46); mg.strokeStyle = "#ffd23f"; mg.lineWidth = Math.max(1, R * 0.12); mg.beginPath(); mg.arc(p.x, p.y - R * 0.06, R * 0.23, Math.PI, 0); mg.stroke(); }
+        labels.push({ name: p.theme.name, x: p.x, y: p.y + R + R * 0.72, open: open });
+      });
+      mg.font = "700 " + Math.round(R * 0.5) + "px monospace"; mg.textBaseline = "alphabetic"; mg.textAlign = "center"; mg.lineJoin = "round"; mg.lineWidth = Math.max(2, R * 0.16);
+      labels.forEach(function (l) { mg.strokeStyle = "rgba(8,10,20,.92)"; mg.strokeText(l.name, l.x, l.y); mg.fillStyle = l.open ? "#ffffff" : "#c2c9e8"; mg.fillText(l.name, l.x, l.y); });
+      x = savedX;
+      var cp = nodes[Math.min(un, MAXLEVELS) - 1]; if (cp) heroDraw(mg, (progress && progress.hero) || "unicorn", cp.x - R * 1.05, cp.y - R * 3.05, R * 2.1, R * 1.9, 0, true);
+    }
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene, drawQuestMap: drawQuestMap };
   })();
 
   /* ---------------- init / wiring ---------------- */
@@ -3808,6 +3855,7 @@
     var st = $("#sound-toggle"); st.textContent = soundOn ? "🔊" : "🔈";
     st.addEventListener("click", function () { soundOn = !soundOn; saveSound(); st.textContent = soundOn ? "🔊" : "🔈"; if (soundOn) { ac(); sTap(); if (window.__adv && window.__adv.resumeMusic) window.__adv.resumeMusic(); } else { musicStop(); } });
     document.addEventListener("touchstart", function once() { ac(); document.removeEventListener("touchstart", once); }, { passive: true });
+    var mapT; window.addEventListener("resize", function () { if (document.body.getAttribute("data-screen") === "home") { clearTimeout(mapT); mapT = setTimeout(paintQuestMap, 120); } });
 
     boot();
   }

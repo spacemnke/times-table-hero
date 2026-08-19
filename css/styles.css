@@ -374,12 +374,22 @@ body[data-screen="home"] #app { max-width: 1000px; }
 
 /* desktop: two balanced columns — info on the left, quest cards on the right
    as equal vertical cards that stretch to match the left column's height */
+/* quest map banner — the in-game Quest Land, big across the top */
+.hub-map { display: block; width: 100%; position: relative; padding: 0; overflow: hidden; cursor: pointer;
+  border: 3px solid #fff; border-radius: var(--radius); box-shadow: var(--shadow); background: #1f5fa8; height: 150px; }
+.hub-map canvas { display: block; width: 100%; height: 100%; }
+.hub-map__lab { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 12px; background: linear-gradient(0deg, rgba(8,10,24,.9), rgba(8,10,24,0)); font-family: var(--mono); text-align: left; }
+.hub-map__lab b { color: #ffd23f; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-shadow: 1px 1px 0 #000; }
+.hub-map__lab span { color: #cfd6ff; font-size: 9px; letter-spacing: .08em; }
+.hub-map:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.85); }
+
 @media (min-width: 820px) {
   body[data-screen="home"] #app { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; }
   .hub { width: 100%; margin: auto 0; }
+  .hub-map { height: 220px; }
   .hub-grid { display: block; }
-  .hub-col--a { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: start; }
-  .hub-col--a .hub-hero { grid-column: 1 / -1; }
+  .hub-col--a { margin-bottom: 16px; }
   .hub-col--b { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .hub-col--b .cta { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px 16px; min-height: 158px; }
   .hub-col--b .cta__text { flex: none; align-items: center; }
