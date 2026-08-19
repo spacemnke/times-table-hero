@@ -159,6 +159,8 @@ body.lp-full #app { max-width: none; padding: 0; }
 }
 .lp-cta { display: flex; flex-direction: column; gap: 12px; margin: 22px auto 0; max-width: 340px; }
 .lp-cta[hidden] { display: none; }
+#lp-cta-in { justify-content: center; align-items: center; }
+#lp-cta-in .lp-btn { flex: 0 0 auto; width: 100%; max-width: 290px; }
 .lp-signedin { margin: 14px auto 0; max-width: 40ch; font-family: var(--lp-mono); font-size: 12.5px; font-weight: 700; color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,.45); }
 .lp-signedin b { color: var(--lp-gold); }
 .lp-linkbtn { border: none; background: none; color: var(--lp-gold); font-family: inherit; font-weight: 700; font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 0; }
@@ -854,3 +856,23 @@ body {
   border: 3px solid #241a4a; box-shadow: inset 0 -4px 0 rgba(0,0,0,.16), 4px 4px 0 rgba(0,0,0,.28); }
 .pcard__hero { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: 86px; height: 63px; image-rendering: pixelated; }
 .pcard__name { font-size: 20px; }
+
+/* ============ who's-playing — cosy arcade den ============ */
+body[data-screen="profiles"] { background:
+    radial-gradient(120% 80% at 50% 120%, rgba(120,70,180,.42), transparent 60%),
+    radial-gradient(90% 60% at 50% -12%, rgba(60,45,120,.42), transparent 60%),
+    linear-gradient(180deg, #16102e, #0b0820) !important; }
+.profiles__sub { letter-spacing: .04em; }
+.pcard { position: relative; --pc: #ffd23f; border: 3px solid var(--pc); background: #1b1633; padding: 15px 12px 14px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 0 26px -5px var(--pc), 6px 6px 0 rgba(0,0,0,.5); }
+.pcard__tag { position: absolute; top: -12px; left: 12px; z-index: 3; font-family: var(--mono); font-weight: 700; font-size: 12px;
+  color: #180d02; background: var(--pc); border: 2px solid #0b0722; border-radius: 9px 9px 9px 0; padding: 2px 9px; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+.pcard__stage { position: relative; overflow: hidden; height: 116px; border-radius: 12px; border: 3px solid #0b0722;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); background: #241d3a; margin-bottom: 12px; }
+.pcard__room { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.pcard__hero { position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 88px; height: 65px; image-rendering: pixelated; z-index: 2;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,.5)); }
+.pcard__name { color: #fff; }
+.pcard__meta { color: #b7a9f0; }
+.pcard--add { border-style: dashed; border-color: #4a3d8a; background: rgba(30,22,60,.4); box-shadow: 6px 6px 0 rgba(0,0,0,.4); }
+.pcard--add .pcard__av { color: #ffd23f; }
