@@ -457,9 +457,11 @@
 
         <div id="adv-failOv" class="adv8-ov hidden">
           <div class="adv8-scrim"></div>
-          <div class="adv8-panel">
-            <h1>GAME OVER</h1><p>Out of hearts — give it another go!</p>
-            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-retryBtn">RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
+          <div class="adv8-panel adv8-panel--fail">
+            <div class="adv8-fail-hearts" id="adv-fail-hearts" aria-hidden="true"></div>
+            <h1>GAME OVER</h1>
+            <p>Out of hearts — give it another go!</p>
+            <div class="adv8-btnrow"><button class="adv8-btn adv8-btn--big" id="adv-retryBtn">↻ RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
           </div>
         </div>
       </div>

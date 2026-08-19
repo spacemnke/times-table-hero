@@ -825,3 +825,22 @@ body {
 .pcard:active, .cta:active, .streak-pill:active, .pm-btn:active, .sound-toggle:active, .btn-secondary:active {
   transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.85);
 }
+
+/* ============ badges card icon — dark tile so the gold star reads ============ */
+.cta--badges .cta__icon { background: rgba(36,16,0,.24); border-color: rgba(0,0,0,.3); }
+
+/* ============ game-over / win overlay — breathing room + graphic ============ */
+.adv8-btnrow { margin-top: 18px; }
+.adv8-panel--fail { padding: 24px 22px 22px; }
+.adv8-panel--fail h1 { color: #ff6a7a; font-size: 30px; margin-bottom: 4px; }
+.adv8-fail-hearts { display: flex; gap: 12px; justify-content: center; margin-bottom: 12px; }
+.adv8-fail-hearts canvas { width: 42px; height: 42px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
+.adv8-btn--big { font-size: 16px; padding: 14px 26px; }
+
+/* ============ who's-playing — character stage cards ============ */
+.pcard { padding: 14px 12px 14px; }
+.pcard__stage { display: block; width: 100%; height: 92px; border-radius: 14px; margin-bottom: 12px; position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #6ea8ff 0%, #a7d1ff 60%, #7cd04a 60%, #7cd04a 76%, #c9803f 76%);
+  border: 3px solid #241a4a; box-shadow: inset 0 -4px 0 rgba(0,0,0,.16), 4px 4px 0 rgba(0,0,0,.28); }
+.pcard__hero { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: 86px; height: 63px; image-rendering: pixelated; }
+.pcard__name { font-size: 20px; }
