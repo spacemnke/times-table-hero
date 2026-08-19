@@ -389,6 +389,22 @@ body[data-screen="parent"] #app { max-width: 1080px; }
   .rep-section { break-inside: avoid; -webkit-column-break-inside: avoid; display: inline-block; width: 100%; vertical-align: top; }
 }
 
+/* ============ other screens on desktop ============ */
+body[data-screen="badges"] #app { max-width: 820px; }
+@media (min-width: 720px) { #badge-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 980px) { #badge-grid { grid-template-columns: repeat(6, 1fr); } }
+
+/* quiz — a bigger centered arcade stage on desktop */
+body[data-screen="play"] #app { max-width: 640px; }
+@media (min-width: 720px) {
+  .screen--play .question { font-size: 88px; margin: 7vh 0 3vh; }
+  .answer-box { max-width: 340px; }
+  .keypad { max-width: 400px; gap: 12px; }
+  .keypad .key { font-size: 26px; padding: 20px 0; }
+  .answers { max-width: 460px; margin-left: auto; margin-right: auto; }
+}
+
+
 /* ---------------- topbar ---------------- */
 .topbar { display: flex; align-items: center; gap: 10px; padding: 4px 0 14px; min-height: 52px; }
 .topbar__title { font-size: 21px; font-weight: 900; margin: 0; }
