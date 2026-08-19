@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787132305" />
+  <link rel="stylesheet" href="css/styles.css?v=1787161243" />
 </head>
 <body>
   <div id="app">
@@ -36,10 +36,14 @@
             <span class="lp-eyebrow">AN 8-BIT TIMES-TABLE ADVENTURE</span>
             <h1 class="lp-logo">TIMES TABLE<br /><span>HERO</span></h1>
             <p class="lp-tag">Gallop through eight pixel worlds. Every glowing gate is a times-table question — nail it to blast straight through. It's <b>×1 to ×12</b> practice that plays like a Saturday-morning platformer.</p>
-            <div class="lp-cta">
+            <div class="lp-cta" id="lp-cta-out">
               <button class="lp-btn lp-btn--play" id="lp-create" data-lp="create">▶ CREATE ACCOUNT</button>
               <button class="lp-btn lp-btn--ghost" id="lp-signin" data-lp="signin">I HAVE AN ACCOUNT</button>
             </div>
+            <div class="lp-cta" id="lp-cta-in" hidden>
+              <button class="lp-btn lp-btn--play" id="lp-play" data-lp="play">▶ PLAY</button>
+            </div>
+            <p class="lp-signedin" id="lp-signedin" hidden>You're already signed in as <b id="lp-user-email"></b> · <button class="lp-linkbtn" id="lp-signout">Sign out</button></p>
           </div>
           <div class="lp-trust">NO ADS · FREE TO PLAY · SAVES ACROSS DEVICES</div>
         </div>
@@ -621,6 +625,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787132305"></script>
+  <script src="js/app.js?v=1787161243"></script>
 </body>
 </html>
