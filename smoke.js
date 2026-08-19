@@ -20,7 +20,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.addInitScript(() => localStorage.setItem("tth.profiles.v1", JSON.stringify({ activeId: "mia", profiles: [{ id: "mia", name: "Mia", avatar: "🐰" }] })));
   await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForSelector('.screen--home.is-active');
-  console.log("✓ booted into home as seeded player:", (await page.textContent('#ps-name')).trim(), (await page.textContent('#ps-av')).trim());
+  console.log("✓ booted into home as seeded player:", (await page.textContent('#ps-name')).trim());
 
   // helper: answer a typed play question correctly via keypad
   async function answerTyped() {

@@ -450,6 +450,7 @@
   function show(name) {
     $all(".screen").forEach(function (s) { s.classList.toggle("is-active", s.getAttribute("data-screen") === name); });
     document.body.classList.toggle("lp-full", name === "landing");   // landing breaks out to full browser width
+    document.body.setAttribute("data-screen", name);                 // lets CSS give each screen its own desktop width
     window.scrollTo(0, 0);
   }
   document.addEventListener("click", function (e) {
@@ -466,6 +467,31 @@
   }
   window.__go = route;   // debug/test hook for direct navigation
 
+  /* ---------------- pixel UI icons (shared arcade style) ---------------- */
+  var Pix = (function () {
+    var PAL = { ".": null, " ": null, O: "#e8722a", D: "#c1531a", W: "#fde6cf", K: "#241a4a", G: "#ffd23f", H: "#fff2a8", C: "#c9930a", F: "#ff8a3f", R: "#ff4d6d", r: "#c1263f", w: "#ffffff", B: "#38b6ff", P: "#a06bff", s: "#b7a9f0", g: "#57c84a" };
+    var GR = {
+      flame: ["....F....", "...FGF...", "...FGF...", "..FGGGF..", "..FGHGF..", ".FGHHHGF.", ".FGHwHGF.", ".FGHHHGF.", ".FFGGGFF.", "..FFFFF..", "...FFF..."],
+      bolt: [".....GG..", "....GGG..", "...GGG...", "..GGGH...", ".GGGGGGG.", "...HGGG..", "...GGG...", "..GGG....", "..GG.....", ".GG......", "GG......."],
+      target: ["..RRRRR..", ".RwwwwwR.", "RwrrrrrwR", "RwrwwwrwR", "RwrwKwrwR", "RwrwwwrwR", "RwrrrrrwR", ".RwwwwwR.", "..RRRRR.."],
+      star: ["....G....", "....G....", "...GHG...", "GGGGGGGGG", ".GGGGGGG.", "..GGGGG..", "..GG.GG..", ".GG...GG.", "GG.....GG"],
+      coin: [".CCC.", "CGHGC", "CGGGC", "CGGGC", ".CCC."],
+      gem: [".PPP.", "PHHHP", "PHHHP", ".PPP.", "..P.."],
+      lock: ["..sss..", ".s...s.", ".s...s.", "GGGGGGG", "GGGGGGG", "GGKKKGG", "GGKKKGG", "GGGGGGG"],
+      chev: ["ww....", ".ww...", "..ww..", "...ww.", "..ww..", ".ww...", "ww...."]
+    };
+    function draw(cv, name, scale, col) {
+      var grid = GR[name]; if (!grid) return; var h = grid.length, w = grid[0].length, x = cv.getContext("2d");
+      cv.width = w * scale; cv.height = h * scale; x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height);
+      for (var yy = 0; yy < h; yy++) for (var xx = 0; xx < w; xx++) { var ch = grid[yy].charAt(xx), c = col || PAL[ch]; if (!c || ch === "." || ch === " ") continue; x.fillStyle = c; x.fillRect(xx * scale, yy * scale, scale, scale); }
+    }
+    // Paint any [data-pix] canvases inside root: data-pix=name, data-s=scale, data-col=override
+    function paint(root) {
+      $all("canvas[data-pix]", root).forEach(function (cv) { draw(cv, cv.getAttribute("data-pix"), +cv.getAttribute("data-s") || 2, cv.getAttribute("data-col") || null); });
+    }
+    return { draw: draw, paint: paint };
+  })();
+
   /* ---------------- HOME / dashboard ---------------- */
   function renderHome() {
     var lp = levelProgress(progress.xp);
@@ -479,10 +505,14 @@
     $(".streak-pill").classList.toggle("is-lit", streak > 0);
     $("#streak-freeze").hidden = !(det.freezeReady && streak > 0);
 
+    var xf = $("#xp-fill"); if (xf) xf.style.width = clamp(lp.frac * 100, 3, 100) + "%";
+    var hc = $("#hub-coins"); if (hc) hc.textContent = progress.coins || 0;
+    var hg = $("#hub-gems"); if (hg) hg.textContent = progress.gems || 0;
+
     var goal = progress.settings.dailyGoal, done = (progress.days[dayKey(0)] || {}).q || 0;
     $("#daily-goal").textContent = goal;
     $("#daily-done").textContent = Math.min(done, goal);
-    $("#daily-fill").style.width = clamp(done / goal * 100, 0, 100) + "%";
+    renderDailyPips(goal, Math.min(done, goal));
     var msg;
     if (done >= goal) msg = "Goal smashed today! 🎉 Come back tomorrow to grow your streak.";
     else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
@@ -494,6 +524,34 @@
     }
     $("#daily-msg").textContent = msg;
     $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · " + focusLabel();
+    var bs = $("#badge-sub"); if (bs && typeof BADGES !== "undefined") { var earned = BADGES.filter(function (b) { try { return b.test(); } catch (e) { return false; } }).length; bs.textContent = earned + " of " + BADGES.length + " earned"; }
+    renderHubRibbon();
+    drawHubAvatar();
+    Pix.paint($(".screen--home"));
+  }
+  var HUB_WORLDS = [["MEADOW", "#7cd04a"], ["BEACH", "#f0d78a"], ["CANDY", "#ffb0d8"], ["OCEAN", "#38b6ff"], ["SNOW", "#dfeeff"], ["JUNGLE", "#5abf5a"], ["VOLCANO", "#ff7a3f"], ["SPACE", "#5a4a9a"]];
+  function renderHubRibbon() {
+    var wc = $("#hub-worlds"); if (!wc) return; wc.innerHTML = "";
+    var cur = clamp(progress.worldsUnlocked || 1, 1, 8);
+    HUB_WORLDS.forEach(function (wd, i) {
+      var n = i + 1, st = n < cur ? "done" : (n === cur ? "cur" : "lock");
+      var d = el("div", "world " + st);
+      var badge = st === "done" ? '<span class="world__b world__b--done">✓</span>'
+        : st === "cur" ? '<span class="world__b world__b--cur">★</span>' : "";
+      d.innerHTML = '<div class="world__tile" style="background:' + wd[1] + '"></div>' + badge +
+        '<div class="world__nm">' + (st === "cur" ? wd[0] : "") + "</div>";
+      wc.appendChild(d);
+    });
+    var lab = $("#hub-worldlab"); if (lab) lab.textContent = "WORLD " + cur + " · " + HUB_WORLDS[cur - 1][0] + " ›";
+  }
+  function renderDailyPips(goal, done) {
+    var pc = $("#daily-pips"); if (!pc) return; pc.innerHTML = "";
+    var n = clamp(goal, 5, 30);
+    for (var i = 0; i < n; i++) { var s = el("i", i < done ? "on" : ""); pc.appendChild(s); }
+  }
+  function drawHubAvatar() {
+    var c = $("#ps-av-c"); if (!c || !window.__adv || !window.__adv.drawHero) return;
+    try { window.__adv.drawHero(c, (progress && progress.hero) || "unicorn", true); } catch (e) {}
   }
 
   function focusTables() {
@@ -1006,8 +1064,8 @@
   /* ---------------- profiles UI ---------------- */
   function updatePlayerSwitch() {
     var p = activeProfile();
-    $("#ps-av").textContent = p ? p.avatar : "⭐️";
     $("#ps-name").textContent = p ? p.name : "Player";
+    drawHubAvatar();
   }
   function renderProfiles() {
     var grid = $("#profiles-grid"); grid.innerHTML = "";
