@@ -1070,20 +1070,27 @@
   function renderProfiles() {
     var grid = $("#profiles-grid"); grid.innerHTML = "";
     reg.profiles.forEach(function (p) {
-      // read that profile's streak without disturbing the active one
-      var streak = profileStreak(p.id);
+      // read that profile's streak + chosen hero without disturbing the active one
+      var streak = profileStreak(p.id), hero = profileHero(p.id);
       var card = el("button", "pcard");
-      card.appendChild(el("span", "pcard__av", p.avatar));
+      var stage = el("span", "pcard__stage");
+      var cv = document.createElement("canvas"); cv.width = 84; cv.height = 62; cv.className = "pcard__hero";
+      stage.appendChild(cv); card.appendChild(stage);
       card.appendChild(el("span", "pcard__name", p.name));
-      card.appendChild(el("span", "pcard__meta", streak > 0 ? "🔥 " + streak + " day streak" : "Let's go!"));
+      card.appendChild(el("span", "pcard__meta", streak > 0 ? "🔥 " + streak + " day streak" : "Ready to play!"));
       card.addEventListener("click", function () { sTap(); setActive(p.id); renderHome(); show("home"); });
       grid.appendChild(card);
+      try { window.__adv && window.__adv.drawHero && window.__adv.drawHero(cv, hero, true); } catch (e) {}
     });
     var add = el("button", "pcard pcard--add");
     add.appendChild(el("span", "pcard__av", "＋"));
     add.appendChild(el("span", "pcard__name", "Add a kid"));
     add.addEventListener("click", function () { sTap(); openProfileNew(false); });
     grid.appendChild(add);
+  }
+  function profileHero(id) {
+    try { var raw = localStorage.getItem(pKey(id)); if (raw) { var p = JSON.parse(raw); return p.hero || "unicorn"; } } catch (e) {}
+    return "unicorn";
   }
   function profileStreak(id) {
     // compute current streak for any profile by peeking at its stored data
@@ -1640,6 +1647,7 @@
     function aStar() {[523, 659, 784, 1046].forEach(function (f, i) { tone(f, .1, "square", i * .05, .08); }); }
     function aFlag() { tone(659, .08, "square", 0); tone(988, .1, "square", .07); }
     function aWin() {[523, 659, 784, 1046, 1319].forEach(function (f, i) { tone(f, .13, "square", i * .1); }); }
+    function aGameOver() {[440, 392, 330, 262].forEach(function (f, i) { tone(f, .3, "triangle", i * .24, .13); }); tone(196, .5, "sawtooth", .96, .1); tone(131, .7, "triangle", .96, .07); }   // sad descending "you lost" sting
     // ---- power-up sounds (each instance gets its own voice) ----
     function aGrow() { for (var i = 0; i < 7; i++) tone(196 + i * 70, .08, "square", i * .05, .1); tone(147, .22, "square", .36, .12); }   // magnifying "grow" sweep
     function aShrink() {[659, 523, 415, 330, 247].forEach(function (f, i) { tone(f, .08, "square", i * .05, .1); }); }                     // shrink (reverse)
@@ -1752,7 +1760,11 @@
     }
 
     function hideAllOv() { ["adv-mapOv", "adv-winOv", "adv-failOv"].forEach(function (id) { $("#" + id).classList.add("hidden"); }); }
-    function openOv(id) { hideAllOv(); $("#" + id).classList.remove("hidden"); hudShow(false); mathHide(); }
+    function openOv(id) { hideAllOv(); $("#" + id).classList.remove("hidden"); hudShow(false); mathHide(); if (id === "adv-failOv") { fillFailHearts(); aGameOver(); } }
+    function fillFailHearts() {
+      var box = $("#adv-fail-hearts"); if (!box) return; box.innerHTML = "";
+      for (var i = 0; i < 3; i++) { var c = document.createElement("canvas"); c.width = 8; c.height = 8; var g = c.getContext("2d"); g.imageSmoothingEnabled = false; heartPix(g, false); box.appendChild(c); }
+    }
     function hudShow(v) { ["adv-hud", "adv-pmap", "adv-tapHint", "adv-quit"].forEach(function (id) { $("#" + id).classList.toggle("hidden", !v); }); }
     function mathShow() { $("#adv-math").classList.remove("hidden"); }
     function mathHide() { $("#adv-math").classList.add("hidden"); }

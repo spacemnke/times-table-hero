@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787161243" />
+  <link rel="stylesheet" href="css/styles.css?v=1787162457" />
 </head>
 <body>
   <div id="app">
@@ -457,9 +457,11 @@
 
         <div id="adv-failOv" class="adv8-ov hidden">
           <div class="adv8-scrim"></div>
-          <div class="adv8-panel">
-            <h1>GAME OVER</h1><p>Out of hearts — give it another go!</p>
-            <div class="adv8-btnrow"><button class="adv8-btn" id="adv-retryBtn">RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
+          <div class="adv8-panel adv8-panel--fail">
+            <div class="adv8-fail-hearts" id="adv-fail-hearts" aria-hidden="true"></div>
+            <h1>GAME OVER</h1>
+            <p>Out of hearts — give it another go!</p>
+            <div class="adv8-btnrow"><button class="adv8-btn adv8-btn--big" id="adv-retryBtn">↻ RETRY</button><button class="adv8-btn ghost" id="adv-mapBtn2">MAP</button><button class="adv8-btn ghost" id="adv-homeBtn2">HOME</button></div>
           </div>
         </div>
       </div>
@@ -625,6 +627,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787161243"></script>
+  <script src="js/app.js?v=1787162457"></script>
 </body>
 </html>
