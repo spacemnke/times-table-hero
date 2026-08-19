@@ -2035,10 +2035,10 @@
       var gy = Math.round(PIXH * 0.82), q = nextQ();   // ground low on the screen: lots of sky to loft into, little dead space
       var shp = SD_SHAPES[Math.floor(Math.random() * SD_SHAPES.length)], dim = sdDims(shp);
       // small crates + a LONG arc: sling on the far left, fortress on the far right (feels like a real slingshot)
-      var rightM = Math.round(PIXW * 0.03), topReserve = Math.round(PIXH * 0.20), availH = gy - topReserve;
-      var cs = Math.max(13, Math.floor(Math.min(PIXH * 0.11, availH / Math.max(dim.rows, 2), (PIXW * 0.56 - SZ(12)) / (dim.cols + 1.7))));
+      var rightM = Math.round(PIXW * 0.03), topReserve = Math.round(PIXH * 0.27), availH = gy - topReserve;
+      var cs = Math.max(13, Math.floor(Math.min(PIXH * 0.11, availH / Math.max(dim.rows, 2), (PIXW * 0.52 - SZ(12)) / (dim.cols + 1.7))));
       var ox = PIXW - rightM - dim.cols * cs;
-      var slingX = Math.round(cs * 1.6) + SZ(8);
+      var slingX = Math.round(Math.max(cs * 3.2, PIXW * 0.19));   // room to the left to pull the ball back
       var sd = { q: q, correct: q.a * q.b, shp: shp, cs: cs, gy: gy, ox: ox, shots: 5, clean: true, phase: "intro", it: 0,
         sling: { x: slingX, y: gy - Math.round(cs * 1.5) }, ents: [], ball: null, demo: null, parts: [], shake: 0,
         dragging: false, msg: "", msgT: 0, wonT: 0, t0: Date.now(), pull: { x: -cs * 1.15, y: cs * 0.78 } };
@@ -2127,7 +2127,7 @@
       var qs = sd.q.a + "  ×  " + sd.q.b + "  =  ?", pf = Math.max(9, Math.round(Math.min(H * 0.06, W * 0.09)));
       x.font = "800 " + pf + "px monospace"; var qw = x.measureText(qs).width;
       if (qw > W * 0.9) { pf = Math.max(8, Math.floor(pf * (W * 0.9) / qw)); x.font = "800 " + pf + "px monospace"; qw = x.measureText(qs).width; }
-      var bw = Math.min(W - SZ(6), Math.max(SZ(100), qw + SZ(20))), bh = Math.round(pf * 1.7), bx = W / 2 - bw / 2, by = SZ(6);
+      var bw = Math.min(W - SZ(6), Math.max(SZ(100), qw + SZ(20))), bh = Math.round(pf * 1.7), bx = W / 2 - bw / 2, by = Math.max(SZ(14), Math.round(H * 0.05));
       x.fillStyle = "rgba(10,8,26,.85)"; x.fillRect(bx, by, bw, bh); x.strokeStyle = "#ffd23f"; x.lineWidth = 2; x.strokeRect(bx, by, bw, bh);
       x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#fff"; x.fillText(qs, W / 2, by + bh / 2 + 1); x.textBaseline = "alphabetic";
       // shots — centered below the banner so it never collides on narrow (portrait) screens
@@ -2809,7 +2809,34 @@
     }
     function drawHeroPix(g, bx, by, B, type) { var fr = (G && (G.state === "run" || G.mini || G.lane || G.ast)) ? Math.floor(G.t * 8) % 2 : 0; heroDraw(g, type, bx, by, 14 * B, 12 * B, fr, false); }
 
+    // A designed "you're stuck here" scene for the trap/escape moment — the world as a bright
+    // themed place with the hero caught in the trap, instead of a dimmed frozen game.
+    function drawTrapScene() {
+      var th = G.theme, W = PIXW, H = PIXH, tr = (G.traps && G.traps[G.trapIndex]) || {};
+      var gy = Math.round(H * 0.56); HIFI = !!th.hifi;
+      if (HIFI) { x.fillStyle = lg(-2, gy, th.sky, th.sky2); x.fillRect(-2, -2, W + 4, H + 4); }
+      else { P(-2, -2, W + 4, gy, th.sky); P(-2, gy - Math.round(H * 0.14), W + 4, H, th.sky2); }
+      var sunx = Math.round(W * 0.82), suny = Math.round(H * 0.15);
+      if (th.night) { for (var s2 = 0; s2 < 34; s2++) P((s2 * 61 + 7) % W, (s2 * 37) % (gy - 10), 2, 2, "#fff"); disc(sunx, suny, 9, "#f2eeff"); }
+      else { disc(sunx, suny, 10, "#ffe06a"); disc(sunx, suny, 6, "#fff2a8"); }
+      for (var ci = 0; ci < 4; ci++) pxCloud(((ci * 74 + 20) % (W + 40)), Math.round(H * (0.08 + ci * 0.07)), th.cloud);
+      function mound(cx, rad, col) { for (var i = 0; i < rad; i++) P(cx - (rad - i) * 2, gy - i * 2, (rad - i) * 4, 3, col); }
+      mound(Math.round(W * 0.28), 10, th.mtn || th.sky2); mound(Math.round(W * 0.66), 13, th.mtnS || th.mtn || th.sky2);
+      P(-2, gy, W + 4, H - gy, th.dirt); P(-2, gy, W + 4, SZ(7), th.grass); P(-2, gy + SZ(7), W + 4, SZ(3), th.dirtL || th.dirt);
+      pxProp(th.prop, Math.round(W * 0.15), gy, SZ(34), th); pxProp(th.prop, Math.round(W * 0.87), gy, SZ(28), th);
+      var hx = Math.round(W * 0.5), hw = SZ(48), hh = SZ(42);
+      heroDraw(x, HEROTYPE, hx - hw / 2, gy - hh, hw, hh, 0, true);
+      try { pxTrap(tr.type || "bush", hx, gy, 0.5, true); } catch (e) {}
+      var lab = (TRAP_LABEL[tr.type] || "CAUGHT!"), lf = Math.max(10, Math.round(Math.min(H * 0.05, W * 0.07)));
+      x.textAlign = "center"; x.textBaseline = "middle"; x.font = "800 " + lf + "px monospace";
+      var lw = Math.min(W - SZ(8), x.measureText(lab).width + SZ(24)), lh = Math.round(lf * 1.7), ly = Math.round(H * 0.05);
+      x.fillStyle = "rgba(122,0,16,.92)"; x.fillRect(W / 2 - lw / 2, ly, lw, lh); x.strokeStyle = "#ff4f5a"; x.lineWidth = 2; x.strokeRect(W / 2 - lw / 2, ly, lw, lh);
+      x.fillStyle = "#fff"; x.fillText(lab, W / 2, ly + lh / 2 + 1);
+      x.fillStyle = "#ffd23f"; x.font = "800 " + Math.max(8, Math.round(H * 0.026)) + "px monospace"; x.fillText("SOLVE TO BREAK FREE!", W / 2, ly + lh + SZ(14));
+      x.textBaseline = "alphabetic";
+    }
     function draw() {
+      if (G.state === "trapped") { var okT = true; try { drawTrapScene(); } catch (e) { okT = false; } if (okT) return; }
       if (G.state === "showdown" && G.sd) { sdDraw(); return; }
       if (G.state === "lanes" && G.lane) { laneDraw(); return; }
       if (G.state === "asteroid" && G.ast) { astDraw(); return; }
