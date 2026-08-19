@@ -521,77 +521,98 @@
           <div class="rep-cell"><b id="rep-streak">0</b><span>Current streak</span></div>
         </div>
 
-        <div class="rep-mastery" id="rep-mastery"></div>
-        <div class="rep-insight" id="rep-insight"></div>
+        <div class="rep-cols">
+          <section class="rep-section rep-section--snap">
+            <div class="rep-mastery" id="rep-mastery"></div>
+            <div class="rep-insight" id="rep-insight"></div>
+          </section>
 
-        <h3 class="rep-h">Practice this week</h3>
-        <div class="activity" id="rep-activity"></div>
-        <p class="rep-note" id="rep-active-note"></p>
+          <section class="rep-section">
+            <h3 class="rep-h">Practice this week</h3>
+            <div class="activity" id="rep-activity"></div>
+            <p class="rep-note" id="rep-active-note"></p>
+          </section>
 
-        <h3 class="rep-h">Progress over time</h3>
-        <div class="rep-trend" id="rep-trend"></div>
+          <section class="rep-section">
+            <h3 class="rep-h">Progress over time</h3>
+            <div class="rep-trend" id="rep-trend"></div>
+          </section>
 
-        <h3 class="rep-h">Accuracy by table</h3>
-        <div class="tablebars" id="rep-tablebars"></div>
+          <section class="rep-section">
+            <h3 class="rep-h">Accuracy by table</h3>
+            <div class="tablebars" id="rep-tablebars"></div>
+          </section>
 
-        <h3 class="rep-h">Trickiest facts <span class="rep-sub">(needs the most work)</span></h3>
-        <div class="tricky" id="rep-tricky"></div>
-        <button class="btn-practice" id="rep-practice-weak" hidden>▶ Practice these now</button>
+          <section class="rep-section">
+            <h3 class="rep-h">Trickiest facts <span class="rep-sub">(needs the most work)</span></h3>
+            <div class="tricky" id="rep-tricky"></div>
+            <button class="btn-practice" id="rep-practice-weak" hidden>▶ Practice these now</button>
+          </section>
 
-        <h3 class="rep-h">Fluency <span class="rep-sub">(known &amp; automatic?)</span></h3>
-        <div class="fluency" id="rep-fluency"></div>
+          <section class="rep-section">
+            <h3 class="rep-h">Fluency <span class="rep-sub">(known &amp; automatic?)</span></h3>
+            <div class="fluency" id="rep-fluency"></div>
+          </section>
 
-        <h3 class="rep-h">Fact mastery map</h3>
-        <p class="rep-note">Each square is a fact. Green = strong, red = needs work, grey = not tried yet.</p>
-        <div class="heatmap" id="rep-heatmap"></div>
+          <section class="rep-section">
+            <h3 class="rep-h">Fact mastery map</h3>
+            <p class="rep-note">Each square is a fact. Green = strong, red = needs work, grey = not tried yet.</p>
+            <div class="heatmap" id="rep-heatmap"></div>
+          </section>
 
-        <h3 class="rep-h">Settings</h3>
-        <div class="goal-setter">
-          <span>Daily goal</span>
-          <div class="goal-stepper">
-            <button class="step" id="goal-minus">–</button>
-            <b id="goal-value">20</b>
-            <button class="step" id="goal-plus">+</button>
-            <span class="goal-unit">questions/day</span>
-          </div>
+          <section class="rep-section">
+            <h3 class="rep-h">Settings</h3>
+            <div class="goal-setter">
+              <span>Daily goal</span>
+              <div class="goal-stepper">
+                <button class="step" id="goal-minus">–</button>
+                <b id="goal-value">20</b>
+                <button class="step" id="goal-plus">+</button>
+                <span class="goal-unit">questions/day</span>
+              </div>
+            </div>
+
+            <div class="focus-block">
+              <div class="focus-head">
+                <span>Daily Challenge tables</span>
+                <span class="focus-actions">
+                  <button class="chip chip--sm" id="focus-all">All 1–12</button>
+                  <button class="chip chip--sm" id="focus-hard">Hard 6–12</button>
+                </span>
+              </div>
+              <p class="rep-note">Tap to choose which tables her Daily Challenge draws from.</p>
+              <div class="mini-grid" id="focus-picker"></div>
+            </div>
+
+            <div class="toggle-row">
+              <span class="toggle-row__label">Streak freeze ❄️
+                <span class="toggle-row__hint">Forgive one missed day (once a week) so an off day doesn't reset the streak.</span>
+              </span>
+              <button class="switch" id="freeze-toggle" role="switch" aria-checked="true"><span class="switch__dot"></span></button>
+            </div>
+
+            <div class="toggle-row">
+              <span class="toggle-row__label">Missing-number gates 🔢
+                <span class="toggle-row__hint">Mixes “find the missing number” questions (5 × ? = 25) into the Daily Challenge for deeper understanding.</span>
+              </span>
+              <button class="switch" id="missing-toggle" role="switch" aria-checked="false"><span class="switch__dot"></span></button>
+            </div>
+          </section>
+
+          <section class="rep-section">
+            <h3 class="rep-h">Players</h3>
+            <div class="players-manage" id="players-manage"></div>
+            <button class="chip chip--sm" id="players-add">＋ Add player</button>
+          </section>
+
+          <section class="rep-section">
+            <h3 class="rep-h">Account</h3>
+            <button class="btn-secondary" id="manage-account">⚙︎ Change email or password</button>
+            <button class="btn-secondary" id="signout-btn">↩︎ Sign out</button>
+            <p class="rep-note">Signs the current player out and returns to the sign-in screen. Players saved online can sign back in anytime with their nickname &amp; PIN.</p>
+            <button class="btn-secondary btn-reset" id="reset-progress">Reset this player's progress</button>
+          </section>
         </div>
-
-        <div class="focus-block">
-          <div class="focus-head">
-            <span>Daily Challenge tables</span>
-            <span class="focus-actions">
-              <button class="chip chip--sm" id="focus-all">All 1–12</button>
-              <button class="chip chip--sm" id="focus-hard">Hard 6–12</button>
-            </span>
-          </div>
-          <p class="rep-note">Tap to choose which tables her Daily Challenge draws from.</p>
-          <div class="mini-grid" id="focus-picker"></div>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-row__label">Streak freeze ❄️
-            <span class="toggle-row__hint">Forgive one missed day (once a week) so an off day doesn't reset the streak.</span>
-          </span>
-          <button class="switch" id="freeze-toggle" role="switch" aria-checked="true"><span class="switch__dot"></span></button>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-row__label">Missing-number gates 🔢
-            <span class="toggle-row__hint">Mixes “find the missing number” questions (5 × ? = 25) into the Daily Challenge for deeper understanding.</span>
-          </span>
-          <button class="switch" id="missing-toggle" role="switch" aria-checked="false"><span class="switch__dot"></span></button>
-        </div>
-
-        <h3 class="rep-h">Players</h3>
-        <div class="players-manage" id="players-manage"></div>
-        <button class="chip chip--sm" id="players-add">＋ Add player</button>
-
-        <h3 class="rep-h">Account</h3>
-        <button class="btn-secondary" id="manage-account">⚙︎ Change email or password</button>
-        <button class="btn-secondary" id="signout-btn">↩︎ Sign out</button>
-        <p class="rep-note">Signs the current player out and returns to the sign-in screen. Players saved online can sign back in anytime with their nickname &amp; PIN.</p>
-
-        <button class="btn-secondary btn-reset" id="reset-progress">Reset this player's progress</button>
       </div>
     </section>
   </div>
