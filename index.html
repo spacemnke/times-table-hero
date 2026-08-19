@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=1787082019" />
+  <link rel="stylesheet" href="css/styles.css?v=1787127995" />
 </head>
 <body>
   <div id="app">
@@ -216,70 +216,90 @@
 
     <!-- ============ HOME / DASHBOARD ============ -->
     <section class="screen screen--home is-active" data-screen="home">
-      <button class="player-switch" id="player-switch" aria-label="Switch player">
-        <span class="player-switch__av" id="ps-av">⭐️</span>
-        <span class="player-switch__name" id="ps-name">Player</span>
-        <span class="cloud-badge" id="cloud-badge" hidden aria-label="Saved online">☁︎</span>
-        <span class="player-switch__caret">▾</span>
-      </button>
-      <header class="dash-top">
-        <div class="dash-level">
-          <div class="ring" id="level-ring">
-            <svg viewBox="0 0 44 44" aria-hidden="true">
-              <circle class="ring__bg" cx="22" cy="22" r="19"></circle>
-              <circle class="ring__fg" id="level-ring-fg" cx="22" cy="22" r="19"></circle>
-            </svg>
-            <span class="ring__num" id="level-num">1</span>
-          </div>
-          <div class="dash-level__meta">
-            <span class="dash-rank" id="rank-name">Rookie</span>
-            <span class="dash-xp" id="xp-text">0 XP</span>
-          </div>
-        </div>
-        <button class="streak-pill" data-go="badges" aria-label="Your streak and badges">
-          <span class="streak-flame" id="streak-flame">🔥</span>
-          <span class="streak-num" id="streak-num">0</span>
-          <span class="streak-freeze" id="streak-freeze" hidden title="Streak freeze ready">❄️</span>
-        </button>
-      </header>
+      <div class="hub">
+        <header class="hub-top">
+          <button class="player-switch" id="player-switch" aria-label="Switch player">
+            <span class="player-switch__av" id="ps-av"><canvas id="ps-av-c" width="36" height="36" aria-hidden="true"></canvas></span>
+            <span class="player-switch__name" id="ps-name">Player</span>
+            <span class="cloud-badge" id="cloud-badge" hidden aria-label="Saved online">☁︎</span>
+            <span class="player-switch__caret">▾</span>
+          </button>
+          <button class="streak-pill" data-go="badges" aria-label="Your streak">
+            <canvas class="streak-flame-c" data-pix="flame" data-s="2" aria-hidden="true"></canvas>
+            <span class="streak-meta"><b class="streak-num" id="streak-num">0</b><small>DAY STREAK</small></span>
+            <span class="streak-freeze" id="streak-freeze" hidden title="Streak freeze ready">❄️</span>
+          </button>
+        </header>
 
-      <div class="daily-card">
-        <div class="daily-card__head">
-          <span class="daily-card__title">Today's goal</span>
-          <span class="daily-card__count"><b id="daily-done">0</b> / <span id="daily-goal">20</span></span>
+        <div class="hub-grid">
+          <div class="hub-col hub-col--a">
+            <div class="hub-hero">
+              <div class="ring" id="level-ring">
+                <svg viewBox="0 0 44 44" aria-hidden="true">
+                  <circle class="ring__bg" cx="22" cy="22" r="19"></circle>
+                  <circle class="ring__fg" id="level-ring-fg" cx="22" cy="22" r="19"></circle>
+                </svg>
+                <span class="ring__num" id="level-num">1</span>
+              </div>
+              <div class="hub-hero__meta">
+                <span class="dash-rank" id="rank-name">Rookie</span>
+                <div class="xpbar"><i id="xp-fill"></i></div>
+                <span class="dash-xp" id="xp-text">0 XP</span>
+              </div>
+              <div class="purse">
+                <span class="coinpill"><canvas data-pix="coin" data-s="2" aria-hidden="true"></canvas><b id="hub-coins">0</b></span>
+                <span class="coinpill"><canvas data-pix="gem" data-s="2" aria-hidden="true"></canvas><b id="hub-gems">0</b></span>
+              </div>
+            </div>
+
+            <div class="mapcard">
+              <div class="mapcard__lab"><span>QUEST MAP</span><button class="mapcard__go" data-go="adventure" id="hub-worldlab">WORLD 1 ›</button></div>
+              <div class="worlds" id="hub-worlds"></div>
+            </div>
+
+            <div class="daily-card">
+              <div class="daily-card__head">
+                <span class="daily-card__title">Today's goal</span>
+                <span class="daily-card__count"><b id="daily-done">0</b> / <span id="daily-goal">20</span></span>
+              </div>
+              <div class="pips" id="daily-pips"></div>
+              <p class="daily-card__msg" id="daily-msg">Do your Daily Challenge to keep your streak alive!</p>
+            </div>
+          </div>
+
+          <div class="hub-col hub-col--b">
+            <button class="cta" id="daily-challenge">
+              <span class="cta__tag">TODAY</span>
+              <span class="cta__icon"><canvas data-pix="bolt" data-s="3" aria-hidden="true"></canvas></span>
+              <span class="cta__text">
+                <span class="cta__title">Daily Quest</span>
+                <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
+              </span>
+              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#ffffff" aria-hidden="true"></canvas></span>
+            </button>
+
+            <button class="cta cta--practice" data-go="practice-setup">
+              <span class="cta__icon"><canvas data-pix="target" data-s="3" aria-hidden="true"></canvas></span>
+              <span class="cta__text">
+                <span class="cta__title">Practice</span>
+                <span class="cta__sub">A mix of games on your tricky ones</span>
+              </span>
+              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#ffffff" aria-hidden="true"></canvas></span>
+            </button>
+
+            <button class="cta cta--badges" data-go="badges">
+              <span class="cta__icon"><canvas data-pix="star" data-s="3" aria-hidden="true"></canvas></span>
+              <span class="cta__text">
+                <span class="cta__title">Badges</span>
+                <span class="cta__sub" id="badge-sub">See the rewards you've earned</span>
+              </span>
+              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#3a1e08" aria-hidden="true"></canvas></span>
+            </button>
+          </div>
         </div>
-        <div class="goalbar"><div class="goalbar__fill" id="daily-fill"></div></div>
-        <p class="daily-card__msg" id="daily-msg">Do your Daily Challenge to keep your streak alive!</p>
+
+        <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
       </div>
-
-      <button class="cta" id="daily-challenge">
-        <span class="cta__icon">⚡️</span>
-        <span class="cta__text">
-          <span class="cta__title">Daily Quest</span>
-          <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
-        </span>
-        <span class="cta__go">➜</span>
-      </button>
-
-      <button class="cta cta--practice" data-go="practice-setup">
-        <span class="cta__icon">🧠</span>
-        <span class="cta__text">
-          <span class="cta__title">Practice</span>
-          <span class="cta__sub">A mix of games on your tricky ones</span>
-        </span>
-        <span class="cta__go">➜</span>
-      </button>
-
-      <button class="cta cta--badges" data-go="badges">
-        <span class="cta__icon">🏅</span>
-        <span class="cta__text">
-          <span class="cta__title">Badges</span>
-          <span class="cta__sub">See the rewards you've earned</span>
-        </span>
-        <span class="cta__go">➜</span>
-      </button>
-
-      <button class="grownup-link" data-go="parent">🔒 Grown-ups</button>
     </section>
 
     <!-- ============ LEARN ============ -->
@@ -580,6 +600,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=1787082019"></script>
+  <script src="js/app.js?v=1787127995"></script>
 </body>
 </html>
