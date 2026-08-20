@@ -1632,7 +1632,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
@@ -1719,14 +1719,11 @@
       var arch = MEADOW_ORDER[(seg - 1) % MEADOW_ORDER.length];
       var pitL = b + SEG * 0.5, pitR = b + SEG * 0.72;   // keep the mid-segment pit clear of ground props
       var c;
-      if (arch === "hills") {              // a connected run of tiered ledges (up → along → down) — reads as a rolling mound
-        G.platforms.push({ x: b + 200, hAbove: 80, w: 190, mv: false, amp: 0, period: 2, phase: 0 });
-        G.platforms.push({ x: b + 380, hAbove: 150, w: 200, mv: false, amp: 0, period: 2, phase: 0 });
-        G.platforms.push({ x: b + 570, hAbove: 150, w: 210, mv: false, amp: 0, period: 2, phase: 0 });
-        G.platforms.push({ x: b + 770, hAbove: 80, w: 190, mv: false, amp: 0, period: 2, phase: 0 });
-        for (c = 0; c < 8; c++) coin1(b + 250 + c * 78, 120 + (c < 4 ? c * 20 : (7 - c) * 20));
-        G.platforms.push({ x: b + 1080, hAbove: 130, w: 160, mv: false, amp: 0, period: 2, phase: 0 });
-        for (c = 0; c < 3; c++) coin1(b + 1120 + c * 36, 170);
+      if (arch === "hills") {              // TRUE rolling ground — grassy mounds you run up & over (no jumping needed)
+        G.hills.push({ x0: b + 140, x1: b + 780, h: 132 });
+        G.hills.push({ x0: b + 1000, x1: b + 1450, h: 108 });
+        for (c = 0; c < 8; c++) { var hxa = b + 200 + c * 74; coin1(hxa, (GROUND - groundY(hxa)) + 44); }
+        for (c = 0; c < 5; c++) { var hxb = b + 1050 + c * 78; coin1(hxb, (GROUND - groundY(hxb)) + 44); }
       } else if (arch === "fork") {        // a choice — take the HIGH road (platforms) for a gem, or stay LOW & safe
         G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
         G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
@@ -1881,6 +1878,8 @@
     function coinBurst(wx, y) { for (var i = 0; i < 9; i++) G.particles.push({ wx: wx, y: y, vx: (Math.random() * 2 - .4) * 160, vy: -(Math.random() * 260 + 120), life: .9, kind: "coin" }); }
     function sparkle(wx, y) { for (var i = 0; i < 2; i++) G.particles.push({ wx: wx + (Math.random() * 50 - 25), y: y - Math.random() * 40, vx: (Math.random() * 2 - 1) * 40, vy: -(Math.random() * 60 + 20), life: .5, kind: "star" }); }
     function groundAt(wx) { for (var i = 0; i < G.grounds.length; i++) { var s = G.grounds[i]; if (wx >= s[0] && wx <= s[1]) return true; } return false; }
+    // rolling ground: the walkable surface Y at wx (GROUND minus a smooth bump for each hill region). Flat elsewhere.
+    function groundY(wx) { var y = GROUND; if (G.hills) for (var i = 0; i < G.hills.length; i++) { var hh = G.hills[i]; if (wx >= hh.x0 && wx <= hh.x1) { var t = (wx - hh.x0) / (hh.x1 - hh.x0); y -= hh.h * (0.5 - 0.5 * Math.cos(t * 6.2831853)); } } return y; }
     function platTop(p) { var ha = p.mv ? p.hAbove + Math.sin(G.t * 2 * Math.PI / p.period + p.phase) * p.amp : p.hAbove; return GROUND - ha; }
     function nextQ() { var d = G.deck; if (!d.length) return { a: 2, b: 2 }; var q = d[G.deckI % d.length]; G.deckI++; return q; }
     // missing-number support: a question may hide a factor ("5 × ? = 25"); the typed answer is that factor
@@ -1924,7 +1923,11 @@
           for (var i = 0; i < G.platforms.length; i++) { var p = G.platforms[i]; var top = platTop(p); if (h.wx >= p.x && h.wx <= p.x + p.w && h.vy >= 0 && h.y <= top + 4 && ny >= top) { if (landTop === null || top < landTop) landTop = top; } }
           for (var bi2 = 0; bi2 < G.bricks.length; bi2++) { var brk2 = G.bricks[bi2]; if (brk2.used) continue; var bt2 = GROUND - brk2.hAbove; if (h.wx >= brk2.x && h.wx <= brk2.x + brk2.w && h.vy >= 0 && h.y <= bt2 + 4 && ny >= bt2) { if (landTop === null || bt2 < landTop) landTop = bt2; } }
           for (var pi2 = 0; pi2 < G.pipes.length; pi2++) { var pp2 = G.pipes[pi2]; var ptp2 = GROUND - pp2.h; if (h.wx >= pp2.x - 2 && h.wx <= pp2.x + pp2.w + 2 && h.vy >= 0 && h.y <= ptp2 + 4 && ny >= ptp2) { if (landTop === null || ptp2 < landTop) landTop = ptp2; } }
-          if (landTop === null) { if ((groundAt(h.wx) || TEST) && h.vy >= 0 && ny >= GROUND && h.y <= GROUND + 4) landTop = GROUND; }
+          if (landTop === null) {
+            if (G.hills && G.hills.length) {                       // rolling ground: glue to the undulating surface (up & down)
+              if (groundAt(h.wx) || TEST) { var gy0 = groundY(h.wx); if (h.ground && h.vy >= 0) landTop = gy0; else if (h.vy >= 0 && ny >= gy0 - 2) landTop = gy0; }
+            } else if ((groundAt(h.wx) || TEST) && h.vy >= 0 && ny >= GROUND && h.y <= GROUND + 4) landTop = GROUND;
+          }
           if (landTop !== null) { h.y = landTop; h.vy = 0; h.ground = true; h.dbl = false; h.coyote = .1; } else { if (h.ground) h.coyote = .1; h.ground = false; h.y = ny; }
           // Candy springboards: landing on one launches you high
           for (var spi = 0; spi < G.springs.length; spi++) { var spr = G.springs[spi]; if (spr.t > 0) spr.t -= dt; if (h.ground && Math.abs(spr.x - h.wx) < 30 && h.y >= GROUND - 6) { h.vy = -1580; h.ground = false; h.dbl = false; h.coyote = 0; spr.t = 0.34; aBoing(); haptic(14); } }
@@ -3022,7 +3025,18 @@
         }
       }
       if (th.water && !PIER) { for (var s2 = 0; s2 < G.grounds.length - 1; s2++) { var wa = FX(G.grounds[s2][1]), wb = FX(G.grounds[s2 + 1][0]); if (wb < -4 || wa > W + 4) continue; if (HIFI) hfWater(wa, wb - wa, gY + SZ(4), th.water); else { P(wa, gY + SZ(4), wb - wa, H, th.water); for (var wv = wa; wv < wb; wv += 6) P(wv + ((G.t * 20) % 6), gY + SZ(6), 3, 1, "#ffffff"); } } }
-      for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, gY, SZ(t2.s), th); }
+      // rolling hills — grassy mounds drawn over the flat ground, top edge following groundY()
+      if (G.hills && G.hills.length) {
+        for (var hli = 0; hli < G.hills.length; hli++) {
+          var hl = G.hills[hli]; var hx0 = FX(hl.x0), hx1 = FX(hl.x1); if (hx1 < -4 || hx0 > W + 4) continue;
+          x.fillStyle = lg(FY(GROUND - hl.h), gY + SZ(20), th.grass, th.h2); x.beginPath(); x.moveTo(hx0, gY + SZ(2));
+          for (var hw = hl.x0; hw <= hl.x1; hw += 12) x.lineTo(FX(hw), FY(groundY(hw)));
+          x.lineTo(hx1, gY + SZ(2)); x.closePath(); x.fill();
+          x.strokeStyle = th.grass; x.lineWidth = Math.max(2, SZ(3)); x.beginPath();
+          for (var hs = hl.x0; hs <= hl.x1; hs += 12) { var sxp = FX(hs), syp = FY(groundY(hs)); hs === hl.x0 ? x.moveTo(sxp, syp) : x.lineTo(sxp, syp); } x.stroke();
+        }
+      }
+      for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, FY(groundY(t2.x)), SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); if (pl.skip) { pxSkipPlat(px, ptp, pw, pl.used, G.t); continue; } P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
       if (G.warp && (!G.warp.done || G.state === "warping")) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.state !== "warping" && G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
@@ -3036,13 +3050,13 @@
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
       for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
-      for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, gY, G.t + trp3.x * 0.01, trp3.sprung); }
+      for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
       for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor, icd.falling); }
       for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
       for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
-      if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, gY + SZ(6), fo.k); }
+      if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, FY(groundY(fo.x)) + SZ(6), fo.k); }
       var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
       if (G.state !== "trapped" && (warping || !(h.inv > 0 && Math.floor(G.t * 16) % 2)) && wsc > 0.04) {
         var B = Math.max(1.8, sx * 4); if (G.bigT > 0) B *= 1.5;
