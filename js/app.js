@@ -1632,7 +1632,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
@@ -1698,7 +1698,13 @@
         G.platforms.push({ x: sga.x - 232, hAbove: 200, w: 120, mv: false, amp: 0, period: 2, phase: 0, skip: true, used: false, gi: sk });
         for (var sc = 0; sc < 4; sc++) G.coinsA.push({ x: sga.x - 344 + sc * 34, hAbove: 60 + sc * 36, got: false }); // a coin staircase pointing up to it
       }
-      var mid2 = Math.floor(gx.length / 2); G.star = { x: gx[mid2] - SEG * 0.2, hAbove: 170, taken: false };
+      // star: mid-level for most worlds; for Meadow put it near the last gate for a triumphant star-powered dash to the castle
+      var mid2 = meadow ? Math.max(1, gx.length - 2) : Math.floor(gx.length / 2); G.star = { x: gx[mid2] - SEG * 0.2, hAbove: 170, taken: false };
+      // MEADOW hawks — a couple of swooping birds that dive as you approach; jump over them (telegraphed, like the icicle)
+      if (meadow && gx.length >= 5) {
+        G.hawks.push({ x: gx[Math.min(3, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 0.6 });
+        G.hawks.push({ x: gx[Math.min(6, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 1.9 });
+      }
       G.flags = [{ x: HEROX, hit: true, raise: 1 }]; for (var f = 0; f < gx.length; f++) { G.flags.push({ x: gx[f] - SEG * 0.5, hit: false, raise: 0, half: true }); }
       for (var trp = 0; trp < 90; trp++) G.props.push({ x: trp * 250 + ((trp * 71) % 160), s: 52 + ((trp * 53) % 30) });
       for (var fl = 0; fl < 220; fl++) G.flowers.push({ x: fl * 84 + ((fl * 37) % 56), k: fl % 3 });
@@ -1933,6 +1939,13 @@
           for (var spi = 0; spi < G.springs.length; spi++) { var spr = G.springs[spi]; if (spr.t > 0) spr.t -= dt; if (h.ground && Math.abs(spr.x - h.wx) < 30 && h.y >= GROUND - 6) { h.vy = -1580; h.ground = false; h.dbl = false; h.coyote = 0; spr.t = 0.34; aBoing(); haptic(14); } }
           // Snow icicles: drop ahead of you — only DANGEROUS while dropping; once settled on the floor it's a spent spike you can run right over
           for (var ici = 0; ici < G.icicles.length; ici++) { var icc = G.icicles[ici]; if (icc.done) continue; if (!icc.falling && h.wx > icc.x - 230 && h.wx < icc.x) icc.falling = true; if (icc.falling && !icc.landed && G.frostT <= 0) { icc.vy += 1500 * dt; icc.y += icc.vy * dt; if (!TEST && h.inv <= 0 && Math.abs(icc.x - h.wx) < 26 && (icc.y + 42) > (h.y - 46) && icc.y < h.y) { hurt(); icc.done = true; continue; } if (icc.y >= GROUND - 22) { icc.y = GROUND - 22; icc.landed = true; aStomp(); G.shakeT = Math.max(G.shakeT, .12); } } }
+          // Meadow hawks — hover, then dive straight down as you come near; jump over the diving bird to dodge
+          for (var hwi = 0; hwi < G.hawks.length; hwi++) {
+            var hw = G.hawks[hwi];
+            if (hw.state === "hover") { hw.y = GROUND - 220 + Math.sin(G.t * 3 + hw.phase) * 12; if (h.wx > hw.x - 120 && h.wx < hw.x - 8) { hw.state = "dive"; hw.vy = 120; } }
+            else if (hw.state === "dive") { hw.vy += 1150 * dt; hw.y += hw.vy * dt; if (!TEST && h.inv <= 0 && Math.abs(hw.x - h.wx) < 32 && (hw.y + 22) > (h.y - 46) && hw.y < h.y + 10) hurt(); if (hw.y >= GROUND - 26) { hw.y = GROUND - 26; hw.state = "rise"; } }
+            else { hw.y -= 240 * dt; if (hw.y <= GROUND - 220) { hw.y = GROUND - 220; hw.state = "hover"; } }
+          }
           // Ocean bubbles rising past you
           if (G.floaty) { if (Math.random() < 0.5) G.bubbles.push({ wx: h.wx + (Math.random() * 2 - 0.6) * (PIXW / sx), y: GROUND + 30, vy: -(45 + Math.random() * 70), r: 1.5 + Math.random() * 4 }); for (var bu = G.bubbles.length - 1; bu >= 0; bu--) { var bb = G.bubbles[bu]; bb.y += bb.vy * dt; bb.wx += Math.sin(G.t * 3 + bb.y * 0.08) * 0.4; if (bb.y < 30 || G.bubbles.length > 60) G.bubbles.splice(bu, 1); } }
           // Jungle vines: grab one mid-jump for a big forward fling across the gap
@@ -3053,6 +3066,7 @@
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
       for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor, icd.falling); }
+      for (var hkr = 0; hkr < G.hawks.length; hkr++) { var hkd = G.hawks[hkr]; var hkx = FX(hkd.x); if (hkx < -24 || hkx > W + 24) continue; pxHawk(hkx, FY(hkd.y), hkd.state === "dive", G.t); }
       for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
       for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
@@ -3320,6 +3334,21 @@
       if (meteor) { x.beginPath(); x.arc(cx, gy - SZ(4), SZ(15), 0, 6.29); x.stroke(); P(cx - SZ(1), gy - SZ(13), SZ(2), SZ(18), "#ff3b30"); P(cx - SZ(9), gy - SZ(5), SZ(18), SZ(2), "#ff3b30"); }
       else { x.setLineDash([SZ(6), SZ(5)]); x.beginPath(); x.ellipse(cx, gy - SZ(3), SZ(22), SZ(7), 0, 0, 6.29); x.stroke(); x.setLineDash([]); }
       x.restore();
+    }
+    function pxHawk(cx, cy, diving, t) {
+      var body = "#6e4322", bodyD = "#4a2c12", wing = "#8a5a2e", wingD = "#4a2a12", belly = "#e0c090";
+      P(cx + SZ(5), cy + SZ(1), SZ(8), SZ(3), bodyD);                                  // tail
+      disc(cx, cy + SZ(3), SZ(6), body);                                               // body
+      disc(cx - SZ(2), cy + SZ(5), SZ(4), belly);                                      // belly
+      disc(cx - SZ(6), cy, SZ(4), body);                                               // head (facing the hero, left)
+      P(cx - SZ(7), cy - SZ(1), SZ(2), SZ(2), "#fff"); P(cx - SZ(7), cy - SZ(1), SZ(1), SZ(1), "#201008");  // eye
+      P(cx - SZ(11), cy + SZ(1), SZ(4), SZ(2), "#ffcb3f");                              // beak
+      if (diving) {                                                                    // wings swept back (dive)
+        P(cx + SZ(1), cy - SZ(1), SZ(10), SZ(3), wing); P(cx + SZ(4), cy - SZ(5), SZ(8), SZ(3), wingD);
+      } else {                                                                         // wings spread + flap
+        var wy = (Math.sin(t * 13) > 0) ? -SZ(7) : -SZ(1);
+        P(cx - SZ(2), cy + wy, SZ(13), SZ(3), wing); P(cx, cy + wy - SZ(2), SZ(10), SZ(3), wingD);
+      }
     }
     function pxIcicle(cx, cyTop, landed, meteor, falling) {
       if (falling && !landed) dropTarget(cx, meteor);
