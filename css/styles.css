@@ -534,7 +534,9 @@ body[data-screen="play"] #app { max-width: 640px; }
 #adv-game { position: fixed; inset: 0; width: 100vw; height: 100%;
   background: #0b0d18; overflow: hidden;
   font-family: ui-monospace, "Courier New", monospace; }
-#adv-c { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+#adv-c { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none;
+  /* iOS Safari won't composite a canvas inside a position:fixed layer until a repaint is forced — give it its own GPU layer so every frame paints */
+  transform: translateZ(0); -webkit-transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 
 .adv8-hud { position: absolute; top: calc(var(--safe-top) + 8px); left: 10px; right: 10px; display: flex;
   align-items: flex-start; justify-content: space-between; pointer-events: none; z-index: 5; }
@@ -593,7 +595,8 @@ body[data-screen="play"] #app { max-width: 640px; }
 /* ---- full-screen Quest Land map ---- */
 .adv8-ov--map { padding: 0; gap: 0; }
 .map-stage { position: absolute; inset: 0; overflow: hidden; }
-.adv8-ov--map #adv-mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; image-rendering: pixelated; cursor: pointer; touch-action: manipulation; }
+.adv8-ov--map #adv-mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; image-rendering: pixelated; cursor: pointer; touch-action: manipulation;
+  transform: translateZ(0); -webkit-transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .map-title { position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 2; text-align: center;
   font-size: 22px; font-weight: 800; color: #ffd23f; text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0,0,0,.6); letter-spacing: .04em; pointer-events: none; margin: 0; }
 .adv8-ov--map .adv8-close { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); z-index: 3; }

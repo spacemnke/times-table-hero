@@ -3482,7 +3482,23 @@
     function redrawPmapHero() { var pg = $("#adv-pmapHero").getContext("2d"); pg.imageSmoothingEnabled = false; pg.clearRect(0, 0, 12, 12); heroMarkPix(pg); }
 
     /* ---- lifecycle ---- */
-    function enter() { show("adventure"); resize(); running = true; if (!looping) { looping = true; last = 0; requestAnimationFrame(frame); } }
+    function enter() { show("adventure"); resize(); running = true; if (!looping) { looping = true; last = 0; requestAnimationFrame(frame); } kickPaint(); }
+    // iOS Safari sometimes leaves the just-shown fixed adventure layer uncomposited (canvas draws
+    // but never appears). A brief DOM mutation on a fixed element forces the first composite pass;
+    // the translateZ layer on #adv-c keeps it painting every frame after that.
+    function kickPaint() {
+      try {
+        var k = document.createElement("div");
+        k.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;background:transparent;pointer-events:none;z-index:2147483640";
+        (document.body || document.documentElement).appendChild(k);
+        var n = 0;
+        (function pulse() {
+          if (!running || n++ > 8) { try { k.remove(); } catch (e) {} return; }
+          k.style.left = (n % 2) + "px";
+          requestAnimationFrame(pulse);
+        })();
+      } catch (e) {}
+    }
     function leave() { running = false; warpFX = null; musicStop(); }
     function startDaily() {
       HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1);
