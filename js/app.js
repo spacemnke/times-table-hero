@@ -19,6 +19,22 @@
   window.addEventListener("error", function (e) {
     __diag("JS ERROR: " + (e.message || (e.error && e.error.message) || e.error || "?") + "\n" + ((e.filename || "").split("/").pop()) + ":" + e.lineno + ":" + e.colno);
   });
+  // Force-on diagnostic mode via ?diag=1 — prints canvas stats + shows a known-good
+  // green-on-red test canvas so a device screenshot tells us if the display pipeline
+  // itself is failing (test box invisible) or only the game canvas is (test box visible).
+  var DIAG = /[?&]diag=1/.test(location.search);
+  function diagTestBox() {
+    if (!DIAG) return;
+    try {
+      if (document.getElementById("__diagtest")) return;
+      var t = document.createElement("canvas"); t.id = "__diagtest"; t.width = 120; t.height = 80;
+      t.setAttribute("style", "position:fixed;left:8px;bottom:8px;width:120px;height:80px;z-index:2147483646;border:2px solid #fff;image-rendering:pixelated");
+      var g = t.getContext("2d"); g.fillStyle = "#e01030"; g.fillRect(0, 0, 120, 80);
+      g.fillStyle = "#22e04a"; g.beginPath(); g.arc(60, 40, 26, 0, 7); g.fill();
+      g.fillStyle = "#fff"; g.font = "bold 12px monospace"; g.textAlign = "center"; g.fillText("TEST", 60, 72);
+      (document.body || document.documentElement).appendChild(t);
+    } catch (e) {}
+  }
 
   var MAX = 12;
   var STORE_KEY = "tth.progress.v2";     // per-profile: STORE_KEY + "." + profileId
@@ -1914,10 +1930,12 @@
         var sw = Math.min(cv.width, 48), sh = Math.min(cv.height, 48);
         var d = g2.getImageData(0, 0, sw, sh).data;
         for (var i = 0; i < d.length; i += 4) { if (d[i] + d[i + 1] + d[i + 2] > 24) { blank = false; break; } }
-        if (blank || cssBad) {
-          __diag("GAME DID NOT PAINT\n" +
+        if (DIAG || blank || cssBad) {
+          diagTestBox();
+          __diag((blank || cssBad ? "GAME DID NOT PAINT" : "GAME DIAG (?diag=1)") + "\n" +
             "backing " + cv.width + "x" + cv.height + "  css " + cv.clientWidth + "x" + cv.clientHeight + "\n" +
             "blank=" + blank + "  dpr=" + (window.devicePixelRatio || 1) + "  canvases=" + document.querySelectorAll("canvas").length + "\n" +
+            "See a red TEST box bottom-left? " + (DIAG ? "(should be there)" : "") + "\n" +
             "ua=" + navigator.userAgent);
         }
       } catch (e) { __diag("GAME CHECK THREW: " + (e && e.message)); }
@@ -3484,11 +3502,13 @@
           var d = mg2.getImageData(0, 0, sw, sh).data;
           for (var i = 0; i < d.length; i += 4) { if (d[i] + d[i + 1] + d[i + 2] > 24) { blank = false; break; } }
         }
-        if (blank || cssBad) {
-          __diag("QUEST MAP DID NOT PAINT\n" +
+        if (DIAG || blank || cssBad) {
+          diagTestBox();
+          __diag((blank || cssBad ? "QUEST MAP DID NOT PAINT" : "MAP DIAG (?diag=1)") + "\n" +
             "backing " + mc.width + "x" + mc.height + "  css " + mc.clientWidth + "x" + mc.clientHeight + "\n" +
             "ctx=" + (!!mg2) + "  blank=" + blank + "  dpr=" + (window.devicePixelRatio || 1) + "\n" +
             "canvases=" + document.querySelectorAll("canvas").length + "  charRow=" + (($("#adv-charRow") || {}).childElementCount) + "\n" +
+            "See a red TEST box bottom-left? " + (DIAG ? "(should be there)" : "") + "\n" +
             "ua=" + navigator.userAgent);
         }
       } catch (e) { __diag("MAP CHECK THREW: " + (e && e.message)); }
