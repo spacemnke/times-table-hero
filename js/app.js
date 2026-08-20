@@ -1632,7 +1632,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
@@ -1672,9 +1672,10 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
+      var meadow = G.theme.name === "MEADOW";
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else fillSegment(b, seg, cf);
       }
       // keep a clean pocket around the secret portal so it stands out
       if (G.warp) { var wl = G.warp.x0 - 50, wr = G.warp.x1 + 50, clr = function (arr) { return arr.filter(function (o) { return (o.x + (o.w || 40)) < wl || o.x > wr; }); }; G.boxes = clr(G.boxes); G.bricks = clr(G.bricks); G.pipes = clr(G.pipes); }
@@ -1711,6 +1712,46 @@
       }
     }
     function coin1(x, hA) { G.coinsA.push({ x: x, hAbove: hA, got: false }); }
+    // MEADOW course — each gate-segment is a distinct, purposeful "beat" instead of the same 4 props
+    // at the same 4 offsets. Uses existing primitives (platforms/springs/enemies) + the new speed zone.
+    var MEADOW_ORDER = ["hills", "pond", "gauntlet", "pipes", "downhill", "coinfield"];
+    function fillSegmentMeadow(b, seg, cf) {
+      var arch = MEADOW_ORDER[(seg - 1) % MEADOW_ORDER.length];
+      var pitL = b + SEG * 0.5, pitR = b + SEG * 0.72;   // keep the mid-segment pit clear of ground props
+      var c;
+      if (arch === "hills") {              // stepped mesas to hop up & over — elevation
+        G.platforms.push({ x: b + 210, hAbove: 150, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 430, hAbove: 250, w: 140, mv: false, amp: 0, period: 2, phase: 0 });
+        for (c = 0; c < 3; c++) coin1(b + 250 + c * 36, 190);
+        for (c = 0; c < 3; c++) coin1(b + 470 + c * 36, 290);
+        G.platforms.push({ x: b + 1080, hAbove: 175, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        for (c = 0; c < 3; c++) coin1(b + 1110 + c * 36, 215);
+      } else if (arch === "pond") {        // bounce mushrooms (springs) across the pit + a high coin arc
+        G.springs.push({ x: b + 300, t: 0 });
+        for (c = 0; c < 6; c++) coin1(b + 306 + c * 30, 220 + c * 40);
+        G.springs.push({ x: b + 1150, t: 0 });
+        for (c = 0; c < 5; c++) coin1(b + 1156 + c * 30, 230 + c * 36);
+      } else if (arch === "gauntlet") {    // enemies + a brick row to stomp through
+        G.enemies.push({ x1: b + 240, x2: b + 430, x: b + 240, dir: 1, alive: true });
+        G.enemies.push({ x1: b + 1050, x2: b + 1240, x: b + 1240, dir: -1, alive: true });
+        for (var q = 0; q < 3; q++) G.bricks.push({ x: b + 1080 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+        for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60);
+      } else if (arch === "pipes") {       // pipes to hop + a power box
+        G.pipes.push({ x: b + 300, w: 46, h: 70 });
+        G.pipes.push({ x: b + 1080, w: 46, h: 104 }); G.pipes.push({ x: b + 1210, w: 46, h: 66 });
+        G.boxes.push({ x: b + 420, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        coin1(b + 323, 190); coin1(b + 1145, 175); coin1(b + 1145, 130);
+      } else if (arch === "downhill") {    // speed-ramp release: run faster through a coin river, few obstacles
+        G.speedZones.push({ x0: b + 120, x1: b + SEG * 0.9, mult: 1.55 });
+        for (c = 0; c < 16; c++) coin1(b + 180 + c * 70, 48 + (c % 3) * 20);
+        G.springs.push({ x: b + SEG * 0.86, t: 0 });
+      } else {                             // coinfield — a breather with a power box
+        for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
+        G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
+      }
+      void pitL; void pitR;
+    }
     function placeFeature(kind, ox, seg, idx, cf) {
       var c, q;
       if (kind === "coins") { for (c = 0; c < 5; c++) coin1(ox + c * 40, 46); }
@@ -1866,7 +1907,8 @@
         if (G.enterPending && !G.secretWorld) { var __ew = G.enterPending; G.enterPending = 0; enterSecret(__ew); }
         G.cloud += dt * 14; G.t += dt; var h = G.hero;
         if (G.state === "run") {
-          var sp = G.speed * (1 + G.dash); G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
+          var zoneMul = 1; if (G.speedZones) { for (var zi = 0; zi < G.speedZones.length; zi++) { var zz = G.speedZones[zi]; if (h.wx >= zz.x0 && h.wx <= zz.x1) { zoneMul = zz.mult; break; } } }
+          var sp = G.speed * (1 + G.dash) * zoneMul; G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
           if (G.flyT > 0) { h.vy += (h.hold ? -1500 : 950) * dt; if (h.vy < -320) h.vy = -320; if (h.vy > 440) h.vy = 440; } else { var g = (h.hold && h.vy < 0) ? 1500 : 2700; if (G.floaty) g *= 0.5; else if (G.moon) g *= 0.34; h.vy += g * dt; var vcap = G.floaty ? 250 : G.moon ? 300 : 1e9; if (h.vy > vcap) h.vy = vcap; }
           if (h.coyote > 0) h.coyote -= dt; if (h.inv > 0) h.inv -= dt; if (h.power > 0) h.power = Math.max(0, h.power - dt); if (G.bigT > 0) G.bigT -= dt; if (G.flyT > 0) G.flyT -= dt; if (G.popT > 0) G.popT -= dt; if (G.frostT > 0) G.frostT -= dt;
           var ny = h.y + h.vy * dt, landTop = null;
@@ -3603,6 +3645,8 @@
       get gems() { return progress.gems || 0; }, get level() { return level; }, get shield() { return G ? !!G.shield : null; },
       get metrics() { if (!G) return null; var vis = PIXW / sx; return { castleX: Math.round(G.castleX), gates: G.gates.length, seg: SEG, visibleWorldUnits: Math.round(vis), screensWide: +(G.castleX / vis).toFixed(1), runSeconds: +(G.castleX / G.speed).toFixed(1) }; },
       start: function (n) { startLevel(n || 1); }, openMap: openMap,
+      tp: function (x) { if (G) { G.hero.wx = x; G.hero.y = GROUND; G.hero.vy = 0; G.hero.ground = true; G.cam = x - HEROX; var ng = G.gates.length; for (var i = 0; i < G.gates.length; i++) { if (G.gates[i].x <= x + 60) G.gates[i].solved = true; else { ng = i; break; } } G.nextGate = ng; if (G.showdown && G.showdown.x < x) G.showdown.done = true; G.state = "run"; try { mathHide(); } catch (e) {} } },
+      gxAt: function (i) { return G && G.gates[i] ? G.gates[i].x : null; },
       forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: pick(G.cf.trapPool), done: false, sprung: false }); springTrap(G.traps.length - 1); },
       forceTrapType: function (t) { if (!G) return; G.traps.push({ x: G.hero.wx, type: t, done: false, sprung: false }); springTrap(G.traps.length - 1); },
       setHero: function (id) { HEROTYPE = id; if (progress) { progress.hero = id; } }, buildCharRow: buildCharRow,
