@@ -2,6 +2,24 @@
 (function () {
   "use strict";
 
+  /* ---- on-screen error reporter (diagnostic; stays invisible unless something actually breaks) ---- */
+  var __diagBox = null;
+  function __diag(msg) {
+    try {
+      if (!__diagBox) {
+        __diagBox = document.createElement("div");
+        __diagBox.setAttribute("style", "position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#b00020;color:#fff;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;padding:9px 12px;white-space:pre-wrap;word-break:break-word;max-height:48vh;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.55)");
+        __diagBox.addEventListener("click", function () { if (__diagBox) { __diagBox.remove(); __diagBox = null; } });
+        (document.body || document.documentElement).appendChild(__diagBox);
+      }
+      __diagBox.textContent = "⚠ " + msg + "\n\n(tap to dismiss)";
+    } catch (e) {}
+  }
+  window.__diag = __diag;
+  window.addEventListener("error", function (e) {
+    __diag("JS ERROR: " + (e.message || (e.error && e.error.message) || e.error || "?") + "\n" + ((e.filename || "").split("/").pop()) + ":" + e.lineno + ":" + e.colno);
+  });
+
   var MAX = 12;
   var STORE_KEY = "tth.progress.v2";     // per-profile: STORE_KEY + "." + profileId
   var PROFILES_KEY = "tth.profiles.v1";
@@ -1882,8 +1900,27 @@
         for (var f2 = 0; f2 < G.flags.length; f2++) { var fg = G.flags[f2]; if (fg.hit && fg.raise < 1) fg.raise = Math.min(1, fg.raise + dt * 3); }
         for (var p2 = G.particles.length - 1; p2 >= 0; p2--) { var pt = G.particles[p2]; pt.wx += pt.vx * dt; pt.vy += 1600 * dt; pt.y += pt.vy * dt; pt.life -= dt * 1.1; if (pt.life <= 0) G.particles.splice(p2, 1); }
         if (G.shakeT > 0) G.shakeT -= dt; if (G.state !== "warping" || warpFX && warpFX.phase === "hop") G.cam = G.hero.wx - HEROX; draw(); drawWarpFX(); hudUpdate();
+        if (!diagFrames && (G.state === "run")) { diagFrames = 1; diagPlay(); }
       }
       requestAnimationFrame(frame);
+    }
+    var diagFrames = 0;
+    // Diagnostic: once gameplay is running, confirm the main canvas actually painted on this device.
+    function diagPlay() {
+      try {
+        if (!cv) return; var g2 = cv.getContext("2d");
+        if (!g2 || !cv.width || !cv.height) { __diag("GAME CANVAS not ready: " + cv.width + "x" + cv.height + " ctx=" + (!!g2)); return; }
+        var cssBad = (cv.clientWidth < 50 || cv.clientHeight < 50), blank = true;
+        var sw = Math.min(cv.width, 48), sh = Math.min(cv.height, 48);
+        var d = g2.getImageData(0, 0, sw, sh).data;
+        for (var i = 0; i < d.length; i += 4) { if (d[i] + d[i + 1] + d[i + 2] > 24) { blank = false; break; } }
+        if (blank || cssBad) {
+          __diag("GAME DID NOT PAINT\n" +
+            "backing " + cv.width + "x" + cv.height + "  css " + cv.clientWidth + "x" + cv.clientHeight + "\n" +
+            "blank=" + blank + "  dpr=" + (window.devicePixelRatio || 1) + "  canvases=" + document.querySelectorAll("canvas").length + "\n" +
+            "ua=" + navigator.userAgent);
+        }
+      } catch (e) { __diag("GAME CHECK THREW: " + (e && e.message)); }
     }
     function hurt() { if (G.bigT > 0) { G.bigT = 0; G.hero.inv = 1.3; G.shakeT = .25; aShrink(); haptic(20); showPow("SHRANK!"); return; } G.hearts--; G.hero.inv = 1.3; G.hero.vy = -460; G.shakeT = .3; aHurt(); haptic([12, 40, 12]); if (G.hearts <= 0) { G.state = "fail"; musicStop(); openOv("adv-failOv"); } }
     // ---- power-ups (from ? boxes and the math-streak meter) ----
@@ -3432,6 +3469,29 @@
     function startDaily() {
       HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1);
       enter(); hideAllOv(); reset(1); G.state = "map"; buildCharRow(); redrawPmapHero(); hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); buildMap();
+      diagMap();
+    }
+    // Diagnostic: after opening the map, verify the canvas actually painted on this device.
+    // Reports (once) if it came up blank or zero-sized so a device screenshot pinpoints the cause.
+    function diagMap() {
+      try {
+        var mc = $("#adv-mapCanvas"); if (!mc) { __diag("MAP: no canvas element"); return; }
+        var mg2 = mc.getContext("2d");
+        var cssBad = (mc.clientWidth < 50 || mc.clientHeight < 50);
+        var blank = true;
+        if (mg2 && mc.width && mc.height) {
+          var sw = Math.min(mc.width, 48), sh = Math.min(mc.height, 48);
+          var d = mg2.getImageData(0, 0, sw, sh).data;
+          for (var i = 0; i < d.length; i += 4) { if (d[i] + d[i + 1] + d[i + 2] > 24) { blank = false; break; } }
+        }
+        if (blank || cssBad) {
+          __diag("QUEST MAP DID NOT PAINT\n" +
+            "backing " + mc.width + "x" + mc.height + "  css " + mc.clientWidth + "x" + mc.clientHeight + "\n" +
+            "ctx=" + (!!mg2) + "  blank=" + blank + "  dpr=" + (window.devicePixelRatio || 1) + "\n" +
+            "canvases=" + document.querySelectorAll("canvas").length + "  charRow=" + (($("#adv-charRow") || {}).childElementCount) + "\n" +
+            "ua=" + navigator.userAgent);
+        }
+      } catch (e) { __diag("MAP CHECK THREW: " + (e && e.message)); }
     }
     function openMap() { unlocked = Math.max(1, progress.worldsUnlocked || 1); hideAllOv(); if (G) G.state = "map"; hudShow(false); mathHide(); $("#adv-mapOv").classList.remove("hidden"); buildMap(); }
     function exitHome() { leave(); musicStop(); renderHome(); show("home"); }
