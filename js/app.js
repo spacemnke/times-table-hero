@@ -1671,10 +1671,10 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
-      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", ocean = G.theme.name === "OCEAN", snow = G.theme.name === "SNOW", authored = meadow || beach || candy || ocean || snow;
+      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", ocean = G.theme.name === "OCEAN", snow = G.theme.name === "SNOW", jungle = G.theme.name === "JUNGLE", volcano = G.theme.name === "VOLCANO", space = G.theme.name === "SPACE", authored = meadow || beach || candy || ocean || snow || jungle || volcano || space;
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else if (ocean) fillSegmentOcean(b, seg, cf); else if (snow) fillSegmentSnow(b, seg, cf); else fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else if (ocean) fillSegmentOcean(b, seg, cf); else if (snow) fillSegmentSnow(b, seg, cf); else if (jungle) fillSegmentJungle(b, seg, cf); else if (volcano) fillSegmentVolcano(b, seg, cf); else if (space) fillSegmentSpace(b, seg, cf); else fillSegment(b, seg, cf);
       }
       if (beach) G.sandUntil = gx[0] + SEG * 2.3;   // the shore (dunes + tide pools) is sand; the pier begins beyond
       if (candy && gx.length >= 6) {   // peppermint spinners (the fire-bar mechanic, re-skinned) over a couple of later beats
@@ -1934,6 +1934,61 @@
         G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
         for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
       }
+    }
+    // shared fork (high road holds a gem; on secret worlds the auto-placed warp lives up here too)
+    function forkBeat(b) {
+      var c;
+      G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+      G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+      G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+      G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+      G.gemsA.push({ x: b + 770, hAbove: 292, got: false });
+      for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272); for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);
+    }
+    function coinfieldBeat(b) { var c; for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52); G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true }); for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205); }
+    function dashBeat(b) { var c; G.speedZones.push({ x0: b + 120, x1: b + SEG * 0.9, mult: 1.55 }); for (c = 0; c < 16; c++) coin1(b + 180 + c * 70, 48 + (c % 3) * 20); G.springs.push({ x: b + SEG * 0.86, t: 0 }); }
+    function hillsBeat(b, h1, h2) { var c; G.hills.push({ x0: b + 140, x1: b + 780, h: h1 }); G.hills.push({ x0: b + 1000, x1: b + 1450, h: h2 }); for (c = 0; c < 8; c++) { var a = b + 200 + c * 74; coin1(a, (GROUND - groundY(a)) + 44); } for (c = 0; c < 5; c++) { var d = b + 1050 + c * 78; coin1(d, (GROUND - groundY(d)) + 44); } }
+    function walkerBeat(b, flag) {   // a pair of themed walking enemies + a brick row to hop
+      var c, q, e1 = { x1: b + 240, x2: b + 430, x: b + 240, dir: 1, alive: true }, e2 = { x1: b + 1050, x2: b + 1240, x: b + 1240, dir: -1, alive: true };
+      e1[flag] = true; e2[flag] = true; G.enemies.push(e1); G.enemies.push(e2);
+      for (q = 0; q < 3; q++) G.bricks.push({ x: b + 1080 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+      for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60);
+    }
+    // JUNGLE course — swing-vines (already global) + rolling mud + a new FROG critter. Holds Mango's secret warp.
+    var JUNGLE_ORDER = ["mudhills", "vineswing", "fork", "frogs", "logs", "rapids", "coinfield"];
+    function fillSegmentJungle(b, seg, cf) {
+      var arch = JUNGLE_ORDER[(seg - 1) % JUNGLE_ORDER.length], c;
+      if (arch === "mudhills") hillsBeat(b, 126, 104);
+      else if (arch === "vineswing") { G.vines.push({ x: b + 720, used: false }); for (c = 0; c < 6; c++) coin1(b + 640 + c * 40, 210 + c * 26); for (c = 0; c < 4; c++) coin1(b + 1120 + c * 44, 60); }
+      else if (arch === "fork") forkBeat(b);
+      else if (arch === "frogs") walkerBeat(b, "frog");
+      else if (arch === "logs") { G.platforms.push({ x: b + 640, hAbove: 70, w: 96, mv: true, amp: 22, period: 2.0, phase: seg }); G.platforms.push({ x: b + 820, hAbove: 96, w: 96, mv: true, amp: 22, period: 2.3, phase: seg + 1 }); for (c = 0; c < 5; c++) coin1(b + 670 + c * 42, 150); for (c = 0; c < 4; c++) coin1(b + 1080 + c * 44, 60); }
+      else if (arch === "rapids") dashBeat(b);
+      else coinfieldBeat(b);
+    }
+    // VOLCANO course — rotating fire-bars (already global) + rolling ash + lava GEYSERS (updrafts) + a new IMP critter.
+    var VOLCANO_ORDER = ["ashhills", "firepass", "fork", "imps", "geyser", "lavaslide", "coinfield"];
+    function fillSegmentVolcano(b, seg, cf) {
+      var arch = VOLCANO_ORDER[(seg - 1) % VOLCANO_ORDER.length], c;
+      if (arch === "ashhills") hillsBeat(b, 124, 102);
+      else if (arch === "firepass") { G.firebars.push({ x: b + 700, cy: GROUND - 96, len: 96, spd: 1.7, phase: seg }); for (c = 0; c < 3; c++) G.bricks.push({ x: b + 1080 + c * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false }); for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60); }
+      else if (arch === "fork") forkBeat(b);
+      else if (arch === "imps") walkerBeat(b, "imp");
+      else if (arch === "geyser") { G.updrafts.push({ x0: b + 1080, x1: b + 1180 }); G.platforms.push({ x: b + 1040, hAbove: 330, w: 170, mv: false, amp: 0, period: 2, phase: 0 }); for (c = 0; c < 4; c++) coin1(b + 1090 + c * 26, 220 + c * 30); G.gemsA.push({ x: b + 1120, hAbove: 372, got: false }); for (c = 0; c < 5; c++) coin1(b + 300 + c * 40, 60); }
+      else if (arch === "lavaslide") dashBeat(b);
+      else coinfieldBeat(b);
+    }
+    // SPACE course — low-gravity moon jumps + falling meteors (already global) + BOOSTER jets (updrafts) + a new ALIEN critter.
+    var SPACE_ORDER = ["moonhills", "meteorpass", "fork", "aliens", "booster", "cosmicdash", "coinfield"];
+    function fillSegmentSpace(b, seg, cf) {
+      var arch = SPACE_ORDER[(seg - 1) % SPACE_ORDER.length], c;
+      if (arch === "moonhills") hillsBeat(b, 122, 100);
+      else if (arch === "meteorpass") { for (c = 0; c < 3; c++) G.bricks.push({ x: b + 300 + c * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false }); for (c = 0; c < 6; c++) coin1(b + 700 + c * 90, 150); }
+      else if (arch === "fork") forkBeat(b);
+      else if (arch === "aliens") walkerBeat(b, "alien");
+      else if (arch === "booster") { G.updrafts.push({ x0: b + 1080, x1: b + 1180 }); G.platforms.push({ x: b + 1040, hAbove: 330, w: 170, mv: false, amp: 0, period: 2, phase: 0 }); for (c = 0; c < 4; c++) coin1(b + 1090 + c * 26, 220 + c * 30); G.gemsA.push({ x: b + 1120, hAbove: 372, got: false }); for (c = 0; c < 5; c++) coin1(b + 300 + c * 40, 60); }
+      else if (arch === "cosmicdash") dashBeat(b);
+      else coinfieldBeat(b);
     }
     function placeFeature(kind, ox, seg, idx, cf) {
       var c, q;
@@ -2366,7 +2421,7 @@
     }
 
     /* ================= SLINGSHOT SHOWDOWN (mini-boss, several worlds) ================= */
-    var SHOWDOWN_WORLDS = { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade (Beach=sandcastle, Ocean=sunken ship)
+    var SHOWDOWN_WORLDS = { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 7: 1, 8: 1 };   // worlds that carry a slingshot barricade (Beach=sandcastle, Ocean=sunken ship, Volcano=obsidian gate, Space=alien mothership)
     // roles: A=answer(number), B=blocker(no number), M=monster, T=tnt. INVARIANT: nothing sits directly above an A.
     var SD_SHAPES = [
       [[0,0,'B'],[1,0,'B'],[2,0,'B'],[3,0,'B'],[0,1,'A'],[1,1,'A'],[2,1,'A'],[3,1,'A'],[4,0,'M']],
@@ -3269,8 +3324,8 @@
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, FY(groundY(t2.x)), SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); if (pl.skip) { pxSkipPlat(px, ptp, pw, pl.used, G.t); continue; } P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; if (pz2.coral) pxCoralSpire(pxs, gY, SZ(pz2.h), SZ(pz2.w)); else pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
-      // Ocean updraft columns (rising bubbles) + kelp on the seabed
-      if (G.updrafts) for (var udr = 0; udr < G.updrafts.length; udr++) { var udd = G.updrafts[udr]; var ux0 = FX(udd.x0), ux1 = FX(udd.x1); if (ux1 < -8 || ux0 > W + 8) continue; x.globalAlpha = 0.55; x.strokeStyle = "#bdeeff"; x.lineWidth = Math.max(1, SZ(2)); for (var bq = 0; bq < 22; bq++) { var bxp = ux0 + (ux1 - ux0) * ((bq * 7 % 11) / 11), byp = gY - ((bq * 71 + G.t * 260) % (gY - SZ(20))); x.beginPath(); x.arc(bxp, byp, SZ(1 + bq % 3), 0, 7); x.stroke(); } x.globalAlpha = 1; }
+      // rising updraft columns — Ocean bubbles, Volcano embers, Space booster jet
+      if (G.updrafts) { var udCol = th.name === "VOLCANO" ? "#ffb04a" : th.name === "SPACE" ? "#9adcff" : "#bdeeff"; for (var udr = 0; udr < G.updrafts.length; udr++) { var udd = G.updrafts[udr]; var ux0 = FX(udd.x0), ux1 = FX(udd.x1); if (ux1 < -8 || ux0 > W + 8) continue; x.globalAlpha = 0.55; x.strokeStyle = udCol; x.fillStyle = udCol; x.lineWidth = Math.max(1, SZ(2)); for (var bq = 0; bq < 22; bq++) { var bxp = ux0 + (ux1 - ux0) * ((bq * 7 % 11) / 11), byp = gY - ((bq * 71 + G.t * 260) % (gY - SZ(20))); x.beginPath(); x.arc(bxp, byp, SZ(1 + bq % 3), 0, 7); if (th.name === "OCEAN") x.stroke(); else x.fill(); } x.globalAlpha = 1; } }
       if (G.kelp) for (var kl = 0; kl < G.kelp.length; kl++) { var kd = G.kelp[kl]; var kx = FX(kd.x); if (kx < -12 || kx > W + 12) continue; if (groundAt(kd.x)) pxKelp(kx, FY(groundY(kd.x)), SZ(kd.h), kd.phase); }
       if (G.warp && (!G.warp.done || G.state === "warping")) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.state !== "warping" && G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
       if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
@@ -3281,7 +3336,7 @@
       for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cxs = FX(co.x); if (cxs > W + 8 || cxs < -8) continue; pxCoin(cxs, FY(GROUND - co.hAbove), G.t * 6 + co.x); }
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
-      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else if (en.puffer) pxPuffer(exs, gY, en.dir, Math.abs(en.x - G.hero.wx) < 150); else if (en.penguin) pxPenguin(exs, gY, en.dir, en.sliding); else pxEnemy(exs, gY, en.dir); }
+      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else if (en.puffer) pxPuffer(exs, gY, en.dir, Math.abs(en.x - G.hero.wx) < 150); else if (en.penguin) pxPenguin(exs, gY, en.dir, en.sliding); else if (en.frog) pxFrog(exs, gY, en.dir, en.x); else if (en.imp) pxImp(exs, gY, en.dir, en.x); else if (en.alien) pxAlien(exs, gY, en.dir, en.x); else pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
@@ -3713,6 +3768,41 @@
       P(cx - SZ(7) + dir * SZ(1), fy + SZ(4), SZ(3), SZ(3), eye); P(cx + SZ(5) + dir * SZ(1), fy + SZ(4), SZ(3), SZ(3), eye);
       P(cx - SZ(3), fy + SZ(9), SZ(6), SZ(5), beak); P(cx - SZ(3), fy + SZ(12), SZ(6), SZ(2), beakD);           // beak
       P(cx - SZ(9), fy + SZ(40), SZ(7), SZ(4), beak); P(cx + SZ(2), fy + SZ(40), SZ(7), SZ(4), beak);           // feet
+    }
+    function pxFrog(cx, gY, dir, wx) {
+      var bnc = Math.round(Math.abs(Math.sin(G.t * 6 + (wx || cx) * 0.1)) * SZ(4)), fy = gY - SZ(34) - bnc;
+      var body = "#5cc24a", bodyD = "#3a9a2f", belly = "#cdefa0", eyw = "#fff", pup = "#0a1808";
+      P(cx - SZ(20), fy + SZ(22), SZ(9), SZ(5), bodyD); P(cx + SZ(11), fy + SZ(22), SZ(9), SZ(5), bodyD);       // back feet
+      disc(cx, fy + SZ(14), SZ(18), bodyD); disc(cx, fy + SZ(14), SZ(15), body);                                // round body
+      P(cx - SZ(9), fy + SZ(16), SZ(18), SZ(10), belly);                                                        // pale belly
+      disc(cx - SZ(9), fy, SZ(7), body); disc(cx + SZ(9), fy, SZ(7), body);                                     // eye bumps
+      disc(cx - SZ(9), fy - SZ(1), SZ(5), eyw); disc(cx + SZ(9), fy - SZ(1), SZ(5), eyw);
+      P(cx - SZ(10) + dir * SZ(1), fy - SZ(2), SZ(4), SZ(4), pup); P(cx + SZ(8) + dir * SZ(1), fy - SZ(2), SZ(4), SZ(4), pup);
+      P(cx - SZ(8), fy + SZ(9), SZ(16), SZ(2), bodyD);                                                          // wide mouth
+    }
+    function pxImp(cx, gY, dir, wx) {
+      var flick = Math.abs(Math.sin(G.t * 9 + (wx || cx) * 0.15)), bnc = Math.round(flick * SZ(3)), fy = gY - SZ(42) - bnc;
+      var body = "#ff6a2a", bodyD = "#c8401a", hot = "#ffd24a", eye = "#2a0800";
+      x.globalAlpha = 0.4; disc(cx, fy + SZ(18), SZ(19) + Math.round(flick * SZ(3)), "#ff9a3a"); x.globalAlpha = 1;   // ember aura
+      P(cx - SZ(11), fy + SZ(2), SZ(3), SZ(6), bodyD); P(cx - SZ(9), fy - SZ(3), SZ(3), SZ(6), body);           // left horn
+      P(cx + SZ(8), fy + SZ(2), SZ(3), SZ(6), bodyD); P(cx + SZ(6), fy - SZ(3), SZ(3), SZ(6), body);            // right horn
+      disc(cx, fy + SZ(14), SZ(15), bodyD); disc(cx, fy + SZ(14), SZ(12), body);                                // body
+      P(cx - SZ(7), fy + SZ(18), SZ(14), SZ(5), hot);                                                           // molten belly glow
+      P(cx - SZ(8), fy + SZ(8), SZ(6), SZ(5), hot); P(cx + SZ(2), fy + SZ(8), SZ(6), SZ(5), hot);               // glowing eyes
+      P(cx - SZ(7) + dir * SZ(1), fy + SZ(9), SZ(3), SZ(3), eye); P(cx + SZ(3) + dir * SZ(1), fy + SZ(9), SZ(3), SZ(3), eye);
+      P(cx - SZ(9), fy + SZ(26), SZ(6), SZ(5), bodyD); P(cx + SZ(3), fy + SZ(26), SZ(6), SZ(5), bodyD);         // feet
+    }
+    function pxAlien(cx, gY, dir, wx) {
+      var bob = Math.round(Math.sin(G.t * 4 + (wx || cx) * 0.1) * SZ(3)), fy = gY - SZ(44) + bob;
+      var body = "#7ce0a8", bodyD = "#3fae78", head = "#a8f0c8", eye = "#141033", glow = "#dfffe8";
+      x.strokeStyle = bodyD; x.lineWidth = Math.max(1, SZ(2)); x.beginPath(); x.moveTo(cx - SZ(5), fy - SZ(6)); x.lineTo(cx - SZ(9), fy - SZ(16)); x.stroke();   // antenna
+      disc(cx - SZ(9), fy - SZ(17), SZ(3), glow);
+      P(cx - SZ(12), fy + SZ(6), SZ(24), SZ(26), body); P(cx - SZ(12), fy + SZ(6), SZ(24), SZ(6), bodyD);       // torso
+      disc(cx, fy + SZ(2), SZ(13), head);                                                                       // big head
+      disc(cx - SZ(5), fy + SZ(2), SZ(4), eye); disc(cx + SZ(5), fy + SZ(2), SZ(4), eye);                       // wide eyes
+      P(cx - SZ(6) + dir * SZ(1), fy + SZ(1), SZ(2), SZ(2), glow); P(cx + SZ(4) + dir * SZ(1), fy + SZ(1), SZ(2), SZ(2), glow);
+      P(cx - SZ(14), fy + SZ(14), SZ(4), SZ(12), bodyD); P(cx + SZ(10), fy + SZ(14), SZ(4), SZ(12), bodyD);     // arms
+      P(cx - SZ(9), fy + SZ(30), SZ(6), SZ(5), bodyD); P(cx + SZ(3), fy + SZ(30), SZ(6), SZ(5), bodyD);         // feet
     }
     function pxGummy(cx, gY, dir, wx) {
       var wob = Math.sin(G.t * 6 + (wx || cx) * 0.1), sq = Math.round(wob * SZ(2)), fy = gY - SZ(42) + Math.abs(sq);
