@@ -1661,7 +1661,8 @@
       // HIDDEN PATH: a golden warp portal up on a ledge — jump onto it to dive into a secret "World B".
       // Only reachable by a deliberate leap (a coin arc hints the climb); ground-runners sail right past it.
       if (SECRET_CHARS[level]) {
-        var wpx = gx[0] - SEG * 0.14;   // in the gentle pit-free opening before the first gate — impossible to miss
+        // Placed deeper in the run (a reward for exploring), not right at the start — up on a ledge past the 2nd gate.
+        var wseg = Math.min(2, gx.length - 1); var wpx = gx[wseg] - SEG * 0.30;
         G.platforms.push({ x: wpx - 62, hAbove: 108, w: 124, mv: false, amp: 0, period: 2, phase: 0, warp: true });
         G.warp = { x0: wpx - 60, x1: wpx + 60, top: GROUND - 108, x: wpx, done: false };
         // a coin staircase pointing the way up, and a purple gem teaser at the portal mouth
