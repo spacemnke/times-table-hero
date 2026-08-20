@@ -1672,12 +1672,16 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
-      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", authored = meadow || beach;
+      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", authored = meadow || beach || candy;
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else fillSegment(b, seg, cf);
       }
       if (beach) G.sandUntil = gx[0] + SEG * 2.3;   // the shore (dunes + tide pools) is sand; the pier begins beyond
+      if (candy && gx.length >= 6) {   // peppermint spinners (the fire-bar mechanic, re-skinned) over a couple of later beats
+        G.firebars.push({ x: gx[Math.min(7, gx.length - 1)] - SEG * 0.5, cy: GROUND - 96, len: 96, spd: 1.5, phase: 0.4, candy: true });
+        G.firebars.push({ x: gx[Math.min(7, gx.length - 1)] - SEG * 0.2, cy: GROUND - 120, len: 84, spd: -1.8, phase: 1.6, candy: true });
+      }
       // keep a clean pocket around the secret portal so it stands out
       if (G.warp) { var wl = G.warp.x0 - 50, wr = G.warp.x1 + 50, clr = function (arr) { return arr.filter(function (o) { return (o.x + (o.w || 40)) < wl || o.x > wr; }); }; G.boxes = clr(G.boxes); G.bricks = clr(G.bricks); G.pipes = clr(G.pipes); }
       // signature trap per world — first two zones always trapped so every run meets one early; a 2nd appears deeper
@@ -1807,6 +1811,43 @@
         G.pipes.push({ x: b + 1080, w: 46, h: 104 }); G.pipes.push({ x: b + 1210, w: 46, h: 66 });
         G.boxes.push({ x: b + 420, hAbove: 150, w: 48, h: 44, used: false, power: true });
         coin1(b + 323, 190); coin1(b + 1145, 175); coin1(b + 1145, 130);
+      } else {                              // coinfield breather
+        for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
+        G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
+      }
+    }
+    // CANDY course — pure re-skins. Candy's pink 'grass' makes the rolling ground read as frosting for free.
+    var CANDY_ORDER = ["hills", "gumdrop", "fork", "gummy", "wafer", "sugarrush", "coinfield"];
+    function fillSegmentCandy(b, seg, cf) {
+      var arch = CANDY_ORDER[(seg - 1) % CANDY_ORDER.length];
+      var c, q;
+      if (arch === "hills") {               // frosting rolling ground
+        G.hills.push({ x0: b + 140, x1: b + 780, h: 126 }); G.hills.push({ x0: b + 1000, x1: b + 1450, h: 104 });
+        for (c = 0; c < 8; c++) { var hxa = b + 200 + c * 74; coin1(hxa, (GROUND - groundY(hxa)) + 44); }
+        for (c = 0; c < 5; c++) { var hxb = b + 1050 + c * 78; coin1(hxb, (GROUND - groundY(hxb)) + 44); }
+      } else if (arch === "gumdrop") {      // gumdrop bounce (Candy's springboards) + high coin arcs
+        G.springs.push({ x: b + 300, t: 0 }); for (c = 0; c < 6; c++) coin1(b + 306 + c * 30, 220 + c * 40);
+        G.springs.push({ x: b + 1150, t: 0 }); for (c = 0; c < 5; c++) coin1(b + 1156 + c * 30, 230 + c * 36);
+      } else if (arch === "fork") {         // high candy-cane road (gem) vs low
+        G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.gemsA.push({ x: b + 770, hAbove: 292, got: false });
+        for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272); for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);
+      } else if (arch === "gummy") {        // gummy bears + brick row
+        G.enemies.push({ x1: b + 240, x2: b + 430, x: b + 240, dir: 1, alive: true, gummy: true });
+        G.enemies.push({ x1: b + 1050, x2: b + 1240, x: b + 1240, dir: -1, alive: true, gummy: true });
+        for (q = 0; q < 3; q++) G.bricks.push({ x: b + 1080 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+        for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60);
+      } else if (arch === "wafer") {        // chocolate river — floating wafer-cookies + high coins
+        G.platforms.push({ x: b + 640, hAbove: 70, w: 96, mv: true, amp: 22, period: 2.0, phase: seg });
+        G.platforms.push({ x: b + 820, hAbove: 96, w: 96, mv: true, amp: 22, period: 2.3, phase: seg + 1 });
+        for (c = 0; c < 5; c++) coin1(b + 670 + c * 42, 150); for (c = 0; c < 4; c++) coin1(b + 1080 + c * 44, 60);
+      } else if (arch === "sugarrush") {    // speed slide + coin river + gumdrop launch
+        G.speedZones.push({ x0: b + 120, x1: b + SEG * 0.9, mult: 1.55 });
+        for (c = 0; c < 16; c++) coin1(b + 180 + c * 70, 48 + (c % 3) * 20); G.springs.push({ x: b + SEG * 0.86, t: 0 });
       } else {                              // coinfield breather
         for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
         G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
@@ -3141,7 +3182,7 @@
       for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cxs = FX(co.x); if (cxs > W + 8 || cxs < -8) continue; pxCoin(cxs, FY(GROUND - co.hAbove), G.t * 6 + co.x); }
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
-      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else pxEnemy(exs, gY, en.dir); }
+      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
@@ -3149,7 +3190,7 @@
       for (var hkr = 0; hkr < G.hawks.length; hkr++) { var hkd = G.hawks[hkr]; var hkx = FX(hkd.x); if (hkx < -24 || hkx > W + 24) continue; pxHawk(hkx, FY(hkd.y), hkd.state === "dive", G.t); }
       if (G.jellies) for (var jlr = 0; jlr < G.jellies.length; jlr++) { var jld = G.jellies[jlr]; var jlx = FX(jld.x); if (jlx < -24 || jlx > W + 24) continue; pxJelly(jlx, FY(jld.y), G.t + jld.phase); }
       for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
-      for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
+      for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; if (fbo.candy) pxPeppermint(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase); else pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
       if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, FY(groundY(fo.x)) + SZ(6), fo.k); }
       var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
@@ -3486,6 +3527,15 @@
       P(cx + sway - SZ(4), gY - SZ(74), SZ(10), SZ(8), "#2f8f42");
     }
     // Volcano fire-bar — a rotating arm of flame around a pivot
+    function pxPeppermint(cx, cyP, len, ang) {
+      var ex = cx + Math.round(Math.cos(ang) * len), ey = cyP + Math.round(Math.sin(ang) * len);
+      x.strokeStyle = "#ffffff"; x.lineWidth = Math.max(2, SZ(3)); x.beginPath(); x.moveTo(cx, cyP); x.lineTo(ex, ey); x.stroke();
+      x.strokeStyle = "#ff5a6e"; x.setLineDash([SZ(4), SZ(4)]); x.lineWidth = Math.max(2, SZ(3)); x.beginPath(); x.moveTo(cx, cyP); x.lineTo(ex, ey); x.stroke(); x.setLineDash([]);
+      disc(cx, cyP, SZ(5), "#ff7ac0");
+      var r = SZ(15); disc(ex, ey, r + SZ(3), "#5a1636");
+      for (var q = 0; q < 8; q++) { x.fillStyle = q % 2 ? "#ff5a6e" : "#ffffff"; x.beginPath(); x.moveTo(ex, ey); x.arc(ex, ey, r, ang + q / 8 * 6.2831853, ang + (q + 1) / 8 * 6.2831853); x.closePath(); x.fill(); }
+      disc(ex, ey, SZ(4), "#ff7ac0"); disc(ex, ey, SZ(2), "#fff");
+    }
     function pxFireBar(cx, cyP, len, ang, frozen) {
       P(cx - SZ(4), cyP - SZ(4), SZ(8), SZ(8), frozen ? "#3a5a7a" : "#3a1c10");   // darkened pivot
       for (var s2 = 0.2; s2 <= 1.001; s2 += 0.12) {
@@ -3512,6 +3562,20 @@
       x.textAlign = "center"; x.fillStyle = "#fff"; x.font = "800 " + SZ(13) + "px monospace"; x.fillText("SKIP!", sgx, sgy + SZ(16)); x.textAlign = "left";
     }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
+    function pxGummy(cx, gY, dir, wx) {
+      var wob = Math.sin(G.t * 6 + (wx || cx) * 0.1), sq = Math.round(wob * SZ(2)), fy = gY - SZ(42) + Math.abs(sq);
+      var body = "#4fd6a6", bodyD = "#2ea884", eye = "#0a3a2a";
+      var w = SZ(18) + sq;                                                    // squash-and-stretch wobble
+      P(cx - SZ(9), fy - SZ(8), SZ(6), SZ(8), bodyD); P(cx + SZ(3), fy - SZ(8), SZ(6), SZ(8), bodyD);   // ears
+      disc(cx, fy + SZ(4), w * 0.55, bodyD);
+      P(cx - w / 2, fy - SZ(2), w, SZ(30) - sq, body);                        // rounded body
+      P(cx - w / 2 + SZ(2), fy - SZ(4), w - SZ(4), SZ(6), body);
+      disc(cx - w / 2, fy + SZ(14), SZ(5), body); disc(cx + w / 2, fy + SZ(14), SZ(5), body);           // arms
+      P(cx - SZ(12), fy + SZ(26), SZ(7), SZ(6), bodyD); P(cx + SZ(5), fy + SZ(26), SZ(7), SZ(6), bodyD); // feet
+      P(cx - SZ(6) + dir * SZ(1), fy + SZ(2), SZ(3), SZ(3), eye); P(cx + SZ(3) + dir * SZ(1), fy + SZ(2), SZ(3), SZ(3), eye);
+      P(cx - SZ(2), fy + SZ(8), SZ(4), SZ(2), eye);                           // smile
+      x.globalAlpha = 0.35; P(cx - SZ(5), fy - SZ(2), SZ(4), SZ(10), "#fff"); x.globalAlpha = 1;        // jelly shine
+    }
     function pxCrab(cx, gY, dir, wx) {
       var bnc = Math.round(Math.abs(Math.sin(G.t * 7 + (wx || cx) * 0.12)) * SZ(2)), fy = gY - SZ(34) - bnc;
       var red = "#e8452a", redD = "#b0301a", eye = "#fff", pup = "#201008";
