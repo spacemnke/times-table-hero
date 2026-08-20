@@ -1714,18 +1714,27 @@
     function coin1(x, hA) { G.coinsA.push({ x: x, hAbove: hA, got: false }); }
     // MEADOW course — each gate-segment is a distinct, purposeful "beat" instead of the same 4 props
     // at the same 4 offsets. Uses existing primitives (platforms/springs/enemies) + the new speed zone.
-    var MEADOW_ORDER = ["hills", "pond", "gauntlet", "pipes", "downhill", "coinfield"];
+    var MEADOW_ORDER = ["hills", "pond", "fork", "gauntlet", "pipes", "downhill", "coinfield"];
     function fillSegmentMeadow(b, seg, cf) {
       var arch = MEADOW_ORDER[(seg - 1) % MEADOW_ORDER.length];
       var pitL = b + SEG * 0.5, pitR = b + SEG * 0.72;   // keep the mid-segment pit clear of ground props
       var c;
-      if (arch === "hills") {              // stepped mesas to hop up & over — elevation
-        G.platforms.push({ x: b + 210, hAbove: 150, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
-        G.platforms.push({ x: b + 430, hAbove: 250, w: 140, mv: false, amp: 0, period: 2, phase: 0 });
-        for (c = 0; c < 3; c++) coin1(b + 250 + c * 36, 190);
-        for (c = 0; c < 3; c++) coin1(b + 470 + c * 36, 290);
-        G.platforms.push({ x: b + 1080, hAbove: 175, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
-        for (c = 0; c < 3; c++) coin1(b + 1110 + c * 36, 215);
+      if (arch === "hills") {              // a connected run of tiered ledges (up → along → down) — reads as a rolling mound
+        G.platforms.push({ x: b + 200, hAbove: 80, w: 190, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 380, hAbove: 150, w: 200, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 570, hAbove: 150, w: 210, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 770, hAbove: 80, w: 190, mv: false, amp: 0, period: 2, phase: 0 });
+        for (c = 0; c < 8; c++) coin1(b + 250 + c * 78, 120 + (c < 4 ? c * 20 : (7 - c) * 20));
+        G.platforms.push({ x: b + 1080, hAbove: 130, w: 160, mv: false, amp: 0, period: 2, phase: 0 });
+        for (c = 0; c < 3; c++) coin1(b + 1120 + c * 36, 170);
+      } else if (arch === "fork") {        // a choice — take the HIGH road (platforms) for a gem, or stay LOW & safe
+        G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });   // steps back down
+        G.gemsA.push({ x: b + 770, hAbove: 292, got: false });                 // reward up on the high road
+        for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272);                  // coin trail along the high road
+        for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);                  // low road: a safe coin trail
       } else if (arch === "pond") {        // bounce mushrooms (springs) across the pit + a high coin arc
         G.springs.push({ x: b + 300, t: 0 });
         for (c = 0; c < 6; c++) coin1(b + 306 + c * 30, 220 + c * 40);
