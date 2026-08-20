@@ -497,6 +497,7 @@
     else if (dest === "practice-setup") { show("practice-setup"); }
     else if (dest === "badges") { renderBadges(); show("badges"); }
     else if (dest === "parent") { openParent(); }
+    else if (dest === "adventure") { ac(); Adv.startDaily(); }   // hub map banner → open the Quest Land map (same entry as Daily Quest)
     else show(dest);
   }
   window.__go = route;   // debug/test hook for direct navigation
