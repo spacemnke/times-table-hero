@@ -1632,8 +1632,8 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [],
-        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [], iceZones: [],
+        floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, iceSlide: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
     }
@@ -1650,8 +1650,7 @@
       if (G.theme.name === "BEACH" || G.theme.name === "OCEAN") { pits.forEach(function (p, fi) { if (fi % 1 === 0) G.fish.push({ x: (p[0] + p[1]) / 2, amp: 210, period: 1.5, phase: (fi * 1.7) % 3 }); }); }
       // Candy (W3): bouncy springboards — land on one to launch high (reach the candy coin arcs above)
       if (G.theme.name === "CANDY") { for (var sg3 = 1; sg3 < gx.length; sg3++) { var sbb = gx[sg3] - SEG; if (sbb <= 200) continue; var spx = sbb + SEG * 0.46; G.springs.push({ x: spx, t: 0 }); for (var sc3 = 0; sc3 < 6; sc3++) G.coinsA.push({ x: spx + 6 + sc3 * 30, hAbove: 210 + sc3 * 44, got: false }); } }
-      // Snow (W5): icicles hang overhead and drop when you pass beneath — keep moving to dodge
-      if (G.theme.name === "SNOW") { for (var sg5 = 1; sg5 < gx.length; sg5++) { var ib = gx[sg5] - SEG; if (ib <= 200) continue; for (var ic5 = 0; ic5 < 2; ic5++) G.icicles.push({ x: ib + SEG * (0.42 + ic5 * 0.34), y: GROUND - 300, vy: 0, falling: false, done: false }); } }
+      // Snow (W5): icicles are authored into the Icicle Cavern beat (see fillSegmentSnow), not sprinkled everywhere
       // Jungle (W6): swing vines over the gaps — grab one mid-jump for a big forward fling
       if (G.theme.name === "JUNGLE") { pits.forEach(function (p) { G.vines.push({ x: p[0] - 30, used: false }); }); for (var vg = 1; vg < gx.length; vg++) { var vb = gx[vg] - SEG; if (vb <= 200) continue; G.vines.push({ x: vb + SEG * 0.5, used: false }); } }
       // Volcano (W7): rotating fire-bars — time your run past the flames (pits are lava)
@@ -1672,10 +1671,10 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
-      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", ocean = G.theme.name === "OCEAN", authored = meadow || beach || candy || ocean;
+      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", ocean = G.theme.name === "OCEAN", snow = G.theme.name === "SNOW", authored = meadow || beach || candy || ocean || snow;
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else if (ocean) fillSegmentOcean(b, seg, cf); else fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else if (ocean) fillSegmentOcean(b, seg, cf); else if (snow) fillSegmentSnow(b, seg, cf); else fillSegment(b, seg, cf);
       }
       if (beach) G.sandUntil = gx[0] + SEG * 2.3;   // the shore (dunes + tide pools) is sand; the pier begins beyond
       if (candy && gx.length >= 6) {   // peppermint spinners (the fire-bar mechanic, re-skinned) over a couple of later beats
@@ -1898,6 +1897,44 @@
         for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
       }
     }
+    // SNOW course — a snowy mountain. New this world: slippery ICE (a glide zone) + waddling PENGUINS.
+    // Reuses rolling ground (drifts), the fork, springs (ski jump), icicles (cavern) and the star finale (aurora palace).
+    var SNOW_ORDER = ["drifts", "iceslide", "fork", "penguins", "cavern", "skijump", "coinfield"];
+    function fillSegmentSnow(b, seg, cf) {
+      var arch = SNOW_ORDER[(seg - 1) % SNOW_ORDER.length];
+      var c, q;
+      if (arch === "drifts") {              // rolling SNOW drifts (rolling ground, snow-white) + ridge coins
+        G.hills.push({ x0: b + 140, x1: b + 780, h: 128 }); G.hills.push({ x0: b + 1000, x1: b + 1450, h: 104 });
+        for (c = 0; c < 8; c++) { var hxa = b + 200 + c * 74; coin1(hxa, (GROUND - groundY(hxa)) + 44); }
+        for (c = 0; c < 5; c++) { var hxb = b + 1050 + c * 78; coin1(hxb, (GROUND - groundY(hxb)) + 44); }
+      } else if (arch === "iceslide") {     // THE ice slide — a long slick sheet you glide across (can't stop), coin river, solid landing before the gate
+        G.iceZones.push({ x0: b + 160, x1: b + SEG * 0.86 });
+        for (c = 0; c < 18; c++) coin1(b + 210 + c * 62, 48 + (c % 3) * 22);
+        G.springs.push({ x: b + SEG * 0.9, t: 0 });                            // a ski-hop off the end of the ice
+      } else if (arch === "fork") {         // high mountain ridge (gem) vs safe low valley
+        G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.gemsA.push({ x: b + 770, hAbove: 292, got: false });
+        for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272); for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);
+      } else if (arch === "penguins") {     // waddling penguins that belly-slide at you (placed with runway so you see them coming)
+        G.enemies.push({ x1: b + 560, x2: b + 720, x: b + 560, dir: 1, alive: true, penguin: true });
+        G.enemies.push({ x1: b + 1120, x2: b + 1300, x: b + 1300, dir: -1, alive: true, penguin: true });
+        for (q = 0; q < 3; q++) G.bricks.push({ x: b + 300 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+        for (c = 0; c < 4; c++) coin1(b + 320 + c * 44, 60);
+      } else if (arch === "cavern") {       // Icicle Cavern — icicles hang overhead and drop as you pass beneath (keep moving)
+        for (var ic5 = 0; ic5 < 4; ic5++) G.icicles.push({ x: b + 260 + ic5 * 260, y: GROUND - 300, vy: 0, falling: false, done: false });
+        for (c = 0; c < 6; c++) coin1(b + 300 + c * 190, 150);
+      } else if (arch === "skijump") {      // ski-jump ramp: a spring flings you over a gap through a high coin arc
+        G.springs.push({ x: b + 300, t: 0 }); for (c = 0; c < 6; c++) coin1(b + 306 + c * 30, 220 + c * 40);
+        G.springs.push({ x: b + 1150, t: 0 }); for (c = 0; c < 5; c++) coin1(b + 1156 + c * 30, 230 + c * 36);
+      } else {                              // coinfield breather + a power box (Snowball Alley territory — the auto snowball-fight traps live here)
+        for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
+        G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
+      }
+    }
     function placeFeature(kind, ox, seg, idx, cf) {
       var c, q;
       if (kind === "coins") { for (c = 0; c < 5; c++) coin1(ox + c * 40, 46); }
@@ -2056,7 +2093,10 @@
         G.cloud += dt * 14; G.t += dt; var h = G.hero;
         if (G.state === "run") {
           var zoneMul = 1; if (G.speedZones) { for (var zi = 0; zi < G.speedZones.length; zi++) { var zz = G.speedZones[zi]; if (h.wx >= zz.x0 && h.wx <= zz.x1) { zoneMul = zz.mult; break; } } }
-          var sp = G.speed * (1 + G.dash) * zoneMul; G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
+          // Snow slippery ice — VERY low grip: on ice you build glide momentum fast, then coast it off slowly on solid snow (you can't just stop)
+          var onIce = false; if (G.iceZones) { for (var izi = 0; izi < G.iceZones.length; izi++) { var izz = G.iceZones[izi]; if (h.wx >= izz.x0 && h.wx <= izz.x1) { onIce = true; break; } } }
+          if (onIce) G.iceSlide = Math.min(0.95, (G.iceSlide || 0) + dt * 1.9); else G.iceSlide = Math.max(0, (G.iceSlide || 0) - dt * 0.28);
+          var sp = G.speed * (1 + G.dash) * zoneMul * (1 + (G.iceSlide || 0)); G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
           if (G.flyT > 0) { h.vy += (h.hold ? -1500 : 950) * dt; if (h.vy < -320) h.vy = -320; if (h.vy > 440) h.vy = 440; } else { var g = (h.hold && h.vy < 0) ? 1500 : 2700; if (G.floaty) g *= 0.5; else if (G.moon) g *= 0.34; h.vy += g * dt; var vcap = G.floaty ? 250 : G.moon ? 300 : 1e9; if (h.vy > vcap) h.vy = vcap; }
           // Ocean updraft currents — a rising column lifts you up (ride it to the high coral shelves)
           if (G.updrafts) { for (var ui = 0; ui < G.updrafts.length; ui++) { var ud = G.updrafts[ui]; if (h.wx >= ud.x0 && h.wx <= ud.x1) { h.vy -= 3600 * dt; if (h.vy < -300) h.vy = -300; h.ground = false; h.coyote = 0; break; } } }
@@ -2106,7 +2146,7 @@
           if (G.star && !G.star.taken) { var syv = GROUND - G.star.hAbove; if (Math.abs(G.star.x - h.wx) < 50 && Math.abs(syv - (h.y - 40)) < 66) { G.star.taken = true; h.power = 6.5; aStar(); haptic([12, 30, 12]); } }
           var mag = h.power > 0 || G.magnet;
           for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cy = GROUND - co.hAbove; var dx = co.x - h.wx, dy = cy - (h.y - 40); if (mag && Math.abs(dx) < 300 && Math.abs(dy) < 300) { co.x -= dx * Math.min(1, dt * 9); co.hAbove += dy * Math.min(1, dt * 9); } if (Math.abs(co.x - h.wx) < 38 && Math.abs((GROUND - co.hAbove) - (h.y - 40)) < 54) { co.got = true; addCoins(1); aCoin(); } }
-          for (var e = 0; e < G.enemies.length; e++) { var en = G.enemies[e]; if (!en.alive) continue; if (G.frostT <= 0) { en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } } var eTop = GROUND - 52; if (Math.abs(en.x - h.wx) < 40) { if (h.power > 0 || G.bigT > 0) { en.alive = false; addCoins(3); aStomp(); coinBurst(en.x, eTop); } else if (h.vy > 0 && h.y <= eTop + 22 && h.y >= eTop - 40) { en.alive = false; h.vy = -620; addCoins(3); aStomp(); haptic(15); coinBurst(en.x, eTop); } else if (!TEST && h.inv <= 0 && G.frostT <= 0 && h.y > eTop - 28) { hurt(); } } }
+          for (var e = 0; e < G.enemies.length; e++) { var en = G.enemies[e]; if (!en.alive) continue; if (G.frostT <= 0) { if (en.penguin) { if (!en.sliding && h.wx > en.x - 260 && h.wx < en.x - 24) { en.sliding = true; en.dir = -1; } if (en.sliding) { en.x -= G.cf.enemySpeed * 2.4 * dt; } else { en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } } } else { en.x += en.dir * G.cf.enemySpeed * dt; if (en.x < en.x1) { en.x = en.x1; en.dir = 1; } if (en.x > en.x2) { en.x = en.x2; en.dir = -1; } } } var eTop = GROUND - 52; if (Math.abs(en.x - h.wx) < 40) { if (h.power > 0 || G.bigT > 0) { en.alive = false; addCoins(3); aStomp(); coinBurst(en.x, eTop); } else if (h.vy > 0 && h.y <= eTop + 22 && h.y >= eTop - 40) { en.alive = false; h.vy = -620; addCoins(3); aStomp(); haptic(15); coinBurst(en.x, eTop); } else if (!TEST && h.inv <= 0 && G.frostT <= 0 && h.y > eTop - 28) { hurt(); } } }
           // shiny purple coins (magnetised while super)
           for (var gm = 0; gm < G.gemsA.length; gm++) { var ge = G.gemsA[gm]; if (ge.got) continue; var gyv = GROUND - ge.hAbove; var gdx = ge.x - h.wx, gdy = gyv - (h.y - 40); if (mag && Math.abs(gdx) < 320 && Math.abs(gdy) < 320) { ge.x -= gdx * Math.min(1, dt * 8); ge.hAbove += gdy * Math.min(1, dt * 8); } if (Math.abs(ge.x - h.wx) < 42 && Math.abs((GROUND - ge.hAbove) - (h.y - 40)) < 60) { ge.got = true; progress.gems = (progress.gems || 0) + 1; G.gemRun++; aStar(); haptic([10, 20, 10]); coinBurst(ge.x, GROUND - ge.hAbove); save(); } }
           // traps: run into one on the ground and you're caught (jump over to dodge; smash through while super)
@@ -2241,8 +2281,8 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), 3), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [],
-        floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [], iceZones: [],
+        floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, iceSlide: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
       };
       buildSecretMap();
       buildPmap();
@@ -3216,6 +3256,16 @@
           for (var hs = hl.x0; hs <= hl.x1; hs += 12) { var sxp = FX(hs), syp = FY(groundY(hs)); hs === hl.x0 ? x.moveTo(sxp, syp) : x.lineTo(sxp, syp); } x.stroke();
         }
       }
+      // Snow slippery-ice sheets — a glossy cyan skin over the snow with sliding highlights
+      if (G.iceZones) for (var izv = 0; izv < G.iceZones.length; izv++) {
+        var iz2 = G.iceZones[izv]; var ix0 = FX(iz2.x0), ix1 = FX(iz2.x1); if (ix1 < -4 || ix0 > W + 4) continue;
+        x.fillStyle = "rgba(150,224,255,.6)"; x.fillRect(ix0, gY, ix1 - ix0, SZ(11));
+        x.fillStyle = "rgba(236,250,255,.9)"; x.fillRect(ix0, gY, ix1 - ix0, SZ(3));
+        x.fillStyle = "#7fb8d8"; x.fillRect(ix0, gY + SZ(10), ix1 - ix0, SZ(2));
+        x.strokeStyle = "rgba(255,255,255,.6)"; x.lineWidth = Math.max(1, SZ(2));
+        var glide = (G.t * 240) % SZ(80);
+        for (var shk = ix0 - SZ(80) + glide; shk < ix1; shk += SZ(80)) { if (shk < ix0 - SZ(28) || shk > ix1) continue; x.beginPath(); x.moveTo(shk, gY + SZ(7)); x.lineTo(shk + SZ(26), gY + SZ(3)); x.stroke(); }
+      }
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, FY(groundY(t2.x)), SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); if (pl.skip) { pxSkipPlat(px, ptp, pw, pl.used, G.t); continue; } P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
       for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; if (pz2.coral) pxCoralSpire(pxs, gY, SZ(pz2.h), SZ(pz2.w)); else pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
@@ -3231,7 +3281,7 @@
       for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cxs = FX(co.x); if (cxs > W + 8 || cxs < -8) continue; pxCoin(cxs, FY(GROUND - co.hAbove), G.t * 6 + co.x); }
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
-      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else if (en.puffer) pxPuffer(exs, gY, en.dir, Math.abs(en.x - G.hero.wx) < 150); else pxEnemy(exs, gY, en.dir); }
+      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else if (en.puffer) pxPuffer(exs, gY, en.dir, Math.abs(en.x - G.hero.wx) < 150); else if (en.penguin) pxPenguin(exs, gY, en.dir, en.sliding); else pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
@@ -3635,6 +3685,34 @@
       P(cx - dir * SZ(6), fy - SZ(3), SZ(4), SZ(4), "#fff"); P(cx - dir * SZ(5), fy - SZ(2), SZ(2), SZ(2), eye); // eye
       P(cx - dir * SZ(9), fy + SZ(4), SZ(3), SZ(2), bodyD);                                                    // lil mouth
       P(cx + dir * SZ(11), fy - SZ(3), SZ(5), SZ(7), bodyD);                                                   // tail fin
+    }
+    function pxPenguin(cx, gY, dir, sliding) {
+      var blk = "#22303c", blkD = "#141d26", wht = "#f2f8ff", beak = "#ff9a2a", beakD = "#e07a10", eye = "#0a1218";
+      if (sliding) {                                                                                            // belly-slide: a low torpedo charging LEFT at the hero
+        var sy = gY - SZ(11);
+        var slick = Math.round(Math.abs(Math.sin(G.t * 22)) * SZ(4));
+        x.strokeStyle = "rgba(200,240,255,.75)"; x.lineWidth = Math.max(1, SZ(2));                              // ice spray streaming off the back (right)
+        x.beginPath(); x.moveTo(cx + SZ(14), sy + SZ(6)); x.lineTo(cx + SZ(30) + slick, sy + SZ(6)); x.stroke();
+        x.beginPath(); x.moveTo(cx + SZ(12), sy + SZ(2)); x.lineTo(cx + SZ(24) + slick, sy - SZ(1)); x.stroke();
+        disc(cx - SZ(13), sy - SZ(1), SZ(8), blk);                                                              // head (front/left)
+        P(cx - SZ(15), sy - SZ(6), SZ(30), SZ(13), blk);                                                        // stretched body
+        disc(cx + SZ(15), sy - SZ(1), SZ(7), blk);                                                              // rounded tail end
+        P(cx - SZ(14), sy + SZ(2), SZ(20), SZ(5), wht);                                                         // white belly stripe (front, low)
+        P(cx + SZ(6), sy - SZ(10), SZ(5), SZ(7), blkD);                                                         // flipper up on the back
+        P(cx - SZ(22), sy - SZ(2), SZ(6), SZ(4), beak); P(cx - SZ(22), sy + SZ(1), SZ(5), SZ(2), beakD);        // beak pointing forward
+        P(cx - SZ(16), sy - SZ(5), SZ(4), SZ(4), wht); P(cx - SZ(15), sy - SZ(4), SZ(2), SZ(2), eye);           // eye
+        P(cx + SZ(16), sy + SZ(5), SZ(6), SZ(3), beak);                                                         // trailing feet
+        return;
+      }
+      var bnc = Math.round(Math.abs(Math.sin(G.t * 5 + cx)) * SZ(3)), fy = gY - SZ(44) - bnc;
+      P(cx - SZ(13), fy + SZ(2), SZ(26), SZ(38), blk);                                                          // body
+      P(cx - SZ(13), fy + SZ(2), SZ(9), SZ(38), blk); disc(cx, fy + SZ(8), SZ(13), blk);                        // rounded head
+      P(cx - SZ(8), fy + SZ(14), SZ(16), SZ(26), wht);                                                          // white belly
+      P(cx - SZ(16), fy + SZ(12), SZ(5), SZ(18), blkD); P(cx + SZ(11), fy + SZ(12), SZ(5), SZ(18), blkD);       // flippers
+      P(cx - SZ(9), fy + SZ(2), SZ(6), SZ(6), wht); P(cx + SZ(3), fy + SZ(2), SZ(6), SZ(6), wht);               // eye whites
+      P(cx - SZ(7) + dir * SZ(1), fy + SZ(4), SZ(3), SZ(3), eye); P(cx + SZ(5) + dir * SZ(1), fy + SZ(4), SZ(3), SZ(3), eye);
+      P(cx - SZ(3), fy + SZ(9), SZ(6), SZ(5), beak); P(cx - SZ(3), fy + SZ(12), SZ(6), SZ(2), beakD);           // beak
+      P(cx - SZ(9), fy + SZ(40), SZ(7), SZ(4), beak); P(cx + SZ(2), fy + SZ(40), SZ(7), SZ(4), beak);           // feet
     }
     function pxGummy(cx, gY, dir, wx) {
       var wob = Math.sin(G.t * 6 + (wx || cx) * 0.1), sq = Math.round(wob * SZ(2)), fy = gY - SZ(42) + Math.abs(sq);
