@@ -1632,7 +1632,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
@@ -1677,6 +1677,7 @@
         var b = gx[seg] - SEG; if (b <= 200) continue;
         if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else fillSegment(b, seg, cf);
       }
+      if (beach) G.sandUntil = gx[0] + SEG * 2.3;   // the shore (dunes + tide pools) is sand; the pier begins beyond
       // keep a clean pocket around the secret portal so it stands out
       if (G.warp) { var wl = G.warp.x0 - 50, wr = G.warp.x1 + 50, clr = function (arr) { return arr.filter(function (o) { return (o.x + (o.w || 40)) < wl || o.x > wr; }); }; G.boxes = clr(G.boxes); G.bricks = clr(G.bricks); G.pipes = clr(G.pipes); }
       // signature trap per world — first two zones always trapped so every run meets one early; a 2nd appears deeper
@@ -1704,6 +1705,10 @@
       if (meadow && gx.length >= 5) {
         G.hawks.push({ x: gx[Math.min(3, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 0.6 });
         G.hawks.push({ x: gx[Math.min(6, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 1.9 });
+      }
+      if (beach && gx.length >= 6) {   // drifting jellyfish over the pier (a gentle, slow-bobbing hazard)
+        G.jellies.push({ x: gx[Math.min(7, gx.length - 1)] - SEG * 0.5, phase: 0.3, amp: 60, mid: 96 });
+        G.jellies.push({ x: gx[Math.min(9, gx.length - 1)] - SEG * 0.55, phase: 1.8, amp: 62, mid: 104 });
       }
       G.flags = [{ x: HEROX, hit: true, raise: 1 }]; for (var f = 0; f < gx.length; f++) { G.flags.push({ x: gx[f] - SEG * 0.5, hit: false, raise: 0, half: true }); }
       for (var trp = 0; trp < 90; trp++) G.props.push({ x: trp * 250 + ((trp * 71) % 160), s: 52 + ((trp * 53) % 30) });
@@ -1765,11 +1770,17 @@
       void pitL; void pitR;
     }
     // BEACH course — reuses Meadow's toys re-skinned for the coast (piranhas leap from the water gaps automatically).
-    var BEACH_ORDER = ["tidepool", "fork", "crabs", "wavedash", "boxes", "coinfield"];
+    var BEACH_PIER_ORDER = ["fork", "crabs", "wavedash", "boxes", "coinfield"];
     function fillSegmentBeach(b, seg, cf) {
-      var arch = BEACH_ORDER[(seg - 1) % BEACH_ORDER.length];
+      // shore first (sand dunes → tide pools), then out onto the pier
+      var arch = seg === 1 ? "dunes" : seg === 2 ? "tidepool" : BEACH_PIER_ORDER[(seg - 3) % BEACH_PIER_ORDER.length];
       var c, q;
-      if (arch === "tidepool") {            // floating barrels across the water gap + a high coin trail
+      if (arch === "dunes") {               // rolling SAND dunes on the sandy shore (renders as sand, not pier)
+        G.hills.push({ x0: b + 140, x1: b + 780, h: 120 });
+        G.hills.push({ x0: b + 1000, x1: b + 1450, h: 100 });
+        for (c = 0; c < 8; c++) { var dxa = b + 200 + c * 74; coin1(dxa, (GROUND - groundY(dxa)) + 44); }
+        for (c = 0; c < 5; c++) { var dxb = b + 1050 + c * 78; coin1(dxb, (GROUND - groundY(dxb)) + 44); }
+      } else if (arch === "tidepool") {     // floating barrels across the water gap + a high coin trail
         G.platforms.push({ x: b + 640, hAbove: 70, w: 96, mv: true, amp: 22, period: 2.0, phase: seg });
         G.platforms.push({ x: b + 820, hAbove: 96, w: 96, mv: true, amp: 22, period: 2.3, phase: seg + 1 });
         for (c = 0; c < 5; c++) coin1(b + 670 + c * 42, 150);
@@ -1984,6 +1995,12 @@
             else if (hw.state === "dive") { hw.vy += 1150 * dt; hw.y += hw.vy * dt; if (!TEST && h.inv <= 0 && Math.abs(hw.x - h.wx) < 32 && (hw.y + 22) > (h.y - 46) && hw.y < h.y + 10) hurt(); if (hw.y >= GROUND - 26) { hw.y = GROUND - 26; hw.state = "rise"; } }
             else { hw.y -= 240 * dt; if (hw.y <= GROUND - 220) { hw.y = GROUND - 220; hw.state = "hover"; } }
           }
+          // Beach jellyfish — slow vertical bob; jump over one when it's low, run under when it's high
+          for (var jli = 0; G.jellies && jli < G.jellies.length; jli++) {
+            var jl = G.jellies[jli];
+            jl.y = GROUND - jl.mid + Math.sin(G.t * 1.6 + jl.phase) * jl.amp;
+            if (!TEST && h.inv <= 0 && h.power <= 0 && G.bigT <= 0 && Math.abs(jl.x - h.wx) < 28 && (jl.y + 26) > (h.y - 96) && (jl.y - 14) < h.y) hurt();
+          }
           // Ocean bubbles rising past you
           if (G.floaty) { if (Math.random() < 0.5) G.bubbles.push({ wx: h.wx + (Math.random() * 2 - 0.6) * (PIXW / sx), y: GROUND + 30, vy: -(45 + Math.random() * 70), r: 1.5 + Math.random() * 4 }); for (var bu = G.bubbles.length - 1; bu >= 0; bu--) { var bb = G.bubbles[bu]; bb.y += bb.vy * dt; bb.wx += Math.sin(G.t * 3 + bb.y * 0.08) * 0.4; if (bb.y < 30 || G.bubbles.length > 60) G.bubbles.splice(bu, 1); } }
           // Jungle vines: grab one mid-jump for a big forward fling across the gap
@@ -2137,7 +2154,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), 3), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [],
         floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
       };
       buildSecretMap();
@@ -3087,7 +3104,8 @@
       if (PIER) { if (HIFI) hfWater(-2, W + 4, gY + SZ(4), th.water); else { P(-2, gY + SZ(4), W + 4, H - gY, th.water); var wsh = (G.t * 22) % SZ(10); for (var wr = gY + SZ(9); wr < H; wr += SZ(11)) for (var wc = -SZ(10); wc < W; wc += SZ(10)) P(wc + wsh, wr + Math.round(Math.sin((wc + G.t * 40) * 0.05) * SZ(1)), SZ(4), 1, "#bdeeff"); } }
       for (var s = 0; s < G.grounds.length; s++) {
         var sp = G.grounds[s]; var gx1 = FX(sp[0]), gx2 = FX(sp[1]); if (gx2 < -4 || gx1 > W + 4) continue;
-        if (PIER) {
+        var sandSpan = PIER && G.sandUntil && (sp[0] + sp[1]) / 2 < G.sandUntil;   // Beach shore/dunes render as sand, not pier
+        if (PIER && !sandSpan) {
           var dkH = SZ(15);
           for (var ps = Math.floor(sp[0] / 150) * 150; ps < sp[1]; ps += 150) { var pxp = FX(ps); if (pxp > gx1 + SZ(4) && pxp < gx2 - SZ(4)) { if (HIFI) oR(pxp - SZ(1), gY + dkH, SZ(7), H - gY, SZ(1), "#7a4a24", "#3a2410"); else { P(pxp, gY + dkH, SZ(5), H, "#7a4a24"); P(pxp + SZ(5), gY + dkH, SZ(1), H, "#5c3418"); } } }
           if (HIFI) { x.fillStyle = lg(gY, gY + dkH, "#e6b06a", "#b57a3c"); x.fillRect(gx1, gY, gx2 - gx1, dkH); x.fillStyle = "#f4cf94"; x.fillRect(gx1, gY, gx2 - gx1, SZ(3)); x.fillStyle = "#8a5a2a"; x.fillRect(gx1, gY + dkH - SZ(2), gx2 - gx1, SZ(2)); x.strokeStyle = "rgba(90,52,24,.55)"; x.lineWidth = Math.max(1, Math.round(sx)); for (var pk = Math.floor(sp[0] / 40) * 40; pk < sp[1]; pk += 40) { var pl3 = FX(pk); if (pl3 > gx1 && pl3 < gx2) { x.beginPath(); x.moveTo(pl3, gY + SZ(1)); x.lineTo(pl3, gY + dkH - SZ(1)); x.stroke(); } } }
@@ -3129,6 +3147,7 @@
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
       for (var icr = 0; icr < G.icicles.length; icr++) { var icd = G.icicles[icr]; if (icd.done) continue; var icx = FX(icd.x); if (icx < -20 || icx > W + 20) continue; pxIcicle(icx, FY(icd.y), icd.landed, icd.meteor, icd.falling); }
       for (var hkr = 0; hkr < G.hawks.length; hkr++) { var hkd = G.hawks[hkr]; var hkx = FX(hkd.x); if (hkx < -24 || hkx > W + 24) continue; pxHawk(hkx, FY(hkd.y), hkd.state === "dive", G.t); }
+      if (G.jellies) for (var jlr = 0; jlr < G.jellies.length; jlr++) { var jld = G.jellies[jlr]; var jlx = FX(jld.x); if (jlx < -24 || jlx > W + 24) continue; pxJelly(jlx, FY(jld.y), G.t + jld.phase); }
       for (var vnr = 0; vnr < G.vines.length; vnr++) { var vnx = FX(G.vines[vnr].x); if (vnx < -20 || vnx > W + 20) continue; pxVine(vnx, gY, G.t + vnr); }
       for (var fbr2 = 0; fbr2 < G.firebars.length; fbr2++) { var fbo = G.firebars[fbr2]; var fbx = FX(fbo.x); if (fbx < -60 || fbx > W + 60) continue; pxFireBar(fbx, FY(fbo.cy), SZ(fbo.len), G.t * fbo.spd + fbo.phase, G.frostT > 0); }
       for (var gmi = 0; gmi < G.gemsA.length; gmi++) { var ge2 = G.gemsA[gmi]; if (ge2.got) continue; var gxs = FX(ge2.x); if (gxs > W + 10 || gxs < -10) continue; pxGem(gxs, FY(GROUND - ge2.hAbove), G.t * 5 + ge2.x); }
@@ -3410,6 +3429,21 @@
       if (meteor) { x.beginPath(); x.arc(cx, gy - SZ(4), SZ(15), 0, 6.29); x.stroke(); P(cx - SZ(1), gy - SZ(13), SZ(2), SZ(18), "#ff3b30"); P(cx - SZ(9), gy - SZ(5), SZ(18), SZ(2), "#ff3b30"); }
       else { x.setLineDash([SZ(6), SZ(5)]); x.beginPath(); x.ellipse(cx, gy - SZ(3), SZ(22), SZ(7), 0, 0, 6.29); x.stroke(); x.setLineDash([]); }
       x.restore();
+    }
+    function pxJelly(cx, cy, t) {
+      x.globalAlpha = 0.82;
+      var bell = "#c88bff", bellD = "#a05bef", glow = "#e8d0ff";
+      // bell (dome)
+      disc(cx, cy + SZ(2), SZ(15), bellD);
+      x.fillStyle = bell; x.beginPath(); x.arc(cx, cy + SZ(4), SZ(14), Math.PI, 0); x.fill();
+      x.fillStyle = bell; x.fillRect(cx - SZ(14), cy + SZ(4), SZ(28), SZ(6));
+      x.fillStyle = glow; x.beginPath(); x.arc(cx - SZ(4), cy - SZ(1), SZ(5), Math.PI, 0); x.fill();
+      // frilly rim
+      for (var r = -2; r <= 2; r++) { var rx = cx + SZ(r * 6); disc(rx, cy + SZ(10), SZ(3), bellD); }
+      // tentacles (wavy)
+      x.strokeStyle = bell; x.lineWidth = Math.max(1, SZ(2)); x.globalAlpha = 0.7;
+      for (var tt = -2; tt <= 2; tt++) { var txx = cx + SZ(tt * 5); x.beginPath(); x.moveTo(txx, cy + SZ(11)); for (var seg2 = 1; seg2 <= 4; seg2++) { x.lineTo(txx + Math.sin(t * 3 + seg2 + tt) * SZ(2), cy + SZ(11 + seg2 * 6)); } x.stroke(); }
+      x.globalAlpha = 1;
     }
     function pxHawk(cx, cy, diving, t) {
       var body = "#6e4322", bodyD = "#4a2c12", wing = "#8a5a2e", wingD = "#4a2a12", belly = "#e0c090";
