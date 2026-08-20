@@ -1632,7 +1632,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: seedMissing(buildQuestions(focusTables(), clamp(progress.settings.dailyGoal, 6, 12))), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [],
         floaty: th.name === "OCEAN", moon: th.name === "SPACE", frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: 0, enterPending: 0, showdown: null, sd: null, lane: null, ast: null, mini: null, arena: null
       };
       build(cf); buildPmap();
@@ -1647,7 +1647,7 @@
       var spans = [], cur = -400; pits.forEach(function (p) { spans.push([cur, p[0]]); cur = p[1]; }); spans.push([cur, G.castleX + 700]); G.grounds = spans;
       pits.forEach(function (p) { var mid = (p[0] + p[1]) / 2; for (var k = -2; k <= 2; k++) G.coinsA.push({ x: mid + k * 40, hAbove: 160 - Math.abs(k) * 24, got: false }); });
       // Beach: leaping fish jump out of the water gaps (time your jump past them)
-      if (G.theme.name === "BEACH") { pits.forEach(function (p, fi) { if (fi % 1 === 0) G.fish.push({ x: (p[0] + p[1]) / 2, amp: 210, period: 1.5, phase: (fi * 1.7) % 3 }); }); }
+      if (G.theme.name === "BEACH" || G.theme.name === "OCEAN") { pits.forEach(function (p, fi) { if (fi % 1 === 0) G.fish.push({ x: (p[0] + p[1]) / 2, amp: 210, period: 1.5, phase: (fi * 1.7) % 3 }); }); }
       // Candy (W3): bouncy springboards — land on one to launch high (reach the candy coin arcs above)
       if (G.theme.name === "CANDY") { for (var sg3 = 1; sg3 < gx.length; sg3++) { var sbb = gx[sg3] - SEG; if (sbb <= 200) continue; var spx = sbb + SEG * 0.46; G.springs.push({ x: spx, t: 0 }); for (var sc3 = 0; sc3 < 6; sc3++) G.coinsA.push({ x: spx + 6 + sc3 * 30, hAbove: 210 + sc3 * 44, got: false }); } }
       // Snow (W5): icicles hang overhead and drop when you pass beneath — keep moving to dodge
@@ -1672,10 +1672,10 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
-      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", authored = meadow || beach || candy;
+      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", candy = G.theme.name === "CANDY", ocean = G.theme.name === "OCEAN", authored = meadow || beach || candy || ocean;
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else if (candy) fillSegmentCandy(b, seg, cf); else if (ocean) fillSegmentOcean(b, seg, cf); else fillSegment(b, seg, cf);
       }
       if (beach) G.sandUntil = gx[0] + SEG * 2.3;   // the shore (dunes + tide pools) is sand; the pier begins beyond
       if (candy && gx.length >= 6) {   // peppermint spinners (the fire-bar mechanic, re-skinned) over a couple of later beats
@@ -1710,9 +1710,10 @@
         G.hawks.push({ x: gx[Math.min(3, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 0.6 });
         G.hawks.push({ x: gx[Math.min(6, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 1.9 });
       }
-      if (beach && gx.length >= 6) {   // drifting jellyfish over the pier (a gentle, slow-bobbing hazard)
+      if ((beach || ocean) && gx.length >= 6) {   // drifting jellyfish (a gentle, slow-bobbing hazard) — Ocean gets a whole bloom
         G.jellies.push({ x: gx[Math.min(7, gx.length - 1)] - SEG * 0.5, phase: 0.3, amp: 60, mid: 96 });
         G.jellies.push({ x: gx[Math.min(9, gx.length - 1)] - SEG * 0.55, phase: 1.8, amp: 62, mid: 104 });
+        if (ocean) { G.jellies.push({ x: gx[Math.min(9, gx.length - 1)] - SEG * 0.3, phase: 1.0, amp: 66, mid: 110 }); G.jellies.push({ x: gx[Math.min(7, gx.length - 1)] - SEG * 0.25, phase: 2.4, amp: 58, mid: 92 }); }
       }
       G.flags = [{ x: HEROX, hit: true, raise: 1 }]; for (var f = 0; f < gx.length; f++) { G.flags.push({ x: gx[f] - SEG * 0.5, hit: false, raise: 0, half: true }); }
       for (var trp = 0; trp < 90; trp++) G.props.push({ x: trp * 250 + ((trp * 71) % 160), s: 52 + ((trp * 53) % 30) });
@@ -1851,6 +1852,49 @@
       } else {                              // coinfield breather
         for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
         G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
+      }
+    }
+    // OCEAN course — underwater re-skins + extra terrain: updraft currents, coral spires, kelp.
+    var OCEAN_ORDER = ["reef", "bubble", "fork", "puffer", "trench", "current", "coinfield"];
+    function kelpAt(x) { G.kelp.push({ x: x, h: 120 + (x % 60), phase: (x % 100) / 16 }); }
+    function fillSegmentOcean(b, seg, cf) {
+      var arch = OCEAN_ORDER[(seg - 1) % OCEAN_ORDER.length];
+      var c, q;
+      if (arch === "reef") {                // rolling coral seabed + coral spires (pipes) + kelp
+        G.hills.push({ x0: b + 140, x1: b + 780, h: 120 }); G.hills.push({ x0: b + 1000, x1: b + 1450, h: 100 });
+        for (c = 0; c < 8; c++) { var rxa = b + 200 + c * 74; coin1(rxa, (GROUND - groundY(rxa)) + 44); }
+        G.pipes.push({ x: b + 1080, w: 46, h: 92, coral: true });             // a coral spire to hop
+        kelpAt(b + 520); kelpAt(b + 1220);
+      } else if (arch === "bubble") {       // bubble geysers (springs) + an UPDRAFT column to a high coral shelf
+        G.springs.push({ x: b + 300, t: 0 }); for (c = 0; c < 6; c++) coin1(b + 306 + c * 30, 220 + c * 40);
+        G.updrafts.push({ x0: b + 1080, x1: b + 1180 });                       // ride the current up
+        G.platforms.push({ x: b + 1040, hAbove: 330, w: 170, mv: false, amp: 0, period: 2, phase: 0 });   // the shelf it lifts you to
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 26, 220 + c * 30);
+        G.gemsA.push({ x: b + 1120, hAbove: 372, got: false });
+      } else if (arch === "fork") {         // high current road (gem + Finn's warp) vs low seabed
+        G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.gemsA.push({ x: b + 770, hAbove: 292, got: false });
+        for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272); for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);
+      } else if (arch === "puffer") {       // pufferfish + brick row + kelp
+        G.enemies.push({ x1: b + 240, x2: b + 430, x: b + 240, dir: 1, alive: true, puffer: true });
+        G.enemies.push({ x1: b + 1050, x2: b + 1240, x: b + 1240, dir: -1, alive: true, puffer: true });
+        for (q = 0; q < 3; q++) G.bricks.push({ x: b + 1080 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+        for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60); kelpAt(b + 700);
+      } else if (arch === "trench") {       // anglerfish trench (fish auto at pit) — floating platforms + an updraft escape
+        G.platforms.push({ x: b + 640, hAbove: 70, w: 96, mv: true, amp: 22, period: 2.0, phase: seg });
+        G.platforms.push({ x: b + 820, hAbove: 96, w: 96, mv: true, amp: 22, period: 2.3, phase: seg + 1 });
+        for (c = 0; c < 5; c++) coin1(b + 670 + c * 42, 150); kelpAt(b + 1180);
+      } else if (arch === "current") {      // rip current — speed ramp + coin river + geyser launch
+        G.speedZones.push({ x0: b + 120, x1: b + SEG * 0.9, mult: 1.55 });
+        for (c = 0; c < 16; c++) coin1(b + 180 + c * 70, 48 + (c % 3) * 20); G.springs.push({ x: b + SEG * 0.86, t: 0 });
+      } else {                              // coinfield breather + spire + kelp
+        for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
+        G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        G.pipes.push({ x: b + 400, w: 46, h: 74, coral: true }); kelpAt(b + 900);
         for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
       }
     }
@@ -2014,6 +2058,8 @@
           var zoneMul = 1; if (G.speedZones) { for (var zi = 0; zi < G.speedZones.length; zi++) { var zz = G.speedZones[zi]; if (h.wx >= zz.x0 && h.wx <= zz.x1) { zoneMul = zz.mult; break; } } }
           var sp = G.speed * (1 + G.dash) * zoneMul; G.dash = Math.max(0, G.dash - dt * 1.6); h.wx += sp * dt; h.run += dt * sp * .03;
           if (G.flyT > 0) { h.vy += (h.hold ? -1500 : 950) * dt; if (h.vy < -320) h.vy = -320; if (h.vy > 440) h.vy = 440; } else { var g = (h.hold && h.vy < 0) ? 1500 : 2700; if (G.floaty) g *= 0.5; else if (G.moon) g *= 0.34; h.vy += g * dt; var vcap = G.floaty ? 250 : G.moon ? 300 : 1e9; if (h.vy > vcap) h.vy = vcap; }
+          // Ocean updraft currents — a rising column lifts you up (ride it to the high coral shelves)
+          if (G.updrafts) { for (var ui = 0; ui < G.updrafts.length; ui++) { var ud = G.updrafts[ui]; if (h.wx >= ud.x0 && h.wx <= ud.x1) { h.vy -= 3600 * dt; if (h.vy < -300) h.vy = -300; h.ground = false; h.coyote = 0; break; } } }
           if (h.coyote > 0) h.coyote -= dt; if (h.inv > 0) h.inv -= dt; if (h.power > 0) h.power = Math.max(0, h.power - dt); if (G.bigT > 0) G.bigT -= dt; if (G.flyT > 0) G.flyT -= dt; if (G.popT > 0) G.popT -= dt; if (G.frostT > 0) G.frostT -= dt;
           var ny = h.y + h.vy * dt, landTop = null;
           for (var i = 0; i < G.platforms.length; i++) { var p = G.platforms[i]; var top = platTop(p); if (h.wx >= p.x && h.wx <= p.x + p.w && h.vy >= 0 && h.y <= top + 4 && ny >= top) { if (landTop === null || top < landTop) landTop = top; } }
@@ -2195,7 +2241,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), 3), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [], jellies: [], updrafts: [], kelp: [],
         floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
       };
       buildSecretMap();
@@ -2280,7 +2326,7 @@
     }
 
     /* ================= SLINGSHOT SHOWDOWN (mini-boss, several worlds) ================= */
-    var SHOWDOWN_WORLDS = { 1: 1, 2: 1, 3: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade (Beach = a sandcastle)
+    var SHOWDOWN_WORLDS = { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade (Beach=sandcastle, Ocean=sunken ship)
     // roles: A=answer(number), B=blocker(no number), M=monster, T=tnt. INVARIANT: nothing sits directly above an A.
     var SD_SHAPES = [
       [[0,0,'B'],[1,0,'B'],[2,0,'B'],[3,0,'B'],[0,1,'A'],[1,1,'A'],[2,1,'A'],[3,1,'A'],[4,0,'M']],
@@ -3172,7 +3218,10 @@
       }
       for (var tr = 0; tr < G.props.length; tr++) { var t2 = G.props[tr]; var tx = FX(t2.x * 1); if (tx < -30 || tx > W + 30) continue; if (groundAt(t2.x)) pxProp(th.prop, tx, FY(groundY(t2.x)), SZ(t2.s), th); }
       for (var p = 0; p < G.platforms.length; p++) { var pl = G.platforms[p]; var px = FX(pl.x), pw = SZ(pl.w); if (px > W + 8 || px + pw < -8) continue; var ptp = FY(platTop(pl)); if (pl.skip) { pxSkipPlat(px, ptp, pw, pl.used, G.t); continue; } P(px, ptp, pw, SZ(18), "#a9713f"); P(px, ptp, pw, SZ(5), th.h1); P(px, ptp + SZ(14), pw, SZ(4), "#7a4a24"); }
-      for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
+      for (var pipn = 0; pipn < G.pipes.length; pipn++) { var pz2 = G.pipes[pipn]; var pxs = FX(pz2.x); if (pxs > W + 12 || pxs + SZ(pz2.w) < -12) continue; if (pz2.coral) pxCoralSpire(pxs, gY, SZ(pz2.h), SZ(pz2.w)); else pxPipe(pxs, gY, SZ(pz2.h), SZ(pz2.w)); }
+      // Ocean updraft columns (rising bubbles) + kelp on the seabed
+      if (G.updrafts) for (var udr = 0; udr < G.updrafts.length; udr++) { var udd = G.updrafts[udr]; var ux0 = FX(udd.x0), ux1 = FX(udd.x1); if (ux1 < -8 || ux0 > W + 8) continue; x.globalAlpha = 0.55; x.strokeStyle = "#bdeeff"; x.lineWidth = Math.max(1, SZ(2)); for (var bq = 0; bq < 22; bq++) { var bxp = ux0 + (ux1 - ux0) * ((bq * 7 % 11) / 11), byp = gY - ((bq * 71 + G.t * 260) % (gY - SZ(20))); x.beginPath(); x.arc(bxp, byp, SZ(1 + bq % 3), 0, 7); x.stroke(); } x.globalAlpha = 1; }
+      if (G.kelp) for (var kl = 0; kl < G.kelp.length; kl++) { var kd = G.kelp[kl]; var kx = FX(kd.x); if (kx < -12 || kx > W + 12) continue; if (groundAt(kd.x)) pxKelp(kx, FY(groundY(kd.x)), SZ(kd.h), kd.phase); }
       if (G.warp && (!G.warp.done || G.state === "warping")) { var wpxs = FX(G.warp.x), wpty = FY(G.warp.top); if (wpxs > -40 && wpxs < W + 40) { pxWarp(wpxs, wpty, G.t); if (G.state !== "warping" && G.hero.wx > G.warp.x - 380 && G.hero.wx < G.warp.x + 40) { var ay = wpty - SZ(70) + Math.round(Math.sin(G.t * 6) * SZ(3)); P(wpxs - SZ(2), ay, SZ(5), SZ(16), "#ffe27a"); P(wpxs - SZ(8), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); P(wpxs + SZ(3), ay + SZ(9), SZ(5), SZ(5), "#ffe27a"); x.textAlign = "center"; x.fillStyle = "#ffe27a"; x.font = "800 " + SZ(11) + "px monospace"; x.fillText("JUMP!", wpxs, ay - SZ(3)); x.textAlign = "left"; } } }
       if (G.chest && !G.chest.taken) { var chxs = FX(G.chest.x); if (chxs > -30 && chxs < W + 30) pxChest(chxs, gY, G.t); }
       for (var brn = 0; brn < G.bricks.length; brn++) { var bkk = G.bricks[brn]; if (bkk.used) continue; var brs = FX(bkk.x); if (brs > W + 8 || brs < -8) continue; pxBrick(brs, FY(GROUND - bkk.hAbove), SZ(bkk.w), SZ(bkk.h), th); }
@@ -3182,7 +3231,7 @@
       for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cxs = FX(co.x); if (cxs > W + 8 || cxs < -8) continue; pxCoin(cxs, FY(GROUND - co.hAbove), G.t * 6 + co.x); }
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
-      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else pxEnemy(exs, gY, en.dir); }
+      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else if (en.gummy) pxGummy(exs, gY, en.dir, en.x); else if (en.puffer) pxPuffer(exs, gY, en.dir, Math.abs(en.x - G.hero.wx) < 150); else pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
@@ -3418,6 +3467,21 @@
       }
     }
     function pxBrick(px, py, w, h, th) { if (HIFI) { hfBrick(px, py, w, h); return; } P(px, py, w, h, "#c65a2a"); P(px, py, w, SZ(3), "#e07a4a"); P(px, py + h - SZ(2), w, SZ(2), "#8a3a18"); for (var ry = py + SZ(4); ry < py + h; ry += SZ(9)) P(px, ry, w, 1, "#8a3a18"); for (var rx = px + SZ(6); rx < px + w; rx += SZ(12)) P(rx, py, 1, h, "#8a3a18"); }
+    function pxCoralSpire(px, gY, h, w) {
+      var cxm = px + w / 2;
+      P(px + SZ(2), gY - h, w - SZ(4), h, "#ff7a6a"); P(px + SZ(2), gY - h, SZ(5), h, "#ff9a8a"); P(px + w - SZ(6), gY - h, SZ(4), h, "#e0503a");   // pink coral trunk
+      disc(cxm, gY - h, w * 0.62, "#ff7a6a"); disc(cxm - SZ(6), gY - h - SZ(4), SZ(6), "#ff9a8a"); disc(cxm + SZ(7), gY - h + SZ(2), SZ(5), "#e0503a");   // knobbly top
+      for (var d = 0; d < 5; d++) P(px + SZ(4) + (d * (w - SZ(8)) / 4), gY - h + SZ(6) + (d % 2) * SZ(8), SZ(2), SZ(2), "#ffd0c0");   // pores
+    }
+    function pxKelp(px, gY, h, phase) {
+      var seg = 6, sway = Math.sin(G.t * 1.4 + phase);
+      x.strokeStyle = "#2fae7a"; x.lineWidth = Math.max(2, SZ(4)); x.lineCap = "round"; x.beginPath(); x.moveTo(px, gY);
+      for (var s = 1; s <= seg; s++) { var t = s / seg; x.lineTo(px + Math.sin(G.t * 1.4 + phase + t * 2) * SZ(10) * t, gY - h * t); }
+      x.stroke();
+      x.strokeStyle = "#4fd6a6"; x.lineWidth = Math.max(1, SZ(2)); x.beginPath(); x.moveTo(px, gY);
+      for (var s2 = 1; s2 <= seg; s2++) { var t2 = s2 / seg; x.lineTo(px + Math.sin(G.t * 1.4 + phase + t2 * 2) * SZ(10) * t2, gY - h * t2); }
+      x.stroke(); x.lineCap = "butt"; void sway;
+    }
     function pxPipe(px, gY, h, w) { P(px, gY - h, w, h, "#2f9e2a"); P(px, gY - h, SZ(6), h, "#7ce06a"); P(px + w - SZ(5), gY - h, SZ(5), h, "#1f7a1f"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(16), "#2f9e2a"); P(px - SZ(5), gY - h - SZ(14), w + SZ(10), SZ(5), "#57bf3a"); P(px - SZ(5), gY - h - SZ(14), SZ(7), SZ(16), "#7ce06a"); }
     function pxFlag(fxs, gY, raise, half) { var poleH = SZ(52); P(fxs, gY - poleH, SZ(2), poleH, C.pole); var fy = gY - poleH + Math.round((1 - raise) * (poleH - SZ(14))); var col = raise >= 1 ? (half ? "#ffca3a" : "#3ad44a") : "#7a7a9a"; P(fxs + SZ(2), fy, SZ(12), SZ(9), col); }
     // golden warp portal on a ledge — the entrance to World B (made loud so it's easy to spot)
@@ -3562,6 +3626,16 @@
       x.textAlign = "center"; x.fillStyle = "#fff"; x.font = "800 " + SZ(13) + "px monospace"; x.fillText("SKIP!", sgx, sgy + SZ(16)); x.textAlign = "left";
     }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
+    function pxPuffer(cx, gY, dir, puffed) {
+      var fy = gY - SZ(30), body = "#ff9a5a", bodyD = "#e0703a", eye = "#201008";
+      var r = puffed ? SZ(17) : SZ(13);
+      if (puffed) { x.strokeStyle = bodyD; x.lineWidth = Math.max(1, SZ(2)); for (var s = 0; s < 12; s++) { var a = s / 12 * 6.2831853; x.beginPath(); x.moveTo(cx + Math.cos(a) * r, fy + Math.sin(a) * r); x.lineTo(cx + Math.cos(a) * (r + SZ(6)), fy + Math.sin(a) * (r + SZ(6))); x.stroke(); } }   // spikes
+      disc(cx, fy, r + SZ(1), bodyD); disc(cx, fy, r, body);
+      disc(cx + dir * SZ(2), fy + SZ(4), SZ(3), "#ffd0a0");                                                    // belly hint
+      P(cx - dir * SZ(6), fy - SZ(3), SZ(4), SZ(4), "#fff"); P(cx - dir * SZ(5), fy - SZ(2), SZ(2), SZ(2), eye); // eye
+      P(cx - dir * SZ(9), fy + SZ(4), SZ(3), SZ(2), bodyD);                                                    // lil mouth
+      P(cx + dir * SZ(11), fy - SZ(3), SZ(5), SZ(7), bodyD);                                                   // tail fin
+    }
     function pxGummy(cx, gY, dir, wx) {
       var wob = Math.sin(G.t * 6 + (wx || cx) * 0.1), sq = Math.round(wob * SZ(2)), fy = gY - SZ(42) + Math.abs(sq);
       var body = "#4fd6a6", bodyD = "#2ea884", eye = "#0a3a2a";
