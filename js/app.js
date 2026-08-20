@@ -1672,10 +1672,10 @@
       // Slingshot Showdown mini-boss barricades, sprinkled through several worlds (a fun break from the keypad)
       if (SHOWDOWN_WORLDS[level] && gx.length >= 3) G.showdown = { x: gx[1] + SEG * 0.30, done: false };
       // SMB-density: pack each gate-segment with several set-pieces (a feature roughly every screen)
-      var meadow = G.theme.name === "MEADOW";
+      var meadow = G.theme.name === "MEADOW", beach = G.theme.name === "BEACH", authored = meadow || beach;
       for (seg = 0; seg < gx.length; seg++) {
         var b = gx[seg] - SEG; if (b <= 200) continue;
-        if (meadow) fillSegmentMeadow(b, seg, cf); else fillSegment(b, seg, cf);
+        if (meadow) fillSegmentMeadow(b, seg, cf); else if (beach) fillSegmentBeach(b, seg, cf); else fillSegment(b, seg, cf);
       }
       // keep a clean pocket around the secret portal so it stands out
       if (G.warp) { var wl = G.warp.x0 - 50, wr = G.warp.x1 + 50, clr = function (arr) { return arr.filter(function (o) { return (o.x + (o.w || 40)) < wl || o.x > wr; }); }; G.boxes = clr(G.boxes); G.bricks = clr(G.bricks); G.pipes = clr(G.pipes); }
@@ -1699,7 +1699,7 @@
         for (var sc = 0; sc < 4; sc++) G.coinsA.push({ x: sga.x - 344 + sc * 34, hAbove: 60 + sc * 36, got: false }); // a coin staircase pointing up to it
       }
       // star: mid-level for most worlds; for Meadow put it near the last gate for a triumphant star-powered dash to the castle
-      var mid2 = meadow ? Math.max(1, gx.length - 2) : Math.floor(gx.length / 2); G.star = { x: gx[mid2] - SEG * 0.2, hAbove: 170, taken: false };
+      var mid2 = authored ? Math.max(1, gx.length - 2) : Math.floor(gx.length / 2); G.star = { x: gx[mid2] - SEG * 0.2, hAbove: 170, taken: false };
       // MEADOW hawks — a couple of swooping birds that dive as you approach; jump over them (telegraphed, like the icicle)
       if (meadow && gx.length >= 5) {
         G.hawks.push({ x: gx[Math.min(3, gx.length - 1)] - SEG * 0.5, y: GROUND - 220, vy: 0, state: "hover", phase: 0.6 });
@@ -1763,6 +1763,44 @@
         for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
       }
       void pitL; void pitR;
+    }
+    // BEACH course — reuses Meadow's toys re-skinned for the coast (piranhas leap from the water gaps automatically).
+    var BEACH_ORDER = ["tidepool", "fork", "crabs", "wavedash", "boxes", "coinfield"];
+    function fillSegmentBeach(b, seg, cf) {
+      var arch = BEACH_ORDER[(seg - 1) % BEACH_ORDER.length];
+      var c, q;
+      if (arch === "tidepool") {            // floating barrels across the water gap + a high coin trail
+        G.platforms.push({ x: b + 640, hAbove: 70, w: 96, mv: true, amp: 22, period: 2.0, phase: seg });
+        G.platforms.push({ x: b + 820, hAbove: 96, w: 96, mv: true, amp: 22, period: 2.3, phase: seg + 1 });
+        for (c = 0; c < 5; c++) coin1(b + 670 + c * 42, 150);
+        for (c = 0; c < 4; c++) coin1(b + 1080 + c * 44, 60);
+      } else if (arch === "fork") {         // high boardwalk (gem + Shelly's warp) vs safe low beach
+        G.platforms.push({ x: b + 300, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 470, hAbove: 230, w: 150, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 690, hAbove: 230, w: 170, mv: false, amp: 0, period: 2, phase: 0 });
+        G.platforms.push({ x: b + 940, hAbove: 150, w: 130, mv: false, amp: 0, period: 2, phase: 0 });
+        G.gemsA.push({ x: b + 770, hAbove: 292, got: false });
+        for (c = 0; c < 4; c++) coin1(b + 500 + c * 40, 272);
+        for (c = 0; c < 5; c++) coin1(b + 340 + c * 130, 50);
+      } else if (arch === "crabs") {        // scuttling crabs + a brick row to hop
+        G.enemies.push({ x1: b + 240, x2: b + 430, x: b + 240, dir: 1, alive: true, crab: true });
+        G.enemies.push({ x1: b + 1050, x2: b + 1240, x: b + 1240, dir: -1, alive: true, crab: true });
+        for (q = 0; q < 3; q++) G.bricks.push({ x: b + 1080 + q * 50, hAbove: 150, w: 46, h: 42, tapped: false, used: false });
+        for (c = 0; c < 4; c++) coin1(b + 250 + c * 44, 60);
+      } else if (arch === "wavedash") {     // receding wave — speed ramp + coin river + a bouncy beach ball
+        G.speedZones.push({ x0: b + 120, x1: b + SEG * 0.9, mult: 1.55 });
+        for (c = 0; c < 16; c++) coin1(b + 180 + c * 70, 48 + (c % 3) * 20);
+        G.springs.push({ x: b + SEG * 0.86, t: 0 });
+      } else if (arch === "boxes") {        // pipes to hop + a power box
+        G.pipes.push({ x: b + 300, w: 46, h: 70 });
+        G.pipes.push({ x: b + 1080, w: 46, h: 104 }); G.pipes.push({ x: b + 1210, w: 46, h: 66 });
+        G.boxes.push({ x: b + 420, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        coin1(b + 323, 190); coin1(b + 1145, 175); coin1(b + 1145, 130);
+      } else {                              // coinfield breather
+        for (c = 0; c < 6; c++) coin1(b + 220 + c * 46, 52);
+        G.boxes.push({ x: b + 1120, hAbove: 150, w: 48, h: 44, used: false, power: true });
+        for (c = 0; c < 4; c++) coin1(b + 1090 + c * 40, 205);
+      }
     }
     function placeFeature(kind, ox, seg, idx, cf) {
       var c, q;
@@ -1940,7 +1978,7 @@
           // Snow icicles: drop ahead of you — only DANGEROUS while dropping; once settled on the floor it's a spent spike you can run right over
           for (var ici = 0; ici < G.icicles.length; ici++) { var icc = G.icicles[ici]; if (icc.done) continue; if (!icc.falling && h.wx > icc.x - 230 && h.wx < icc.x) icc.falling = true; if (icc.falling && !icc.landed && G.frostT <= 0) { icc.vy += 1500 * dt; icc.y += icc.vy * dt; if (!TEST && h.inv <= 0 && Math.abs(icc.x - h.wx) < 26 && (icc.y + 42) > (h.y - 46) && icc.y < h.y) { hurt(); icc.done = true; continue; } if (icc.y >= GROUND - 22) { icc.y = GROUND - 22; icc.landed = true; aStomp(); G.shakeT = Math.max(G.shakeT, .12); } } }
           // Meadow hawks — hover, then dive straight down as you come near; jump over the diving bird to dodge
-          for (var hwi = 0; hwi < G.hawks.length; hwi++) {
+          for (var hwi = 0; G.hawks && hwi < G.hawks.length; hwi++) {
             var hw = G.hawks[hwi];
             if (hw.state === "hover") { hw.y = GROUND - 220 + Math.sin(G.t * 3 + hw.phase) * 12; if (h.wx > hw.x - 120 && h.wx < hw.x - 8) { hw.state = "dive"; hw.vy = 120; } }
             else if (hw.state === "dive") { hw.vy += 1150 * dt; hw.y += hw.vy * dt; if (!TEST && h.inv <= 0 && Math.abs(hw.x - h.wx) < 32 && (hw.y + 22) > (h.y - 46) && hw.y < h.y + 10) hurt(); if (hw.y >= GROUND - 26) { hw.y = GROUND - 26; hw.state = "rise"; } }
@@ -2099,7 +2137,7 @@
         question: null, input: "", lastCP: HEROX, particles: [], cloud: 0, shakeT: 0, dash: 0, qStart: 0,
         correct: 0, wrong: 0, combo: 0, xpEarned: 0, goalMet: false, levelBefore: levelFromXp(progress.xp), trapIndex: -1,
         deck: buildQuestions(focusTables(), 3), deckI: 0,
-        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [],
+        grounds: [], platforms: [], boxes: [], bricks: [], pipes: [], coinsA: [], enemies: [], flags: [], gates: [], star: null, castleX: 0, props: [], flowers: [], traps: [], gemsA: [], powerups: [], fish: [], springs: [], icicles: [], bubbles: [], vines: [], firebars: [], speedZones: [], mushrooms: [], hills: [], hawks: [], fireworks: [],
         floaty: false, moon: false, frostT: 0, bigT: 0, flyT: 0, meter: 0, popT: 0, popTxt: "", warp: null, chest: null, secretWorld: worldN, enterPending: 0, returnTo: { g: mainG, x: retX }
       };
       buildSecretMap();
@@ -2184,7 +2222,7 @@
     }
 
     /* ================= SLINGSHOT SHOWDOWN (mini-boss, several worlds) ================= */
-    var SHOWDOWN_WORLDS = { 1: 1, 3: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade
+    var SHOWDOWN_WORLDS = { 1: 1, 2: 1, 3: 1, 5: 1, 7: 1 };   // worlds that carry a slingshot barricade (Beach = a sandcastle)
     // roles: A=answer(number), B=blocker(no number), M=monster, T=tnt. INVARIANT: nothing sits directly above an A.
     var SD_SHAPES = [
       [[0,0,'B'],[1,0,'B'],[2,0,'B'],[3,0,'B'],[0,1,'A'],[1,1,'A'],[2,1,'A'],[3,1,'A'],[4,0,'M']],
@@ -3085,7 +3123,7 @@
       for (var k = 0; k < G.coinsA.length; k++) { var co = G.coinsA[k]; if (co.got) continue; var cxs = FX(co.x); if (cxs > W + 8 || cxs < -8) continue; pxCoin(cxs, FY(GROUND - co.hAbove), G.t * 6 + co.x); }
       for (var g2 = G.nextGate; g2 < G.gates.length; g2++) { var ga = G.gates[g2]; if (ga.solved) continue; var gxs = FX(ga.x); if (gxs > W + 16 || gxs < -16) continue; pxGate(gxs, gY); }
       var castxs = FX(G.castleX); if (castxs < W + 30 && castxs > -30) pxCastle(castxs, gY);
-      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; pxEnemy(exs, gY, en.dir); }
+      for (var e2 = 0; e2 < G.enemies.length; e2++) { var en = G.enemies[e2]; if (!en.alive) continue; var exs = FX(en.x); if (exs > W + 8 || exs < -8) continue; if (en.crab) pxCrab(exs, gY, en.dir, en.x); else pxEnemy(exs, gY, en.dir); }
       for (var fshr = 0; fshr < G.fish.length; fshr++) { var fz2 = G.fish[fshr]; var fph2 = Math.sin((G.t / fz2.period + fz2.phase) * Math.PI * 2); if (fph2 <= -0.15) continue; var fxs = FX(fz2.x); if (fxs < -20 || fxs > W + 20) continue; pxFish(fxs, FY(GROUND - Math.max(0, fph2) * fz2.amp), fph2, fph2 >= 0.9 ? 0 : (Math.cos((G.t / fz2.period + fz2.phase) * Math.PI * 2) > 0 ? 1 : -1)); }
       for (var tpi = 0; tpi < G.traps.length; tpi++) { var trp3 = G.traps[tpi]; if (trp3.done) continue; var txs = FX(trp3.x); if (txs > W + 24 || txs < -24) continue; pxTrap(trp3.type, txs, FY(groundY(trp3.x)), G.t + trp3.x * 0.01, trp3.sprung); }
       for (var spr2 = 0; spr2 < G.springs.length; spr2++) { var sprx = FX(G.springs[spr2].x); if (sprx < -20 || sprx > W + 20) continue; pxSpring(sprx, gY, G.springs[spr2].t || 0); }
@@ -3440,6 +3478,18 @@
       x.textAlign = "center"; x.fillStyle = "#fff"; x.font = "800 " + SZ(13) + "px monospace"; x.fillText("SKIP!", sgx, sgy + SZ(16)); x.textAlign = "left";
     }
     function pxCastle(cx, gY) { var hh = SZ(150);[-70, -24, 24, 70].forEach(function (o) { P(cx + SZ(o) - SZ(18), gY - hh, SZ(36), hh, C.castle); }); P(cx - SZ(58), gY - SZ(100), SZ(116), SZ(100), C.castleD);[-90, -66, -42, -2, 22, 46, 70, 92].forEach(function (o) { P(cx + SZ(o) - SZ(7), gY - hh - SZ(14), SZ(14), SZ(14), C.castle); }); P(cx - SZ(16), gY - SZ(40), SZ(32), SZ(40), C.door); P(cx - SZ(70), gY - hh - SZ(30), SZ(2), SZ(18), C.pole); P(cx - SZ(68), gY - hh - SZ(30), SZ(14), SZ(8), C.flag); }
+    function pxCrab(cx, gY, dir, wx) {
+      var bnc = Math.round(Math.abs(Math.sin(G.t * 7 + (wx || cx) * 0.12)) * SZ(2)), fy = gY - SZ(34) - bnc;
+      var red = "#e8452a", redD = "#b0301a", eye = "#fff", pup = "#201008";
+      x.strokeStyle = redD; x.lineWidth = Math.max(1, SZ(2));
+      for (var L = -1; L <= 1; L += 2) { for (var j = 0; j < 3; j++) { var lx = cx + L * SZ(15 + j * 4); x.beginPath(); x.moveTo(cx + L * SZ(11), fy + SZ(20)); x.lineTo(lx, gY); x.stroke(); } }   // legs
+      disc(cx, fy + SZ(16), SZ(17), redD); P(cx - SZ(18), fy + SZ(10), SZ(36), SZ(14), red); disc(cx, fy + SZ(16), SZ(14), red);   // wide body
+      P(cx - SZ(28), fy + SZ(8), SZ(11), SZ(9), red); P(cx - SZ(31), fy + SZ(5), SZ(7), SZ(5), redD);   // left claw
+      P(cx + SZ(17), fy + SZ(8), SZ(11), SZ(9), red); P(cx + SZ(24), fy + SZ(5), SZ(7), SZ(5), redD);   // right claw
+      P(cx - SZ(6), fy - SZ(4), SZ(2), SZ(9), redD); P(cx + SZ(4), fy - SZ(4), SZ(2), SZ(9), redD);      // eye stalks
+      P(cx - SZ(8), fy - SZ(10), SZ(6), SZ(6), eye); P(cx + SZ(2), fy - SZ(10), SZ(6), SZ(6), eye);
+      P(cx - SZ(7) + dir * SZ(1), fy - SZ(8), SZ(3), SZ(3), pup); P(cx + SZ(3) + dir * SZ(1), fy - SZ(8), SZ(3), SZ(3), pup);
+    }
     function pxEnemy(cx, gY, dir) { if (HIFI) { hfEnemy(cx, gY, dir); return; } var bnc = Math.round(Math.abs(Math.sin(G.t * 4 + cx)) * SZ(4)), fy = gY - SZ(46) - bnc, w = SZ(24); P(cx - w, fy + SZ(6), w * 2, SZ(40), C.enemy); P(cx - w + SZ(3), fy, w * 2 - SZ(6), SZ(8), C.enemy); P(cx - w, fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx + w - SZ(8), fy + SZ(40), SZ(8), SZ(6), C.enemyD); P(cx - SZ(12), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx + SZ(4), fy + SZ(14), SZ(8), SZ(8), C.enemyEye); P(cx - SZ(11) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); P(cx + SZ(5) + dir * SZ(2), fy + SZ(16), SZ(4), SZ(4), C.enemyPup); }
 
     function pxGem(cx, cy, spin) {
