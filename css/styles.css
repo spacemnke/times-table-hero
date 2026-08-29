@@ -318,7 +318,7 @@ body.lp-full #app { max-width: none; padding: 0; }
 
 /* ============ QUEST HUB (home) ============ */
 canvas[data-pix] { image-rendering: pixelated; display: block; }
-body[data-screen="home"] #app { max-width: 1000px; }
+body[data-screen="home"] #app { max-width: none; padding: 0; }
 .hub { display: flex; flex-direction: column; gap: 14px; }
 .hub-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .player-switch__av { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; background: #0e0930; border-radius: 5px; overflow: hidden; }
@@ -387,7 +387,7 @@ body[data-screen="home"] #app { max-width: 1000px; }
 .hub-map:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.85); }
 
 @media (min-width: 820px) {
-  body[data-screen="home"] #app { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; }
+  body[data-screen="home"] #app { display: block; min-height: 100vh; }
   .hub { width: 100%; margin: auto 0; }
   .hub-map { height: 220px; }
   .hub-grid { display: block; }
@@ -1017,3 +1017,18 @@ body[data-screen="profiles"] { background:
 }
 @media (max-width: 380px) { .ql-plate__nm { font-size: 9.5px; } .ql-isleimg { max-width: 72px; } }
 @media (prefers-reduced-motion: reduce) { .ql-isle.is-current .ql-isleimg { animation: none; } }
+
+/* Quest Land — desktop: full-bleed background, centered + larger island cluster */
+@media (min-width: 820px) {
+  .ql-titlebar { padding-top: 18px; }
+  .ql-title { font-size: 40px; }
+  .ql-rows { max-width: 1140px; margin: 0 auto; width: 100%; gap: 12px; padding: 12px 40px 6px; }
+  .ql-isleimg { max-width: 150px; }
+  .ql-plate { max-width: 156px; }
+  .ql-plate__nm { font-size: 15px; }
+  .ql-plate__st { font-size: 11px; }
+  .ql-flag { width: 32px; height: 38px; }
+  .ql-flag__cloth { width: 22px; height: 16px; font-size: 13px; }
+  .ql-primary { max-width: 1040px; margin: 0 auto; }
+  .ql-secondary { max-width: 1040px; margin-left: auto; margin-right: auto; }
+}
