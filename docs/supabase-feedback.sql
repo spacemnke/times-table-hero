@@ -19,14 +19,14 @@ create policy "anyone can submit feedback" on public.feedback
 drop policy if exists "admin can read feedback" on public.feedback;
 create policy "admin can read feedback" on public.feedback
   for select to authenticated
-  using ((auth.jwt() ->> 'email') = 'spacemnke@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'mario.azzi@gmail.com');
 
 -- 2) Admin stats: accounts / players / new-this-week / feedback count
 create or replace function public.admin_stats()
 returns json language plpgsql security definer set search_path = public as $$
 declare r json;
 begin
-  if (auth.jwt() ->> 'email') is distinct from 'spacemnke@gmail.com' then
+  if (auth.jwt() ->> 'email') is distinct from 'mario.azzi@gmail.com' then
     raise exception 'not authorized';
   end if;
   select json_build_object(
