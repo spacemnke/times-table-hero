@@ -97,7 +97,7 @@ async function device(browser) {
   // parent gate uses the account password
   await A.click(".profiles-grid .pcard");                 // pick first kid → home
   await A.waitForSelector(".screen--home.is-active");
-  await A.click(".grownup-link");
+  await A.evaluate(() => window.__go("parent"));
   await A.waitForSelector("#parent-gate:not([hidden])");
   await A.fill("#gate-input", "wrongpw"); await A.click("#gate-go");
   await A.waitForSelector("#gate-err:not([hidden])", { timeout: 4000 });
@@ -127,7 +127,7 @@ async function device(browser) {
   B.on("dialog", d => d.accept());
   await B.click(".profiles-grid .pcard");
   await B.waitForSelector(".screen--home.is-active");
-  await B.click(".grownup-link");
+  await B.evaluate(() => window.__go("parent"));
   await B.waitForSelector("#parent-gate:not([hidden])");
   await B.fill("#gate-input", "hunter2"); await B.click("#gate-go");
   await B.waitForSelector("#parent-report:not([hidden])");
