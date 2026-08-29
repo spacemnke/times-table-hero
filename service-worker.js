@@ -1,7 +1,7 @@
 /* Times Table Hero — self-updating service worker.
    Network-first for app files so new code loads as soon as it's online;
    falls back to cache when offline. Bump CACHE on release. */
-var CACHE = "tth-v103";
+var CACHE = "tth-v104";
 var ASSETS = [
   "./", "./index.html", "./css/styles.css", "./js/app.js",
   "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"

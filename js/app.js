@@ -4541,7 +4541,6 @@
     // adventure (8-bit Quest Land) — engine owns its own input + controls
     Adv.init();
     $("#daily-challenge").addEventListener("click", function () { sTap(); ac(); Adv.playWorld(Adv.unlocked); });
-    var qh = $("#ql-heroes"); if (qh) qh.addEventListener("click", function () { sTap(); ac(); Adv.startDaily(); });
 
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
     // Practice = always a "Surprise Me" mix of games on the kid's tricky facts (no game/table picker)
