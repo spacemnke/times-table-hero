@@ -178,7 +178,7 @@
       }
     };
   })();
-  var ADMIN_EMAIL = "spacemnke@gmail.com";
+  var ADMIN_EMAIL = "mario.azzi@gmail.com";
 
   /* ---------------- helpers ---------------- */
   function $(s, r) { return (r || document).querySelector(s); }
