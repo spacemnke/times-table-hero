@@ -302,7 +302,10 @@
           </div>
         </div>
 
-        <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
+        <div class="hub-foot-links">
+          <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
+          <button class="grownup-link" data-go="feedback">💬 Feedback</button>
+        </div>
       </div>
     </section>
 
@@ -502,6 +505,55 @@
     </section>
 
     <!-- ============ PARENT REPORT (gated) ============ -->
+    <!-- ============ FEEDBACK ============ -->
+    <section class="screen screen--feedback" data-screen="feedback">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Feedback</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="fb-wrap">
+        <div class="fb-intro">
+          <p class="fb-lead">Times Dash is a <b>free</b> project made for kids — no ads, no cost.</p>
+          <p class="fb-sub">Got an idea, a bug, or just want to say hi? Tell us! 🦄</p>
+        </div>
+        <div class="fb-form" id="fb-form">
+          <label class="fb-label" for="fb-name">Your name <span>(optional)</span></label>
+          <input class="fb-input" id="fb-name" type="text" maxlength="40" placeholder="e.g. Ella" autocomplete="off" />
+          <label class="fb-label" for="fb-msg">Your message</label>
+          <textarea class="fb-input fb-textarea" id="fb-msg" maxlength="1000" rows="5" placeholder="What do you think of Times Dash?"></textarea>
+          <div class="fb-rate" id="fb-rate" role="group" aria-label="Rating">
+            <span class="fb-rate__lab">How fun is it?</span>
+            <button type="button" class="fb-star" data-star="1">★</button>
+            <button type="button" class="fb-star" data-star="2">★</button>
+            <button type="button" class="fb-star" data-star="3">★</button>
+            <button type="button" class="fb-star" data-star="4">★</button>
+            <button type="button" class="fb-star" data-star="5">★</button>
+          </div>
+          <button class="btn-primary fb-send" id="fb-send">Send feedback</button>
+          <p class="fb-status" id="fb-status" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="fb-thanks" id="fb-thanks" hidden>
+          <div class="fb-thanks__ic">🎉</div>
+          <p class="fb-thanks__t">Thank you!</p>
+          <p class="fb-thanks__s">Your feedback landed. It really helps.</p>
+          <button class="btn-primary" data-go="home">Back to the game</button>
+        </div>
+
+        <!-- admin only -->
+        <div class="fb-admin" id="fb-admin" hidden>
+          <h3 class="fb-admin__h">Admin — the numbers</h3>
+          <div class="fb-stats" id="fb-stats">
+            <div class="fb-stat"><b id="fb-st-accounts">–</b><span>Accounts</span></div>
+            <div class="fb-stat"><b id="fb-st-players">–</b><span>Players</span></div>
+            <div class="fb-stat"><b id="fb-st-new">–</b><span>New this week</span></div>
+            <div class="fb-stat"><b id="fb-st-fb">–</b><span>Feedback</span></div>
+          </div>
+          <h3 class="fb-admin__h">What people are saying</h3>
+          <div class="fb-list" id="fb-list"><p class="fb-empty">Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
     <section class="screen screen--parent" data-screen="parent">
       <div class="topbar">
         <button class="btn-back" data-go="home" aria-label="Back home">‹</button>

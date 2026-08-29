@@ -162,9 +162,23 @@
       addKid: function (name, avatar, progress) { return rest("kids", "POST", { name: name, avatar: avatar, progress: progress || {} }); },
       saveKid: function (id, progress) { return rest("kids?id=eq." + id, "PATCH", { progress: progress }); },
       renameKid: function (id, name, avatar) { var b = { name: name }; if (avatar) b.avatar = avatar; return rest("kids?id=eq." + id, "PATCH", b); },
-      removeKid: function (id) { return rest("kids?id=eq." + id, "DELETE"); }
+      removeKid: function (id) { return rest("kids?id=eq." + id, "DELETE"); },
+      // feedback: anyone can submit (anon insert); only the admin can read (RLS on email)
+      submitFeedback: function (payload) {
+        return fetch(CLOUD_URL + "/rest/v1/feedback", { method: "POST", headers: { apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(payload) })
+          .then(function (r) { return { ok: r.status >= 200 && r.status < 300, status: r.status }; }, function () { return { ok: false, status: 0 }; });
+      },
+      adminFeedback: function () { return rest("feedback?select=*&order=created_at.desc&limit=200", "GET"); },
+      adminStats: function () {
+        return token().then(function (tok) {
+          if (!tok) return { ok: false };
+          return fetch(CLOUD_URL + "/rest/v1/rpc/admin_stats", { method: "POST", headers: hdr(tok), body: "{}" })
+            .then(function (r) { return r.text().then(function (t) { var j = null; try { j = t ? JSON.parse(t) : null; } catch (e) {} return { ok: r.ok, data: j }; }); }, function () { return { ok: false }; });
+        });
+      }
     };
   })();
+  var ADMIN_EMAIL = "spacemnke@gmail.com";
 
   /* ---------------- helpers ---------------- */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -497,6 +511,7 @@
     else if (dest === "practice-setup") { show("practice-setup"); }
     else if (dest === "badges") { renderBadges(); show("badges"); }
     else if (dest === "parent") { openParent(); }
+    else if (dest === "feedback") { openFeedback(); show("feedback"); }
     else if (dest === "adventure") { ac(); Adv.startDaily(); }   // hub map banner → open the Quest Land map (same entry as Daily Quest)
     else show(dest);
   }
@@ -927,6 +942,60 @@
       b.textContent = lbl; b.disabled = false;
       if (res && res.ok) { state.parentUnlocked = true; $("#parent-gate").hidden = true; showReport(); }
       else { $("#gate-err").textContent = res && res.error === "offline" ? "No connection — try again." : "Wrong password — try again."; $("#gate-err").hidden = false; $("#gate-input").value = ""; $("#gate-input").focus(); }
+    });
+  }
+  /* ---------------- feedback + admin ---------------- */
+  var fbRating = 0;
+  function renderFbStars() { $all("#fb-rate .fb-star").forEach(function (b) { b.classList.toggle("on", (+b.getAttribute("data-star")) <= fbRating); }); }
+  function openFeedback() {
+    $("#fb-form").hidden = false; $("#fb-thanks").hidden = true;
+    $("#fb-name").value = ""; $("#fb-msg").value = ""; $("#fb-status").hidden = true;
+    fbRating = 0; renderFbStars();
+    var admin = $("#fb-admin");
+    if (Auth.enabled && Auth.signedIn() && Auth.email() === ADMIN_EMAIL) { admin.hidden = false; loadAdmin(); }
+    else admin.hidden = true;
+  }
+  function sendFeedback() {
+    var msg = $("#fb-msg").value.trim(), st = $("#fb-status");
+    if (msg.length < 2) { st.hidden = false; st.className = "fb-status fb-status--err"; st.textContent = "Please type a message first."; return; }
+    if (!Auth.enabled) { st.hidden = false; st.className = "fb-status fb-status--err"; st.textContent = "Feedback needs a connection — try again online."; return; }
+    var b = $("#fb-send"), lbl = b.textContent; b.disabled = true; b.textContent = "Sending…"; st.hidden = true;
+    var who = activeProfile();
+    Auth.submitFeedback({
+      message: msg,
+      kid_name: ($("#fb-name").value.trim() || (who && who.name) || null),
+      rating: fbRating || null,
+      ua: (navigator.userAgent || "").slice(0, 300),
+      email: Auth.email() || null
+    }).then(function (r) {
+      b.disabled = false; b.textContent = lbl;
+      if (r && r.ok) { $("#fb-form").hidden = true; $("#fb-thanks").hidden = false; }
+      else { st.hidden = false; st.className = "fb-status fb-status--err"; st.textContent = (r && r.status === 0) ? "No connection — try again." : "Couldn't send just now — try again soon."; }
+    });
+  }
+  function loadAdmin() {
+    Auth.adminStats().then(function (r) {
+      var d = (r && r.ok && r.data) || {};
+      $("#fb-st-accounts").textContent = d.accounts != null ? d.accounts : "–";
+      $("#fb-st-players").textContent = d.players != null ? d.players : "–";
+      $("#fb-st-new").textContent = d.new7 != null ? d.new7 : "–";
+      $("#fb-st-fb").textContent = d.feedback != null ? d.feedback : "–";
+    });
+    Auth.adminFeedback().then(function (r) {
+      var list = $("#fb-list");
+      if (!r || !r.ok || !r.data) { list.innerHTML = '<p class="fb-empty">Couldn\'t load — is the feedback table set up in Supabase yet?</p>'; return; }
+      if (!r.data.length) { list.innerHTML = '<p class="fb-empty">No feedback yet.</p>'; return; }
+      list.innerHTML = "";
+      r.data.forEach(function (f) {
+        var card = el("div", "fb-item"), head = el("div", "fb-item__head");
+        head.appendChild(el("b", "fb-item__who", f.kid_name || "Someone"));
+        if (f.rating) head.appendChild(el("span", "fb-item__rate", "★".repeat(Math.max(0, Math.min(5, f.rating)))));
+        head.appendChild(el("span", "fb-item__date", f.created_at ? new Date(f.created_at).toLocaleDateString() : ""));
+        card.appendChild(head);
+        card.appendChild(el("p", "fb-item__msg", f.message || ""));
+        if (f.email) { var e2 = el("span", "fb-item__email", f.email); card.appendChild(e2); }
+        list.appendChild(card);
+      });
     });
   }
   function accColor(acc, n) {
@@ -4455,6 +4524,8 @@
     // parent gate
     $("#gate-go").addEventListener("click", function () { sTap(); tryGate(); });
     $("#gate-input").addEventListener("keydown", function (e) { if (e.key === "Enter") tryGate(); });
+    $("#fb-send").addEventListener("click", function () { sTap(); sendFeedback(); });
+    $all("#fb-rate .fb-star").forEach(function (b) { b.addEventListener("click", function () { fbRating = +b.getAttribute("data-star"); renderFbStars(); }); });
     $("#goal-minus").addEventListener("click", function () { changeGoal(-5); });
     $("#goal-plus").addEventListener("click", function () { changeGoal(5); });
     $("#focus-all").addEventListener("click", function () { sTap(); setFocus(allTables()); });
