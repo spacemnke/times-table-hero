@@ -109,7 +109,12 @@
         return post("/auth/v1/signup", { email: email, password: password }).then(function (r) {
           if (r.status >= 200 && r.status < 300) {
             if (r.body && r.body.access_token) return { ok: true, session: setFromToken(r.body) };
-            return { ok: true, session: null, needsConfirm: true };       // "Confirm email" is ON in the project
+            // No session in the signup response — new users are auto-confirmed by a DB trigger,
+            // so sign them straight in for a seamless "sign up and play" flow.
+            return post("/auth/v1/token?grant_type=password", { email: email, password: password }).then(function (r2) {
+              if (r2.body && r2.body.access_token) return { ok: true, session: setFromToken(r2.body) };
+              return { ok: true, session: null, needsConfirm: true };      // fallback if confirmation is ever re-enabled without the trigger
+            });
           }
           return { ok: false, error: authErr(r.body, r.status) };
         });
