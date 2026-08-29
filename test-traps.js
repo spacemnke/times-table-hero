@@ -29,7 +29,7 @@ async function answer(page, correct) {
   await page.goto(`http://localhost:${PORT}/index.html?test=1`, { waitUntil: "networkidle" });
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForSelector('.screen--home.is-active');
-  await page.click('#daily-challenge');
+  await page.evaluate(() => window.__go("adventure"));
   await page.waitForSelector('#adv-mapOv:not(.hidden)');
   console.log("✓ map opened, gems =", await page.evaluate(() => window.__adv.gems));
 

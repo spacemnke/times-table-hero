@@ -220,91 +220,51 @@
 
     <!-- ============ HOME / DASHBOARD ============ -->
     <section class="screen screen--home is-active" data-screen="home">
-      <div class="hub">
-        <header class="hub-top">
-          <button class="player-switch" id="player-switch" aria-label="Switch player">
-            <span class="player-switch__av" id="ps-av"><canvas id="ps-av-c" width="36" height="36" aria-hidden="true"></canvas></span>
-            <span class="player-switch__name" id="ps-name">Player</span>
+      <div class="ql">
+        <header class="ql-hud">
+          <button class="ql-chip ql-who" id="player-switch" aria-label="Switch player">
+            <span class="ql-av"><canvas id="ps-av-c" width="40" height="40" aria-hidden="true"></canvas></span>
+            <span class="ql-who__meta">
+              <span class="ql-who__name" id="ps-name">Player</span>
+              <span class="ql-who__lvl"><span class="ql-star">★</span> Lv. <b id="level-num">1</b> · <span id="rank-name">Rookie</span></span>
+            </span>
             <span class="cloud-badge" id="cloud-badge" hidden aria-label="Saved online">☁︎</span>
-            <span class="player-switch__caret">▾</span>
           </button>
-          <button class="streak-pill" data-go="badges" aria-label="Your streak">
+          <div class="ql-chip ql-xp"><span class="ql-xpbar"><i id="xp-fill"></i></span><span class="ql-xpnum" id="xp-text">0 XP</span></div>
+          <div class="ql-spacer"></div>
+          <button class="ql-chip ql-stat" data-go="badges" aria-label="Your streak">
             <canvas class="streak-flame-c" data-pix="flame" data-s="2" aria-hidden="true"></canvas>
-            <span class="streak-meta"><b class="streak-num" id="streak-num">0</b><small>DAY STREAK</small></span>
+            <span class="ql-stat__col"><b class="streak-num" id="streak-num">0</b><small>DAY STREAK</small></span>
             <span class="streak-freeze" id="streak-freeze" hidden title="Streak freeze ready">❄️</span>
           </button>
+          <div class="ql-chip ql-stat"><canvas data-pix="coin" data-s="2" aria-hidden="true"></canvas><b id="hub-coins">0</b></div>
+          <div class="ql-chip ql-stat"><canvas data-pix="gem" data-s="2" aria-hidden="true"></canvas><b id="hub-gems">0</b></div>
         </header>
 
-        <button class="hub-map" data-go="adventure" aria-label="Open the quest map">
-          <canvas id="hub-questmap" aria-hidden="true"></canvas>
-          <span class="hub-map__lab"><b id="hub-worldlab">WORLD 1 · MEADOW</b><span>TAP TO OPEN THE MAP ›</span></span>
-        </button>
-
-        <div class="hub-grid">
-          <div class="hub-col hub-col--a">
-            <div class="hub-hero">
-              <div class="ring" id="level-ring">
-                <svg viewBox="0 0 44 44" aria-hidden="true">
-                  <circle class="ring__bg" cx="22" cy="22" r="19"></circle>
-                  <circle class="ring__fg" id="level-ring-fg" cx="22" cy="22" r="19"></circle>
-                </svg>
-                <span class="ring__num" id="level-num">1</span>
-              </div>
-              <div class="hub-hero__meta">
-                <span class="dash-rank" id="rank-name">Rookie</span>
-                <div class="xpbar"><i id="xp-fill"></i></div>
-                <span class="dash-xp" id="xp-text">0 XP</span>
-              </div>
-              <div class="purse">
-                <span class="coinpill"><canvas data-pix="coin" data-s="2" aria-hidden="true"></canvas><b id="hub-coins">0</b></span>
-                <span class="coinpill"><canvas data-pix="gem" data-s="2" aria-hidden="true"></canvas><b id="hub-gems">0</b></span>
-              </div>
+        <div class="ql-stage">
+          <div class="ql-titlebar"><h1 class="ql-title"><span class="ql-s">★</span> QUEST LAND <span class="ql-s">★</span></h1><p class="ql-sub">Choose your next world!</p></div>
+          <div class="ql-rows" id="ql-worlds"></div>
+          <div class="ql-ground">
+            <div class="ql-primary">
+              <button class="ql-btn ql-btn--daily" id="daily-challenge">
+                <span class="ql-bic"><canvas data-pix="bolt" data-s="3" aria-hidden="true"></canvas></span>
+                <span class="ql-bt"><b>Daily Quest</b><small id="cta-sub">20 questions</small></span>
+              </button>
+              <button class="ql-btn ql-btn--practice" data-go="practice-setup">
+                <span class="ql-bic"><canvas data-pix="target" data-s="3" aria-hidden="true"></canvas></span>
+                <span class="ql-bt"><b>Practice</b><small>Train tricky questions</small></span>
+              </button>
+              <button class="ql-btn ql-btn--badges" data-go="badges">
+                <span class="ql-bic"><canvas data-pix="star" data-s="3" aria-hidden="true"></canvas></span>
+                <span class="ql-bt"><b>Badges</b><small id="badge-sub">See your rewards</small></span>
+              </button>
             </div>
-
-            <div class="daily-card">
-              <div class="daily-card__head">
-                <span class="daily-card__title">Today's goal</span>
-                <span class="daily-card__count"><b id="daily-done">0</b> / <span id="daily-goal">20</span></span>
-              </div>
-              <div class="pips" id="daily-pips"></div>
-              <p class="daily-card__msg" id="daily-msg">Do your Daily Challenge to keep your streak alive!</p>
+            <div class="ql-secondary">
+              <button class="ql-schip" id="ql-heroes"><span class="ql-schip__ic">🦄</span> HEROES</button>
+              <button class="ql-schip" data-go="parent"><span class="ql-schip__ic">🔒</span> GROWN-UPS</button>
+              <button class="ql-schip" data-go="feedback"><span class="ql-schip__ic">💬</span> FEEDBACK</button>
             </div>
           </div>
-
-          <div class="hub-col hub-col--b">
-            <button class="cta" id="daily-challenge">
-              <span class="cta__tag">TODAY</span>
-              <span class="cta__icon"><canvas data-pix="bolt" data-s="3" aria-hidden="true"></canvas></span>
-              <span class="cta__text">
-                <span class="cta__title">Daily Quest</span>
-                <span class="cta__sub" id="cta-sub">20 questions · builds your streak</span>
-              </span>
-              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#ffffff" aria-hidden="true"></canvas></span>
-            </button>
-
-            <button class="cta cta--practice" data-go="practice-setup">
-              <span class="cta__icon"><canvas data-pix="target" data-s="3" aria-hidden="true"></canvas></span>
-              <span class="cta__text">
-                <span class="cta__title">Practice</span>
-                <span class="cta__sub">A mix of games on your tricky ones</span>
-              </span>
-              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#ffffff" aria-hidden="true"></canvas></span>
-            </button>
-
-            <button class="cta cta--badges" data-go="badges">
-              <span class="cta__icon"><canvas data-pix="star" data-s="3" aria-hidden="true"></canvas></span>
-              <span class="cta__text">
-                <span class="cta__title">Badges</span>
-                <span class="cta__sub" id="badge-sub">See the rewards you've earned</span>
-              </span>
-              <span class="cta__go"><canvas data-pix="chev" data-s="3" data-col="#3a1e08" aria-hidden="true"></canvas></span>
-            </button>
-          </div>
-        </div>
-
-        <div class="hub-foot-links">
-          <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
-          <button class="grownup-link" data-go="feedback">💬 Feedback</button>
         </div>
       </div>
     </section>

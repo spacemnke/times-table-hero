@@ -22,7 +22,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: "networkidle" });
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForSelector('.screen--home.is-active');
-  await page.click('#daily-challenge');
+  await page.evaluate(() => window.__go("adventure"));
   await page.waitForSelector('#adv-mapOv:not(.hidden)');
   await page.evaluate(() => window.__adv.start(1)); // World 1
   await sleep(300);

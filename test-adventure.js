@@ -24,7 +24,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.waitForSelector('.screen--home.is-active');
   console.log("✓ loaded as Mia");
 
-  await page.click('#daily-challenge');
+  await page.evaluate(() => window.__go("adventure"));
   await page.waitForSelector('.screen--adv.is-active');
   await page.waitForSelector('#adv-mapOv:not(.hidden)');
   console.log("✓ Quest Land map opened");

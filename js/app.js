@@ -545,39 +545,70 @@
   /* ---------------- HOME / dashboard ---------------- */
   function renderHome() {
     var lp = levelProgress(progress.xp);
-    $("#level-num").textContent = lp.level;
-    $("#rank-name").textContent = rankName(lp.level);
-    $("#xp-text").textContent = progress.xp + " XP";
-    $("#level-ring-fg").style.strokeDashoffset = String(RING_C * (1 - lp.frac));
+    var set = function (id, v) { var e = $("#" + id); if (e) e.textContent = v; };
+    set("level-num", lp.level);
+    set("rank-name", rankName(lp.level));
+    set("xp-text", progress.xp + " XP");
+    var ring = $("#level-ring-fg"); if (ring) ring.style.strokeDashoffset = String(RING_C * (1 - lp.frac));
 
     var det = streakDetail(), streak = det.streak;
-    $("#streak-num").textContent = streak;
-    $(".streak-pill").classList.toggle("is-lit", streak > 0);
-    $("#streak-freeze").hidden = !(det.freezeReady && streak > 0);
+    set("streak-num", streak);
+    var sp = $(".streak-pill"); if (sp) sp.classList.toggle("is-lit", streak > 0);
+    var sf = $("#streak-freeze"); if (sf) sf.hidden = !(det.freezeReady && streak > 0);
 
     var xf = $("#xp-fill"); if (xf) xf.style.width = clamp(lp.frac * 100, 3, 100) + "%";
-    var hc = $("#hub-coins"); if (hc) hc.textContent = progress.coins || 0;
-    var hg = $("#hub-gems"); if (hg) hg.textContent = progress.gems || 0;
+    set("hub-coins", progress.coins || 0);
+    set("hub-gems", progress.gems || 0);
 
     var goal = progress.settings.dailyGoal, done = (progress.days[dayKey(0)] || {}).q || 0;
-    $("#daily-goal").textContent = goal;
-    $("#daily-done").textContent = Math.min(done, goal);
-    renderDailyPips(goal, Math.min(done, goal));
-    var msg;
-    if (done >= goal) msg = "Goal smashed today! 🎉 Come back tomorrow to grow your streak.";
-    else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
-    else msg = "Start your Daily Quest to keep your streak alive!";
-    if (streak > 0 && !det.todayMet) {
-      msg += det.freezeReady
-        ? "  ❄️ Streak freeze is ready — one missed day is okay."
-        : "  🔥 Practise today to keep your " + streak + "-day streak!";
+    if ($("#daily-goal")) { set("daily-goal", goal); set("daily-done", Math.min(done, goal)); renderDailyPips(goal, Math.min(done, goal)); }
+    if ($("#daily-msg")) {
+      var msg;
+      if (done >= goal) msg = "Goal smashed today! 🎉 Come back tomorrow to grow your streak.";
+      else if (done > 0) msg = "Nice start — " + (goal - done) + " more to hit today's goal!";
+      else msg = "Start your Daily Quest to keep your streak alive!";
+      if (streak > 0 && !det.todayMet) msg += det.freezeReady ? "  ❄️ Streak freeze is ready — one missed day is okay." : "  🔥 Practise today to keep your " + streak + "-day streak!";
+      set("daily-msg", msg);
     }
-    $("#daily-msg").textContent = msg;
-    $("#cta-sub").textContent = clamp(goal, 10, 25) + " questions · " + focusLabel();
+    set("cta-sub", clamp(goal, 10, 25) + " questions · " + focusLabel());
     var bs = $("#badge-sub"); if (bs && typeof BADGES !== "undefined") { var earned = BADGES.filter(function (b) { try { return b.test(); } catch (e) { return false; } }).length; bs.textContent = earned + " of " + BADGES.length + " earned"; }
+    renderWorldGrid();
     paintQuestMap();
     drawHubAvatar();
     Pix.paint($(".screen--home"));
+  }
+  // Quest Land island grid — the 8 worlds as the home world-select
+  var QL_WORLDS = [
+    { n: 1, name: "MEADOW", cls: "w1" }, { n: 2, name: "BEACH", cls: "w2", warp: true },
+    { n: 3, name: "CANDY", cls: "w3" }, { n: 4, name: "OCEAN", cls: "w4", warp: true },
+    { n: 5, name: "SNOW", cls: "w5" }, { n: 6, name: "JUNGLE", cls: "w6", warp: true },
+    { n: 7, name: "VOLCANO", cls: "w7" }, { n: 8, name: "SPACE", cls: "w8" }
+  ];
+  function renderWorldGrid() {
+    var wrap = $("#ql-worlds"); if (!wrap) return;
+    var cur = clamp(progress.worldsUnlocked || 1, 1, 8);
+    wrap.innerHTML = "";
+    var row;
+    QL_WORLDS.forEach(function (wd, i) {
+      if (i % 4 === 0) { row = el("div", "ql-row"); wrap.appendChild(row); }
+      var locked = wd.n > cur, cleared = wd.n < cur, current = wd.n === cur;
+      var b = el("button", "ql-isle " + wd.cls + (locked ? " is-locked" : "") + (current ? " is-current" : ""));
+      b.setAttribute("data-world", wd.n);
+      var status = locked ? '<span class="ql-plate__st ql-st--lock">🔒 Locked</span>'
+        : cleared ? '<span class="ql-plate__st ql-st--done">★ Cleared</span>'
+        : '<span class="ql-plate__st ql-st--play">▶ PLAY</span>';
+      var warp = (wd.warp && !locked) ? '<span class="ql-warp"><span class="ql-warp__b"></span><span class="ql-warp__t">WARP!</span></span>' : '';
+      b.innerHTML =
+        '<span class="ql-flag"><span class="ql-flag__pole"></span><span class="ql-flag__cloth">' + wd.n + '</span></span>' +
+        '<span class="ql-art"><img class="ql-isleimg" src="assets/worlds/' + wd.cls + '.png" alt="' + wd.name + '" loading="lazy"></span>' +
+        '<span class="ql-plate"><span class="ql-plate__nm">' + wd.name + '</span>' + status + '</span>' + warp;
+      b.addEventListener("click", function () {
+        sTap();
+        if (locked) { b.classList.remove("ql-shake"); void b.offsetWidth; b.classList.add("ql-shake"); return; }
+        ac(); Adv.playWorld(wd.n);
+      });
+      row.appendChild(b);
+    });
   }
   function paintQuestMap() {
     var lab = $("#hub-worldlab"); if (lab) { var cur = clamp(progress.worldsUnlocked || 1, 1, 8); lab.textContent = "WORLD " + cur + " · " + HUB_WORLDS[cur - 1][0]; }
@@ -4194,6 +4225,9 @@
       get gems() { return progress.gems || 0; }, get level() { return level; }, get shield() { return G ? !!G.shield : null; },
       get metrics() { if (!G) return null; var vis = PIXW / sx; return { castleX: Math.round(G.castleX), gates: G.gates.length, seg: SEG, visibleWorldUnits: Math.round(vis), screensWide: +(G.castleX / vis).toFixed(1), runSeconds: +(G.castleX / G.speed).toFixed(1) }; },
       start: function (n) { startLevel(n || 1); }, openMap: openMap,
+      // launch a world directly from the new Quest Land home (enter the engine, then play level n)
+      playWorld: function (n) { HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1); n = Math.max(1, Math.min(MAXLEVELS, n || 1)); enter(); startLevel(n); },
+      get unlocked() { return Math.max(1, (progress && progress.worldsUnlocked) || 1); },
       tp: function (x) { if (G) { G.hero.wx = x; G.hero.y = GROUND; G.hero.vy = 0; G.hero.ground = true; G.cam = x - HEROX; var ng = G.gates.length; for (var i = 0; i < G.gates.length; i++) { if (G.gates[i].x <= x + 60) G.gates[i].solved = true; else { ng = i; break; } } G.nextGate = ng; if (G.showdown && G.showdown.x < x) G.showdown.done = true; G.state = "run"; try { mathHide(); } catch (e) {} } },
       gxAt: function (i) { return G && G.gates[i] ? G.gates[i].x : null; },
       forceTrap: function () { if (!G) return; G.traps.push({ x: G.hero.wx, type: pick(G.cf.trapPool), done: false, sprung: false }); springTrap(G.traps.length - 1); },
@@ -4376,7 +4410,9 @@
       x = savedX;
       var cp = nodes[Math.min(un, MAXLEVELS) - 1]; if (cp) heroDraw(mg, (progress && progress.hero) || "unicorn", cp.x - R * 1.05, cp.y - R * 3.05, R * 2.1, R * 1.9, 0, true);
     }
-    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene, drawQuestMap: drawQuestMap };
+    return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene, drawQuestMap: drawQuestMap,
+      playWorld: function (n) { HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1); n = Math.max(1, Math.min(MAXLEVELS, n || 1)); enter(); startLevel(n); },
+      get unlocked() { return Math.max(1, (progress && progress.worldsUnlocked) || 1); } };
   })();
 
   /* ---------------- init / wiring ---------------- */
@@ -4499,7 +4535,8 @@
 
     // adventure (8-bit Quest Land) — engine owns its own input + controls
     Adv.init();
-    $("#daily-challenge").addEventListener("click", function () { sTap(); ac(); Adv.startDaily(); });
+    $("#daily-challenge").addEventListener("click", function () { sTap(); ac(); Adv.playWorld(Adv.unlocked); });
+    var qh = $("#ql-heroes"); if (qh) qh.addEventListener("click", function () { sTap(); ac(); Adv.startDaily(); });
 
     $("#quiz-start").addEventListener("click", function () { sTap(); ac(); startPlay({ tables: state.quizTables.slice(), len: state.quizLen, mode: state.quizMode, isDaily: false }); });
     // Practice = always a "Surprise Me" mix of games on the kid's tricky facts (no game/table picker)
