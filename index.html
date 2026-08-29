@@ -260,6 +260,7 @@
               </button>
             </div>
             <div class="ql-secondary">
+              <button class="ql-schip" data-go="heroes"><span class="ql-schip__ic">🦄</span> HEROES</button>
               <button class="ql-schip" data-go="parent"><span class="ql-schip__ic">🔒</span> GROWN-UPS</button>
               <button class="ql-schip" data-go="feedback"><span class="ql-schip__ic">💬</span> FEEDBACK</button>
             </div>
@@ -464,6 +465,23 @@
     </section>
 
     <!-- ============ PARENT REPORT (gated) ============ -->
+    <!-- ============ HEROES ============ -->
+    <section class="screen screen--heroes" data-screen="heroes">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Heroes</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="heroes-wrap">
+        <div class="heroes-head">
+          <p class="heroes-lead">Tap a hero to wear it</p>
+          <span class="heroes-gems"><canvas data-pix="gem" data-s="2" aria-hidden="true"></canvas><b id="heroes-gemN">0</b></span>
+        </div>
+        <p class="heroes-status" id="heroes-status" role="status" aria-live="polite"></p>
+        <div class="hero-grid" id="heroes-grid"></div>
+        <p class="heroes-foot">Earn purple coins ◆ in the worlds to unlock powered-up heroes. Secret heroes hide behind the warp paths! 🦄</p>
+      </div>
+    </section>
+
     <!-- ============ FEEDBACK ============ -->
     <section class="screen screen--feedback" data-screen="feedback">
       <div class="topbar">

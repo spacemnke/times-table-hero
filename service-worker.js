@@ -1,4 +1,4 @@
-/* Times Table Hero — offline cache. Bump CACHE when files change. */
+/* Times Dash — offline cache. Bump CACHE when files change. */
 var CACHE = "tth-v13";
 var ASSETS = [
   "./",
@@ -31,24 +31,34 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
-  // never touch cross-origin requests (Supabase auth/data API) — let them go straight to the network
-  try { if (new URL(req.url).origin !== self.location.origin) return; } catch (err) { return; }
-  e.respondWith(
-    caches.match(req).then(function (cached) {
-      if (cached) return cached;
-      return fetch(req).then(function (res) {
-        // cache same-origin GETs we fetch at runtime
-        try {
-          var url = new URL(req.url);
-          if (url.origin === self.location.origin) {
-            var copy = res.clone();
-            caches.open(CACHE).then(function (c) { c.put(req, copy); });
-          }
-        } catch (err) {}
+  var url;
+  try { url = new URL(req.url); } catch (err) { return; }
+  // never touch cross-origin (Supabase auth/data API) — straight to the network
+  if (url.origin !== self.location.origin) return;
+
+  // The page shell (HTML navigations) is network-first so a new release shows up
+  // on the next load instead of being pinned to the cache.
+  var isHTML = req.mode === "navigate" || url.pathname === "/" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+  if (isHTML) {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        try { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); } catch (err) {}
         return res;
       }).catch(function () {
-        return caches.match("./index.html");
-      });
+        return caches.match(req).then(function (c) { return c || caches.match("./index.html"); });
+      })
+    );
+    return;
+  }
+
+  // Other same-origin assets: serve cached fast, refresh in the background (stale-while-revalidate).
+  e.respondWith(
+    caches.match(req).then(function (cached) {
+      var net = fetch(req).then(function (res) {
+        try { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); } catch (err) {}
+        return res;
+      }).catch(function () { return cached; });
+      return cached || net;
     })
   );
 });
