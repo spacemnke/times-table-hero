@@ -1,7 +1,7 @@
 {
-  "name": "Times Table Hero",
-  "short_name": "Table Hero",
-  "description": "A fun way to learn the times tables up to 12.",
+  "name": "Times Dash",
+  "short_name": "Times Dash",
+  "description": "A free times-tables adventure game — learn the times tables up to 12.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,4 +1,4 @@
-/* Times Table Hero — vanilla JS, no build step. v2 (age 10: streaks, XP, badges, parent report). */
+/* Times Dash — vanilla JS, no build step. v2 (age 10: streaks, XP, badges, parent report). */
 (function () {
   "use strict";
 
@@ -3349,7 +3349,7 @@
       if (!th.night && !PIER) for (var fw = 0; fw < G.flowers.length; fw++) { var fo = G.flowers[fw]; var foX = FX(fo.x); if (foX < -4 || foX > W + 4) continue; if (groundAt(fo.x)) pxFlower(foX, FY(groundY(fo.x)) + SZ(6), fo.k); }
       var h = G.hero, warping = G.state === "warping" && warpFX; var wsc = warping ? warpFX.scale : 1;
       if (G.state !== "trapped" && (warping || !(h.inv > 0 && Math.floor(G.t * 16) % 2)) && wsc > 0.04) {
-        var B = Math.max(1.8, sx * 4); if (G.bigT > 0) B *= 1.5;
+        var B = 2 * Math.max(1.8, sx * 4); if (G.bigT > 0) B *= 1.6;   // hero drawn 2x bigger by default; Power Berry makes it 1.6x bigger again
         var hbxp = FX(h.wx) - 7 * B, hby = FY(h.y) - 12 * B + SZ(2);
         if (h.power > 0) { disc(FX(h.wx), FY(h.y) - 6 * B, 9 * B, "rgba(255," + (120 + Math.floor(Math.sin(G.t * 20) * 80)) + ",240,.25)"); }
         if (G.flyT > 0) { var wf = Math.sin(G.t * 22) > 0 ? SZ(4) : 0; P(hbxp - SZ(7), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); P(hbxp + 14 * B - SZ(2), hby + 3 * B - wf, SZ(9), SZ(5), "#eef2f8"); }
