@@ -128,7 +128,7 @@
           return { ok: false, error: authErr(r.body, r.status) };
         });
       },
-      recover: function (email) { return post("/auth/v1/recover", { email: email }).then(function (r) { return { ok: r.status >= 200 && r.status < 300, error: authErr(r.body, r.status) }; }); },
+      recover: function (email) { var rt = ""; try { rt = "?redirect_to=" + encodeURIComponent(location.origin + location.pathname); } catch (e) {} return post("/auth/v1/recover" + rt, { email: email }).then(function (r) { return { ok: r.status >= 200 && r.status < 300, error: authErr(r.body, r.status) }; }); },
       // a password-reset link opens the app with tokens in the URL hash — adopt them as a session
       consumeHash: function () {
         try {
