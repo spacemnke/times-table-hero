@@ -517,6 +517,7 @@
     else if (dest === "badges") { renderBadges(); show("badges"); }
     else if (dest === "parent") { openParent(); }
     else if (dest === "feedback") { openFeedback(); show("feedback"); }
+    else if (dest === "heroes") { openHeroes(); }
     else if (dest === "adventure") { ac(); Adv.startDaily(); }   // hub map banner → open the Quest Land map (same entry as Daily Quest)
     else show(dest);
   }
@@ -979,6 +980,13 @@
       if (res && res.ok) { state.parentUnlocked = true; $("#parent-gate").hidden = true; showReport(); }
       else { $("#gate-err").textContent = res && res.error === "offline" ? "No connection — try again." : "Wrong password — try again."; $("#gate-err").hidden = false; $("#gate-input").value = ""; $("#gate-input").focus(); }
     });
+  }
+  function openHeroes() {
+    show("heroes");
+    var gn = $("#heroes-gemN"); if (gn) gn.textContent = progress.gems || 0;
+    var st = $("#heroes-status"); if (st) { st.textContent = ""; st.classList.remove("flash"); }
+    try { Adv.renderHeroPicker($("#heroes-grid"), $("#heroes-status")); } catch (e) {}
+    Pix.paint($(".screen--heroes"));
   }
   /* ---------------- feedback + admin ---------------- */
   var fbRating = 0;
@@ -4109,6 +4117,41 @@
       var info = $("#adv-gemInfo"); if (info) info.textContent = "◆ " + gems + " purple coins — grab them to unlock heroes!";
     }
     function redrawPmapHero() { var pg = $("#adv-pmapHero").getContext("2d"); pg.imageSmoothingEnabled = false; pg.clearRect(0, 0, 12, 12); heroMarkPix(pg); }
+    // Hero picker for the new home flow — renders hero cards into a styled grid element.
+    function renderHeroPicker(grid, statusEl) {
+      if (!grid) return;
+      if (progress.hero) HEROTYPE = progress.hero;   // reflect the saved hero even before a level is entered
+      grid.innerHTML = "";
+      var gems = progress.gems || 0;
+      function flash(msg) { if (statusEl) { statusEl.textContent = msg; statusEl.classList.remove("flash"); void statusEl.offsetWidth; statusEl.classList.add("flash"); } }
+      function card(id, name, subText, locked, lockMsg) {
+        var on = (id === HEROTYPE);
+        var btn = el("button", "hero-card" + (on ? " is-on" : "") + (locked ? " is-locked" : ""));
+        var c = document.createElement("canvas"); c.width = 64; c.height = 52; c.className = "hero-card__ava";
+        var g = c.getContext("2d"); g.imageSmoothingEnabled = false;
+        if (locked) g.globalAlpha = 0.32; heroDraw(g, id, 0, 4, 64, 46, 0, true); g.globalAlpha = 1;
+        btn.appendChild(c);
+        btn.appendChild(el("div", "hero-card__name", name));
+        btn.appendChild(el("div", "hero-card__sub", subText));
+        if (on) btn.appendChild(el("div", "hero-card__badge", "✓ WEARING"));
+        btn.addEventListener("click", function () {
+          if (locked) { aBad(); haptic(20); flash(lockMsg); return; }
+          HEROTYPE = id; progress.hero = id; save(); aStar(); haptic(12);
+          if (statusEl) statusEl.textContent = "Now playing as " + name + "!";
+          renderHeroPicker(grid, statusEl);
+        });
+        grid.appendChild(btn);
+      }
+      CHARS.forEach(function (ch) {
+        var locked = !!(ch.cost && gems < ch.cost);
+        var sub = ch.cost ? (locked ? ("◆ " + ch.cost + " to unlock") : ch.note) : (ch.id === HEROTYPE ? "Your hero" : "Free");
+        card(ch.id, ch.name, sub, locked, "Collect " + ch.cost + " purple coins to unlock " + ch.name + "!");
+      });
+      Object.keys(SECRET_CHARS).forEach(function (wk) {
+        var ch = SECRET_CHARS[wk], found = !!(progress.secretsFound && progress.secretsFound[wk]);
+        card(ch.id, found ? ch.name : "???", found ? ch.note : ("🔒 Hidden in " + ch.from), !found, "Find the secret warp in " + ch.from + " to unlock " + ch.name + "!");
+      });
+    }
 
     /* ---- lifecycle ---- */
     function enter() { show("adventure"); resize(); running = true; if (!looping) { looping = true; last = 0; requestAnimationFrame(frame); } kickPaint(); }
@@ -4417,6 +4460,7 @@
     }
     return { init: advInit, startDaily: startDaily, exitHome: exitHome, startArena: startArena, drawHero: drawHero, drawWorld: drawWorld, drawHowScene: drawHowScene, drawQuestMap: drawQuestMap,
       playWorld: function (n) { HEROTYPE = progress.hero || "unicorn"; unlocked = Math.max(1, progress.worldsUnlocked || 1); n = Math.max(1, Math.min(MAXLEVELS, n || 1)); enter(); startLevel(n); },
+      renderHeroPicker: renderHeroPicker,
       get unlocked() { return Math.max(1, (progress && progress.worldsUnlocked) || 1); } };
   })();
 
