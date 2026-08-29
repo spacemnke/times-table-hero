@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#5b3df0" />
 
-  <title>Times Table Hero</title>
-  <meta name="description" content="Master the times tables up to 12 — with streaks, levels and badges." />
+  <title>Times Dash</title>
+  <meta name="description" content="Times Dash — a free times-tables adventure game with streaks, levels and badges. No ads, no cost." />
 
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Table Hero" />
+  <meta name="apple-mobile-web-app-title" content="Times Dash" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="css/styles.css?v=18462c51787257102" />
+  <link rel="stylesheet" href="css/styles.css?v=2e460611787986300" />
 </head>
 <body>
   <div id="app">
@@ -34,7 +34,7 @@
           <canvas class="lp-scene" id="lp-scene" aria-hidden="true"></canvas>
           <div class="lp-hero__copy">
             <span class="lp-eyebrow">AN 8-BIT TIMES-TABLE ADVENTURE</span>
-            <h1 class="lp-logo">TIMES TABLE<br /><span>HERO</span></h1>
+            <h1 class="lp-logo">TIMES<br /><span>DASH</span></h1>
             <p class="lp-tag">Gallop through eight pixel worlds. Every glowing gate is a times-table question — nail it to blast straight through. It's <b>×1 to ×12</b> practice that plays like a Saturday-morning platformer.</p>
             <div class="lp-cta" id="lp-cta-out">
               <button class="lp-btn lp-btn--play" id="lp-create" data-lp="create">▶ CREATE ACCOUNT</button>
@@ -302,7 +302,10 @@
           </div>
         </div>
 
-        <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
+        <div class="hub-foot-links">
+          <button class="grownup-link" data-go="parent"><canvas data-pix="lock" data-s="2" aria-hidden="true"></canvas> Grown-ups</button>
+          <button class="grownup-link" data-go="feedback">💬 Feedback</button>
+        </div>
       </div>
     </section>
 
@@ -502,6 +505,55 @@
     </section>
 
     <!-- ============ PARENT REPORT (gated) ============ -->
+    <!-- ============ FEEDBACK ============ -->
+    <section class="screen screen--feedback" data-screen="feedback">
+      <div class="topbar">
+        <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
+        <h2 class="topbar__title">Feedback</h2><div class="topbar__spacer"></div>
+      </div>
+      <div class="fb-wrap">
+        <div class="fb-intro">
+          <p class="fb-lead">Times Dash is a <b>free</b> project made for kids — no ads, no cost.</p>
+          <p class="fb-sub">Got an idea, a bug, or just want to say hi? Tell us! 🦄</p>
+        </div>
+        <div class="fb-form" id="fb-form">
+          <label class="fb-label" for="fb-name">Your name <span>(optional)</span></label>
+          <input class="fb-input" id="fb-name" type="text" maxlength="40" placeholder="e.g. Ella" autocomplete="off" />
+          <label class="fb-label" for="fb-msg">Your message</label>
+          <textarea class="fb-input fb-textarea" id="fb-msg" maxlength="1000" rows="5" placeholder="What do you think of Times Dash?"></textarea>
+          <div class="fb-rate" id="fb-rate" role="group" aria-label="Rating">
+            <span class="fb-rate__lab">How fun is it?</span>
+            <button type="button" class="fb-star" data-star="1">★</button>
+            <button type="button" class="fb-star" data-star="2">★</button>
+            <button type="button" class="fb-star" data-star="3">★</button>
+            <button type="button" class="fb-star" data-star="4">★</button>
+            <button type="button" class="fb-star" data-star="5">★</button>
+          </div>
+          <button class="btn-primary fb-send" id="fb-send">Send feedback</button>
+          <p class="fb-status" id="fb-status" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="fb-thanks" id="fb-thanks" hidden>
+          <div class="fb-thanks__ic">🎉</div>
+          <p class="fb-thanks__t">Thank you!</p>
+          <p class="fb-thanks__s">Your feedback landed. It really helps.</p>
+          <button class="btn-primary" data-go="home">Back to the game</button>
+        </div>
+
+        <!-- admin only -->
+        <div class="fb-admin" id="fb-admin" hidden>
+          <h3 class="fb-admin__h">Admin — the numbers</h3>
+          <div class="fb-stats" id="fb-stats">
+            <div class="fb-stat"><b id="fb-st-accounts">–</b><span>Accounts</span></div>
+            <div class="fb-stat"><b id="fb-st-players">–</b><span>Players</span></div>
+            <div class="fb-stat"><b id="fb-st-new">–</b><span>New this week</span></div>
+            <div class="fb-stat"><b id="fb-st-fb">–</b><span>Feedback</span></div>
+          </div>
+          <h3 class="fb-admin__h">What people are saying</h3>
+          <div class="fb-list" id="fb-list"><p class="fb-empty">Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
     <section class="screen screen--parent" data-screen="parent">
       <div class="topbar">
         <button class="btn-back" data-go="home" aria-label="Back home">‹</button>
@@ -627,6 +679,6 @@
     <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
   </div>
 
-  <script src="js/app.js?v=18462c51787257102"></script>
+  <script src="js/app.js?v=2e460611787986300"></script>
 </body>
 </html>
