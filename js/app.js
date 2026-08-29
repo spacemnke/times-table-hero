@@ -4207,12 +4207,12 @@
         else if (e.key === " " || e.key === "ArrowUp") { e.preventDefault(); jump(); }
       });
       document.addEventListener("keyup", function (e) { if (isActive() && (e.key === " " || e.key === "ArrowUp")) jumpRelease(); });
-      $("#adv-quit").addEventListener("click", function (e) { e.stopPropagation(); sTap(); if (G && G.arena) { exitHome(); return; } openMap(); });
+      $("#adv-quit").addEventListener("click", function (e) { e.stopPropagation(); sTap(); exitHome(); });
       $("#adv-map-close").addEventListener("click", function () { sTap(); exitHome(); });
       $("#adv-nextBtn").addEventListener("click", function () { sTap(); startLevel(Math.min(level + 1, MAXLEVELS)); });
       $("#adv-retryBtn").addEventListener("click", function () { sTap(); startLevel(level); });
-      $("#adv-mapBtn").addEventListener("click", function () { sTap(); if (G && G.arena) { startArena(G.arena.opts); return; } openMap(); });
-      $("#adv-mapBtn2").addEventListener("click", function () { sTap(); openMap(); });
+      $("#adv-mapBtn").addEventListener("click", function () { sTap(); if (G && G.arena) { startArena(G.arena.opts); return; } exitHome(); });
+      $("#adv-mapBtn2").addEventListener("click", function () { sTap(); exitHome(); });
       $("#adv-homeBtn").addEventListener("click", function () { sTap(); exitHome(); });
       $("#adv-homeBtn2").addEventListener("click", function () { sTap(); exitHome(); });
     }
